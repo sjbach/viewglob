@@ -4,25 +4,25 @@
 .so giftcurs.tmac
 .
 .TL
-Viewglob 1.0.2 README
+Viewglob 1.0.3 README
 .br
-November 19, 2004
+March 6, 2005
 .AU
 Stephen Bach <sjbach@users.sourceforge.net>
 .
 .Sh INTRODUCTION
 .LP
-\fIViewglob\fP is a utility designed to extend Bash and Zsh when used in windowing environments.  It has two parts:
+\fIViewglob\fP is a utility designed to add a kind of visualization to Bash and Zsh when used in windowing environments.  It has two parts:
 .RS
 .IP 1.
-A tool that sits as a layer between the shell and X terminal, keeping track of the user's current directory and command line.
+A tool that sits inconspicuously as a layer between a shell and its X terminal, keeping track of the user's current directory and command line.
 .IP 2. 
-A GTK+ display which shows the layouts of directories referenced on the command line (including pwd).
+A GTK+ display which shows the layouts of pwd and other directories as they are referenced.
 .RE
 .LP
-The display reveals the results of file globs and expansions as they are typed (hence the name), highlighting selected files and potential name completions.
+The display updates dynamically to highlight selected files and potential name completions, including from shell expansions and globs - hence the name.
 .LP
-It can also be used as a surrogate terminal, where keystrokes typed in the display are passed to the shell.  Files and directories can be double-clicked to insert their names and/or paths into the terminal.
+It can also be used as a surrogate terminal, where keystrokes typed into the display are passed to the shell.  Likewise, files and directories can be double-clicked to insert their names and/or paths into the terminal.
 .LP
 The website is here:
 .IP
@@ -41,9 +41,11 @@ Feedback is welcome!
 .
 .Sh NEW IN THIS RELEASE
 .LP
-If you find the default font sizes in the display are too big / too small in your window manager, you can change them with the --font-size-modifier flag.  Passing +2 will increase all fonts by two, passing -2 will decrease all by two (duh).  Hardcores can now keep the font size so small that they can fit all of /usr/bin in the display at once, if they so choose.
+My biggest issue with Viewglob has always been the awkwardness of dealing with separate windows.  As you shuffle around, the display gets separated from the terminal, and soon you're just using the shell and none of the Viewglob.  I considered creating a terminal with an integrated display, but that feels like giving up.
 .LP
-Also, the code managing pseudo terminals has been replaced with code from rxvt, which has been shown to improve compatibility.  BSD users may now Ctrl-C to their heart's content.
+In my first attempt at combatting this problem I've added a key sequence, Cg-<TAB> or Cg-<ENTER> (Cg = Ctrl-G), which will ask the window manager to refocus the terminal and the display, bringing them both to the top layer.  So when you've got one but not the other, type this sequence and both will be visible.
+.LP
+This has necessitated a new reliance on Xlib (previously only implied with GTK), which may cause compatibility issues.  If so, please let me know.  Also, whether this feature works or not depends on your window manager.  If it has implemented a good portion of the EWMH specification you'll probably be okay.
 .
 .Sh INSTALLATION
 .LP
@@ -62,6 +64,12 @@ The program has been built with portability in mind, so it should (ha) run on mo
 .Sh REQUIREMENTS
 .LP
 Viewglob requires a version of Bash (any, as far as I know) and GTK+ 2.4.  A version of Zsh is also obviously required if you wish to use Zsh under Viewglob.
+.
+.Sh NEW IN PREVIOUS RELEASE 1.0.2
+.LP
+If you find the default font sizes in the display are too big / too small in your window manager, you can change them with the --font-size-modifier flag.  Passing +2 will increase all fonts by two, passing -2 will decrease all by two (duh).  Hardcores can now keep the font size so small that they can fit all of /usr/bin in the display at once, if they so choose.
+.LP
+Also, the code managing pseudo terminals has been replaced with code from rxvt, which has been shown to improve compatibility.  BSD users may now Ctrl-C to their heart's content.
 .
 .Sh NEW IN PREVIOUS RELEASE 1.0.1
 .LP

@@ -1,6 +1,6 @@
 
-                           viewglob 1.0.2 README
-                             November 19, 2004
+                           Viewglob 1.0.3 README
+                               March 6, 2005
 
                 Stephen Bach <sjbach@users.sourceforge.net>
 
@@ -8,22 +8,23 @@
 INTRODUCTION
 ------------
 
-viewglob  is a utility designed to extend bash and zsh when used in window­
-ing environments. It has two parts:
+Viewglob  is  a utility designed to add a kind of visualization to Bash and
+Zsh when used in windowing environments. It has two parts:
 
-     1.   A tool that sits as a layer between the  shell  and  X  terminal,
-          keeping track of the user's current directory and command line.
+     1.   A tool that sits inconspicuously as a layer between a  shell  and
+          its X terminal, keeping track of the user's current directory and
+          command line.
 
-     2.   A  GTK+ display which shows the layouts of directories referenced
-          on the command line (including pwd).
+     2.   A GTK+ display which shows the layouts of pwd and other  directo­
+          ries as they are referenced.
 
-The display reveals the results of file globs and expansions  as  they  are
-typed (hence the name), highlighting selected files and potential name com­
-pletions.
+The  display  updates dynamically to highlight selected files and potential
+name completions, including from shell expansions and  globs  -  hence  the
+name.
 
-It can also be used as a surrogate terminal, where keystrokes typed in  the
-display  are  passed  to  the  shell.  Files and directories can be double-
-clicked to insert their names and/or paths into the terminal.
+It  can  also  be used as a surrogate terminal, where keystrokes typed into
+the display are passed to the shell. Likewise, files and directories can be
+double-clicked to insert their names and/or paths into the terminal.
 
 The website is here:
 
@@ -33,8 +34,8 @@ The sourceforge listing is here:
 
      http://sourceforge.net/projects/viewglob/
 
-New releases are announced through Freshmeat, so if you'd like to stay  up-
-to-date you may subscribe to the viewglob project there:
+New  releases are announced through Freshmeat, so if you'd like to stay up-
+to-date you may subscribe to the Viewglob project there:
 
      http://freshmeat.net/projects/viewglob/
 
@@ -43,6 +44,53 @@ Feedback is welcome!
 
 NEW IN THIS RELEASE
 -------------------
+
+My biggest issue with Viewglob has always been the awkwardness  of  dealing
+with  separate  windows.  As you shuffle around, the display gets separated
+from the terminal, and soon you're just using the shell  and  none  of  the
+Viewglob.  I considered creating a terminal with an integrated display, but
+that feels like giving up.
+
+In my first attempt at combatting this problem I've added a  key  sequence,
+Cg-<TAB>  or Cg-<ENTER> (Cg = Ctrl-G), which will ask the window manager to
+refocus the terminal and the display, bringing them both to the top  layer.
+So  when you've got one but not the other, type this sequence and both will
+be visible.
+
+This has necessitated a new reliance on Xlib (previously only implied  with
+GTK),  which  may  cause  compatibility  issues. If so, please let me know.
+Also, whether this feature works or not depends on your window manager.  If
+it has implemented a good portion of the EWMH specification you'll probably
+be okay.
+
+INSTALLATION
+------------
+
+See the file INSTALL for generic instructions.  This  program  follows  the
+./configure && make && make install convention.
+
+PORTABILITY
+-----------
+
+Tested on:
+
+     FreeBSD 4.10 with GTK+ 2.4.3
+     GNU/Linux (various) with GTK+ 2.4+
+     Mac OS X 10.3.5 with fink unstable providing GTK+ 2.4.9 (Viewglob 0.9)
+
+The  program has been built with portability in mind, so it should (ha) run
+on most POSIX-compliant systems with minimal fuss. I happily accept patches
+for portability issues.
+
+REQUIREMENTS
+------------
+
+Viewglob requires a version of Bash (any, as far as I know) and GTK+ 2.4. A
+version of Zsh is also obviously required if you  wish  to  use  Zsh  under
+Viewglob.
+
+NEW IN PREVIOUS RELEASE 1.0.2
+-----------------------------
 
 If  you  find the default font sizes in the display are too big / too small
 in your window manager, you can change them with  the  --font-size-modifier
@@ -53,32 +101,6 @@ can fit all of /usr/bin in the display at once, if they so choose.
 Also,  the  code managing pseudo terminals has been replaced with code from
 rxvt, which has been shown to improve  compatibility.  BSD  users  may  now
 Ctrl-C to their heart's content.
-
-INSTALLATION
-------------
-
-See  the  file  INSTALL  for generic instructions. This program follows the
-./configure && make && make install convention.
-
-PORTABILITY
------------
-
-Tested on:
-
-     FreeBSD 4.10 with GTK+ 2.4.3
-     GNU/Linux (various) with GTK+ 2.4+
-     Mac OS X 10.3.5 with fink unstable providing GTK+ 2.4.9 (viewglob 0.9)
-
-I don't have access to Solaris, so I can only hope for the best -- it would
-be awesome if someone could try it for me.
-
-REQUIREMENTS
-------------
-
-viewglob requires a version of bash (any, as far as I know) and GTK+ 2.4. A
-version of zsh is also obviously required if you  wish  to  use  zsh  under
-viewglob.
-
 
 NEW IN PREVIOUS RELEASE 1.0.1
 -----------------------------
@@ -110,7 +132,7 @@ you double click a file in the display (or the directory header), its  name
 will  be  passed  as text to the terminal. Holding shift will send the full
 path to the file.
 
-By default viewglob is in "smart insert" mode. There's more info about that
+By default Viewglob is in "smart insert" mode. There's more info about that
 in the man page.
 
 This  release  also  allows  you to type into the display and have the key­
@@ -127,7 +149,7 @@ please get in touch with me.
 NEW IN PREVIOUS RELEASE 0.9.1
 -----------------------------
 
-First of all, if you've got a previous installation of viewglob that's  not
+First of all, if you've got a previous installation of Viewglob that's  not
 from a package manager (i.e. you just ran make && make install), you should
 remove it before installing this version. I was incorrectly installing some
 binaries  to  .../share/viewglob  instead  of  .../lib/viewglob, which goes
@@ -136,14 +158,14 @@ to  the old install, a make uninstall should do the job. If not, the direc­
 tory which you want to remove is, by default, /usr/local/share/viewglob.
 
 The display can now be toggled on and off with the sequence Ctrl-G  <SPACE>
-(or  Ctrl-G  Ctrl-<SPACE>). If the display is closed manually, viewglob now
+(or  Ctrl-G  Ctrl-<SPACE>). If the display is closed manually, Viewglob now
 interprets it as toggling off, and doesn't disable  itself.  A  toggled-off
 display  still  follows  the  state of the shell (i.e. when it's toggled on
 it'll be at the right place).
 
-To disable viewglob (which you used to be able to do by  closing  the  dis­
+To disable Viewglob (which you used to be able to do by  closing  the  dis­
 play),  you  can  use the sequence Ctrl-G Q (but not Ctrl-G Ctrl-Q, because
-that's too easy to type accidentally). Disabling a viewglob shell  is  non-
+that's too easy to type accidentally). Disabling a Viewglob shell  is  non-
 recoverable.
 
 When you might want to toggle off the display (C-g <SPACE>):
@@ -158,20 +180,20 @@ When you might want to toggle off the display (C-g <SPACE>):
 
      -  It's just in the way.
 
-When you might want to disable viewglob (C-g q):
+When you might want to disable Viewglob (C-g q):
 
      -  You  just  want  a  regular shell, but you want to keep the current
         environment.
 
-     -  Maybe you're compiling in the background, and your  viewglob  shell
+     -  Maybe you're compiling in the background, and your  Viewglob  shell
         has begun to stutter.
 
 NEW IN PREVIOUS RELEASE 0.9
 ---------------------------
 
-Preliminary  support for zsh has been added. From my testing viewglob works
+Preliminary  support for zsh has been added. From my testing Viewglob works
 well with the advanced completion features of zsh, but there is  a  lot  of
-ground  to  cover. If you use zsh and find that viewglob isn't working well
+ground  to  cover. If you use zsh and find that Viewglob isn't working well
 at all, please let me know - I'd be mostly interested in seeing your .zshrc
 file.
 
@@ -179,7 +201,7 @@ This release also adds the capability to navigate the display from the ter­
 minal. This is done in a way similar to GNU screen's Ctrl-A commands -  you
 type the control key followed by a direction character.
 
-I've  chosen  Ctrl-G as viewglob's control key, because a. the letter makes
+I've  chosen  Ctrl-G as Viewglob's control key, because a. the letter makes
 sense, and b. Ctrl-G is by default just a beeping (i.e. more annoying) ver­
 sion  of  Ctrl-C in most shell configurations, and I don't think people use
 it. But I could be wrong.

@@ -1,3 +1,9 @@
+New in 1.0.3, released 2005-03-06:
+	Features:
+	  * Added shortcut to refocus the display and terminal for when they
+	    get separated.
+	  * Map $HOME to ~ in the display (the /home/blah part)
+
 New in 1.0.2, released 2004-11-19:
 	Features:
 	  * Added option to increase/decrease base font size in the display.
