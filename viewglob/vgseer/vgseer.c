@@ -71,7 +71,7 @@ struct options {
 
 /* --- Prototypes --- */
 
-/* Signal stuff */
+/* Signal stuff. */
 static void     sigwinch_handler(gint signum);
 static void     sigterm_handler(gint signum);
 static gboolean handle_signals(void);
@@ -79,12 +79,13 @@ static void     handler(gint signum);
 static void     unexpected_termination_handler(struct pty_child* shell_to_kill);
 static size_t   strlen_safe(const gchar* string);
 
-/* Program flow */
+/* Program flow. */
 static gboolean main_loop(struct user_shell* u);
 static gboolean io_activity(Connection** bufs, struct user_shell* u);
 static gboolean scan_for_newline(const Connection* b);
 static gboolean process_input(Connection* b, struct user_shell* u);
 
+/* Communication with vgd. */
 static gboolean is_key(Connection* b);
 static gboolean is_filename(Connection* b);
 static gboolean is_xid(Connection* b);

@@ -4,6 +4,7 @@
 - Get buffered text from that extra fifo so it can be spat onto command line when viewglob initiates (text typed while viewglob is being executed, not yet presenting command line) instead of throwing it away?
 - dlisting of current directory in display different colour?
 - Use a different key sequence than Ctrl-G (easier to type)?
+- In display command line, underline the character which has the cursor
 
 - Instead of:
 	# Source the user's run-control file.

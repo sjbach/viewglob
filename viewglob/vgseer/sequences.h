@@ -51,10 +51,6 @@ void  check_seqs(Connection* b, struct user_shell* u);
 void  enable_all_seqs(enum process_level pl);
 void  clear_seqs(enum process_level pl);
 
-/* These are common to cmdline and sequences, but gotta put them somewhere. */
-gint find_prev_cret(gchar* string, gint pos);
-gint find_next_cret(gchar* string, gint length, gint pos);
-
 G_END_DECLS
 
 #endif	/* !SEQUENCES_H */

@@ -208,38 +208,6 @@ static gchar* parse_printables(const gchar* string, const gchar* sequence) {
 	return printables;
 }
 
-//FIXME remove find_prev_cret() and find_next_cret() and replace with g_strstrblah() etc.?
-
-gint find_prev_cret(gchar* string, gint pos) {
-	gint i;
-	gboolean found = FALSE;
-
-	/* Find the first ^M to the left of pos. */
-	for (i = pos - 1; i >= 0; i--)
-		if (string[i] == '\015') {
-			found = TRUE;
-			break;
-		}
-
-	if (found)
-		return i;
-	else
-		return -1;
-}
-
-
-gint find_next_cret(gchar* string, gint length, gint pos) {
-	gchar* cr;
-
-	/* Find the first ^M to the right of pos. */
-	cr = memchr(string + pos, '\015', length - pos);
-
-	if (cr != NULL)
-		return cr - string;
-	else
-		return -1;
-}
-
 
 /* Initialize all of the sequences.  Some of them are duplicated
    in different groups instead of referenced, which should be fixed. */
