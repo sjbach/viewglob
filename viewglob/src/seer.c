@@ -437,13 +437,8 @@ static bool main_loop(struct display* disp) {
 
 				case A_REFOCUS:
 					DEBUG((df, "A_REFOCUS"));
-					if (viewglob_enabled && display_running(disp) && xDisp) {
-						DEBUG((df, "okay"));
-						if (disp->xid)
-							activate_window(xDisp, disp->xid, false);
-						if (term_xid)
-							activate_window(xDisp, term_xid, false);
-					}
+					if (viewglob_enabled && display_running(disp) && xDisp)
+						refocus(xDisp, disp->xid, term_xid);
 					break;
 
 				case A_SEND_LOST:

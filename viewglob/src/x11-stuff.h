@@ -37,7 +37,7 @@
 BEGIN_C_DECLS
 
 
-bool activate_window (Display* disp, Window win, bool switch_desktop);
+void refocus(Display* disp, Window w1, Window w2);
 Window get_xid_from_title(Display* disp, char* title);
 
 

@@ -44,6 +44,7 @@
 extern FILE* df;
 #endif
 
+static void activate_window (Display* disp, Window win, bool switch_desktop);
 static Window *get_client_list (Display *disp, unsigned long *size);
 static char* get_property (Display* disp, Window win, Atom xa_prop_type, char* prop_name, unsigned long* size);
 static char* get_window_title (Display* disp, Window win);
@@ -53,9 +54,27 @@ static bool client_msg(Display* disp, Window win, char* msg,
 		unsigned long data4);
 
 
-bool activate_window (Display* disp, Window win, bool switch_desktop) {
-	unsigned long* desktop;
+void refocus(Display* disp, Window w1, Window w2) {
+	Window active_window;
+	int revert_to_return;
 
+	XGetInputFocus(disp, &active_window, &revert_to_return);
+
+	/* Refocus the window which isn't focused.  Or, if neither
+	   are focused (?), focus both. */
+	if (active_window == w1 && w2 != 0)
+		activate_window(disp, w2, false);
+	else if (active_window == w2 && w1 != 0)
+		activate_window(disp, w1, false);
+	else if (w1 != 0 && w2 != 0) {
+		activate_window(disp, w2, false);
+		activate_window(disp, w1, false);
+	}
+}
+
+
+static void activate_window(Display* disp, Window win, bool switch_desktop) {
+	unsigned long* desktop;
 	/* desktop ID */
 	if ((desktop = (unsigned long*)get_property(disp, win,
 			XA_CARDINAL, "_NET_WM_DESKTOP", NULL)) == NULL) {
@@ -77,8 +96,6 @@ bool activate_window (Display* disp, Window win, bool switch_desktop) {
 	/*client_msg(disp, win, "_NET_ACTIVE_WINDOW", 0, 0, 0, 0, 0);*/
 	client_msg(disp, win, "_NET_ACTIVE_WINDOW", 2, time(NULL), 0, 0, 0);
 	XMapRaised(disp, win);
-
-	return true;
 }
 
 
@@ -218,5 +235,4 @@ static char* get_window_title (Display *disp, Window win) {
 	
 	return title_utf8;
 }
-
 

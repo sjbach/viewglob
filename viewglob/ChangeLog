@@ -1,3 +1,10 @@
+2005-03-06 09:27  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* seer.c, x11-stuff.c, x11-stuff.h:
+	  Tweaked the algorithm for refocusing.  If display is focused,
+	  terminal is brought to front.  If terminal is focused, display
+	  is brought to front.  If neither, both are brought to front.
+
 2005-03-06 19:49  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* file_box.c, lscolors.c, lscolors.h:
