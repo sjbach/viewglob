@@ -1,3 +1,9 @@
+2004-09-05 14:51  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* README.ms, viewglob.1, seer.c, sequences.c, viewglob.in:
+	  Replaced "command-line" with "command line".
+	* viewglob.1, viewglob.in: updated for zsh.
+
 2004-09-05 13:52  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* Makefile.am, src/Makefile.am:

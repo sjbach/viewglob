@@ -28,8 +28,7 @@ usage: $SCRIPT_NAME [-d <display program>] [-f <config file>]
                    [-p <name|inode>] [-s <ls|windows>] [-n <##>]
                    [-b] [-t] [-w] [ -e <executable>]
 -c, --shell-mode    Shell to use (bash or zsh).
--d, --display       Name or path to a display program to use instead of the
-                    default.
+-d, --display       Path to a display program to use instead of the default.
 -f, --config-file   Alternate config file.
 -o, --shell-output  Output a transcript of the shell's output to the given file.
 -O, --term-output   Output a transcript of the terminal's input to given file.
@@ -118,12 +117,14 @@ fi
 
 VG_CONFIG_FILE="$HOME/.viewglobrc"
 
-# The viewglob initialization script will pick up this variable from the environment.
+# The viewglob initialization script will pick up this variable from the
+# environment.
 export VG_ASTERISK=yep
 
-# This is an excellent script to replace bash's getopts with one which allows long names.
-# I found it on Google Groups.  It's written by Grigoriy Strokin (grg@philol.msu.ru).
-# The script is also available in the bash package under examples/functions/getoptx.bash.
+# This is an excellent script to replace bash's getopts with one which allows
+# long names.  I found it on Google Groups.  It's written by Grigoriy Strokin
+# (grg@philol.msu.ru).  The script is also available in the bash package under
+# examples/functions/getoptx.bash.
 . $VG_DIR/getopt.sh
 
 # Parse the options.
@@ -196,7 +197,8 @@ if [ "$OPTOPT" = \? ]
 	then exit 5
 fi
 
-# Parse the config file.  These options will not override the command-line options.
+# Parse the config file.  These options will not override the command line
+# options.
 if [ -r "$VG_CONFIG_FILE" ]; then
 	while read opt arg; do
 		case "$opt" in
@@ -263,10 +265,11 @@ else
 fi
 
 # Exec seer.
-exec "$VG_DIR"/seer -c "$VG_SHELL_MODE" -e "$VG_EXECUTABLE" -f "$VG_CONFIG_FILE"  \
-                    -o "$VG_SHELL_OUTPUT" -O "$VG_TERM_OUTPUT"                    \
-                    -d "$VG_DISPLAY" $VG_DISPLAY_OPTS                             \
-                    -n "$VG_SHOW_MAX" -s "$VG_SORT_STYLE"                         \
-                    -i "$VG_SHELL_INIT"                                           \
+exec "$VG_DIR"/seer -c "$VG_SHELL_MODE" -e "$VG_EXECUTABLE"     \
+                    -f "$VG_CONFIG_FILE"                        \
+                    -o "$VG_SHELL_OUTPUT" -O "$VG_TERM_OUTPUT"  \
+                    -d "$VG_DISPLAY" $VG_DISPLAY_OPTS           \
+                    -n "$VG_SHOW_MAX" -s "$VG_SORT_STYLE"       \
+                    -i "$VG_SHELL_INIT"                         \
                     -x "$VG_DIR/glob-expand --"
 

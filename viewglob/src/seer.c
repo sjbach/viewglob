@@ -680,7 +680,7 @@ static void send_sane_cmd(struct display* d) {
 	(void)strcpy(sane_cmd_delimited, sane_cmd);
 	(void)strcat(sane_cmd_delimited, "\n");
 
-	/* Write the sanitized command-line to the cmd_fifo. */
+	/* Write the sanitized command line to the cmd_fifo. */
 	DEBUG((df, "\n^^^%s^^^\n", sane_cmd_delimited));
 	if ( ! hardened_write(d->cmd_fifo_fd, sane_cmd_delimited, strlen(sane_cmd_delimited)) ) {
 		fprintf(stderr, "(viewglob disabled)");

@@ -940,9 +940,9 @@ static MatchEffect seq_term_carriage_return(void) {
 
 /* What this function returns depends on whether the user has
    pressed any of return (enter), Ctrl-C, or Ctrl-D or not.
-   If so, then a newline that takes us out of the command-line
+   If so, then a newline that takes us out of the command line
    is interpreted as a command execution.  If not, then it is
-   a command-line wrap. */
+   a command line wrap. */
 static MatchEffect seq_term_newline(void) {
 	int p;
 	MatchEffect effect;
