@@ -409,6 +409,51 @@ void wrap_box_pack(WrapBox *wbox, GtkWidget *child) {
 }
 
 
+/* Pack this widget at the given position. */
+void wrap_box_pack_pos(WrapBox* wbox, GtkWidget* child, guint pos) {
+	WrapBoxChild* child_info;
+
+	g_return_if_fail(IS_WRAP_BOX (wbox));
+	g_return_if_fail(GTK_IS_WIDGET (child));
+	g_return_if_fail(child->parent == NULL);
+
+	child_info = g_new (WrapBoxChild, 1);
+	child_info->widget = child;
+	
+	if (wbox->children) {
+		WrapBoxChild* iter = wbox->children;
+		WrapBoxChild* prev = NULL;
+		while (pos && iter) {
+			prev = iter;
+			iter = iter->next;
+			pos--;
+		}
+		if (prev)
+			prev->next = child_info;
+		else
+			wbox->children = child_info;
+		child_info->next = iter;
+	}
+	else {
+		wbox->children = child_info;
+		child_info->next = NULL;
+	}
+	wbox->n_children++;
+
+	gtk_widget_set_parent(child, GTK_WIDGET(wbox));
+
+	if (GTK_WIDGET_REALIZED(wbox))
+		gtk_widget_realize(child);
+
+	if (GTK_WIDGET_VISIBLE(wbox) && GTK_WIDGET_VISIBLE(child)) {
+		if (GTK_WIDGET_MAPPED(wbox))
+			gtk_widget_map(child);
+
+		gtk_widget_queue_resize (child);
+	}
+}
+
+
 void wrap_box_reorder_child (WrapBox *wbox, GtkWidget *child, gint position) {
 	WrapBoxChild *child_info, *prev = NULL;
 

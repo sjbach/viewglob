@@ -45,7 +45,7 @@ static void  file_box_get_property(GObject* object, guint property_id, GValue* v
 static void  file_box_size_request(GtkWidget* widget, GtkRequisition* requisition);
 static void  file_box_size_allocate(GtkWidget* widget, GtkAllocation* allocation);
 
-static gint  file_box_get_display_pos(FileBox* fbox, FItem* fitem);
+static guint  file_box_get_display_pos(FileBox* fbox, FItem* fitem);
 
 static FItem*    fitem_new(const GString* name, FileType type, FileSelection selection);
 static void      fitem_build_widgets(FItem* fi);
@@ -323,8 +323,7 @@ static void fitem_display(FItem* fi, FileBox* fbox) {
 				if ( ! fi->widget ) {
 					/* Build widgets and pack it in. */
 					fitem_build_widgets(fi);
-					wrap_box_pack(WRAP_BOX(fbox), fi->widget);
-					wrap_box_reorder_child(WRAP_BOX(fbox), fi->widget, file_box_get_display_pos(fbox, fi));
+					wrap_box_pack_pos(WRAP_BOX(fbox), fi->widget, file_box_get_display_pos(fbox, fi));
 				}
 				fbox->n_displayed_files++;
 			}
@@ -333,8 +332,7 @@ static void fitem_display(FItem* fi, FileBox* fbox) {
 					/* It's not under the limit, but it's been selected.
 					   Doesn't have any widgets (if it does it's already displayed), so we make them. */
 					fitem_build_widgets(fi);
-					wrap_box_pack(WRAP_BOX(fbox), fi->widget);
-					wrap_box_reorder_child(WRAP_BOX(fbox), fi->widget, file_box_get_display_pos(fbox, fi));
+					wrap_box_pack_pos(WRAP_BOX(fbox), fi->widget, file_box_get_display_pos(fbox, fi));
 				}
 			}
 			else if (fi->widget) {
@@ -350,8 +348,7 @@ static void fitem_display(FItem* fi, FileBox* fbox) {
 				if (! fi->widget )  {
 					/* We're peeking at this FItem, but it doesn't have any widgets yet. */
 					fitem_build_widgets(fi);
-					wrap_box_pack(WRAP_BOX(fbox), fi->widget);
-					wrap_box_reorder_child(WRAP_BOX(fbox), fi->widget, file_box_get_display_pos(fbox, fi));
+					wrap_box_pack_pos(WRAP_BOX(fbox), fi->widget, file_box_get_display_pos(fbox, fi));
 				}
 
 			}
@@ -367,10 +364,10 @@ static void fitem_display(FItem* fi, FileBox* fbox) {
 
 
 /* Get the position of this fitem in the box. */
-static gint file_box_get_display_pos(FileBox* fbox, FItem* fitem) {
+static guint file_box_get_display_pos(FileBox* fbox, FItem* fitem) {
 	GSList* fi_iter;
 	FItem* fi;
-	gint pos = 0;
+	guint pos = 0;
 
 	for (fi_iter = fbox->fi_slist; fi_iter; fi_iter = g_slist_next(fi_iter)) {
 		fi = fi_iter->data;

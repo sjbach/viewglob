@@ -87,6 +87,7 @@ void       wrap_box_set_justify(WrapBox *wbox, GtkJustification justify);
 void       wrap_box_set_line_justify(WrapBox *wbox, GtkJustification line_justify);
 //void       wrap_box_set_optimal_width(WrapBox* wbox, guint optimal_width);
 void       wrap_box_pack(WrapBox *wbox, GtkWidget *child);
+void       wrap_box_pack_pos(WrapBox* wbox, GtkWidget* child, guint pos);
 void       wrap_box_reorder_child(WrapBox *wbox, GtkWidget *child, gint position);
 
 G_END_DECLS
