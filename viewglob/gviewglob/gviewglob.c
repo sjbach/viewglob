@@ -52,6 +52,7 @@ static FileType       map_file_type(const GString* string);
 static gboolean  window_delete_event(GtkWidget* widget, GdkEvent* event, gpointer data);
 static gboolean  window_configure_event(GtkWidget* window, GdkEventConfigure* event, Exhibit* e);
 static gboolean  window_state_event(GtkWidget *window, GdkEvent *event, Exhibit* e);
+static void      listings_allocate_event(GtkWidget* widget, GtkAllocation* allocation, GtkWidget* layout);
 
 /* Globals. */
 struct viewable_preferences v;
@@ -629,23 +630,31 @@ static GdkPixbuf* make_pixbuf_scaled(const guint8 icon_inline[], gint scale_size
 }
 
 
+/* Set the optimal width of the dlistings using the new width. */
 static gboolean window_configure_event(GtkWidget* window, GdkEventConfigure* event, Exhibit* e) {
 	GSList* dl_iter;
 	DListing* dl;
 
-	//g_print("<configure-event (%d --> %d)>", window->allocation.width, event->width);
+	/*g_print("<window: (%d,%d) layout: (%d,%d) listings_box: (%d,%d)>",
+			window->allocation.width, window->allocation.height,
+			e->listings_box->parent->allocation.width, e->listings_box->parent->allocation.height,
+			e->listings_box->allocation.width, e->listings_box->allocation.height); */
+	/*g_print("<configure-event (%d --> %d)>", window->allocation.width, event->width);*/
 	if (event->width != window->allocation.width) {
 		for (dl_iter = e->dl_slist; dl_iter; dl_iter = g_slist_next(dl_iter)) {
 			dl = dl_iter->data;
 			//g_printerr("?");
 			dlisting_set_optimal_width(dl, ((gint)dl->optimal_width) + event->width - window->allocation.width);
 		}
-
-		//gtk_widget_queue_resize(GTK_WIDGET(e->listings_box));
-		//gtk_container_resize_children(GTK_CONTAINER(e->listings_box));
 	}
 
 	return FALSE;
+}
+
+
+/* Set the layout to the size of the listings so that the scrollbars work. */
+static void listings_allocate_event(GtkWidget* widget, GtkAllocation* allocation, GtkWidget* layout) {
+	gtk_layout_set_size(GTK_LAYOUT(layout), allocation->width, allocation->height);
 }
 
 
@@ -660,19 +669,6 @@ static gboolean window_state_event(GtkWidget *window, GdkEvent *event, Exhibit* 
 
 	return FALSE;
 }
-
-
-/*
-static gboolean configure_event2(GtkWidget* window, GdkEventConfigure* event, GtkWidget* label) {
-
-	if (event->width != window->allocation.width) {
-		gtk_widget_queue_resize(label);
-	}
-
-	return FALSE;
-}
-*/
-
 
 
 static gboolean parse_args(int argc, char** argv) {
@@ -744,22 +740,11 @@ static void report_version(void) {
 	return;
 }
 
-/*
-static void allocate_callback(GtkWidget *label, GtkAllocation *allocation, gpointer data) {
-	g_print("(allocate)");
-}
-
-
-static void request_callback(GtkWidget *label, GtkRequisition *requisition, gpointer data) {
-	g_print("(request)");
-}
-*/
-
-
 
 int main(int argc, char *argv[]) {
 
 	GtkWidget* vbox;
+	GtkWidget* layout;
 	GtkWidget* scrolled_window;
 
 	GtkStyle* style;
@@ -787,7 +772,7 @@ int main(int argc, char *argv[]) {
 
 	/* Create gviewglob window. */
 	e.window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	gtk_container_set_border_width (GTK_CONTAINER(e.window), 5);
+	gtk_container_set_border_width(GTK_CONTAINER(e.window), 5);
 	gtk_window_set_title(GTK_WINDOW(e.window), (gchar *) "gviewglob");
 	gtk_window_set_default_size(GTK_WINDOW(e.window), 340, 420);
 
@@ -797,10 +782,15 @@ int main(int argc, char *argv[]) {
 	gtk_container_add(GTK_CONTAINER(e.window), vbox);
 	gtk_widget_show(vbox);
 
-	/* Scrollbar for the file/directory display vbox. */
+	/* Layout for the file/directory display vbox. */
+	layout = gtk_layout_new(NULL, NULL);
+	gtk_widget_show(layout);
+
+	/* ScrolledWindow for the layout. */
 	scrolled_window = gtk_scrolled_window_new(NULL, NULL);
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolled_window), GTK_POLICY_NEVER, GTK_POLICY_ALWAYS);
 	gtk_box_pack_start(GTK_BOX(vbox), scrolled_window, TRUE, TRUE, 0);
+	gtk_container_add(GTK_CONTAINER(scrolled_window), layout);
 	gtk_widget_show(scrolled_window);
 	e.vadjustment = gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(scrolled_window));
 
@@ -823,38 +813,17 @@ int main(int argc, char *argv[]) {
 	/* Setup the listings display. */
 	e.listings_box = gtk_vbox_new(FALSE, 5);
 	gtk_box_set_homogeneous(GTK_BOX(e.listings_box), FALSE);
-		//gtk_box_pack_start(GTK_BOX(vbox), e.listings_box, TRUE, TRUE, 0);
-	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scrolled_window), e.listings_box);
-	/* Kludge for resizing. */
-	gtk_container_set_resize_mode(GTK_CONTAINER(e.listings_box), GTK_RESIZE_IMMEDIATE);
-	/* g_object_set(e.listings_box, "width-request", 150, NULL); */
+	gtk_layout_put(GTK_LAYOUT(layout), e.listings_box, 0, 0);
 	gtk_widget_show(e.listings_box);
-
-	/*
-	GtkWidget* testbox;
-	GtkWidget* label;
-	testbox = gtk_vbox_new(FALSE, 5);
-	gtk_box_set_homogeneous(GTK_BOX(testbox), FALSE);
-	gtk_widget_show(testbox);
-	label = gtk_label_new("Testing2!");
-	gtk_box_pack_start(GTK_BOX(testbox), label, FALSE, FALSE, 0);
-	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scrolled_window), testbox);
-	gtk_widget_show(testbox);
-	gtk_widget_show(label);
-
-
-	g_signal_connect(G_OBJECT(label), "size-allocate", G_CALLBACK(allocate_callback), NULL);
-	g_signal_connect(G_OBJECT(label), "size-request", G_CALLBACK(request_callback), NULL);
-	g_signal_connect(G_OBJECT(window), "configure-event", G_CALLBACK(configure_event2), label);
-	*/
 
 	g_signal_connect(G_OBJECT(e.window), "configure-event", G_CALLBACK(window_configure_event), &e);
 	g_signal_connect(G_OBJECT(e.window), "window-state-event", G_CALLBACK(window_state_event), &e);
-	g_signal_connect(G_OBJECT (e.window), "delete_event", G_CALLBACK(window_delete_event), NULL);
+	g_signal_connect(G_OBJECT(e.window), "delete_event", G_CALLBACK(window_delete_event), NULL);
+	g_signal_connect(G_OBJECT(e.listings_box), "size-allocate", G_CALLBACK(listings_allocate_event), layout);
 
 	set_icons(&e);
 
-	/* Setup watch for glob input. */
+	/* Setup a watch for glob input. */
 	if (v.glob_fifo)
 		glob_channel = g_io_channel_new_file(v.glob_fifo, "r", NULL);
 	else {
@@ -869,7 +838,7 @@ int main(int argc, char *argv[]) {
 	g_io_channel_set_flags(glob_channel, G_IO_FLAG_NONBLOCK, NULL);
 	g_io_add_watch(glob_channel, G_IO_IN, get_glob_data, &e);
 
-	/* Setup watch for cmd input (only if a fifo name was passed as an argument). */
+	/* Setup a watch for cmd input (only if a fifo name was passed as an argument). */
 	if (v.cmd_fifo) {
 		cmd_channel = g_io_channel_new_file(v.cmd_fifo, "r", NULL);
 		if (!cmd_channel) {

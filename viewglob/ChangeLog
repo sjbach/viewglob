@@ -1,3 +1,9 @@
+2004-09-25 10:52  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* dlisting.c, exhibit.c, gviewglob.c:
+	  Fixed the long-standing window resizing bug where the labels
+	  and file boxes would sometimes enforce a minimum width.
+
 2004-09-23 19:37  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* children.c, children.h:

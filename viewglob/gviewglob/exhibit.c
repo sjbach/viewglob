@@ -78,7 +78,8 @@ DListing* exhibit_add(Exhibit* e, GString* name, gint rank, GString* selected_co
 		dl = DLISTING(dlisting_new());
 		dlisting_set_name(dl, name->str);
 		dlisting_set_file_counts(dl, selected_count->str, total_count->str, hidden_count->str);
-		dlisting_set_optimal_width(dl, e->listings_box->allocation.width);
+		/* Set optimal width as the width of the layout. */
+		dlisting_set_optimal_width(dl, e->listings_box->parent->allocation.width);
 		dlisting_mark(dl, rank);
 		file_box_set_show_hidden_files(FILE_BOX(dl->file_box), v.show_hidden_files);
 		file_box_set_file_display_limit(FILE_BOX(dl->file_box), v.file_display_limit);
@@ -167,8 +168,12 @@ void exhibit_do_order(Exhibit* e, GString* order) {
 	page_increment = e->vadjustment->page_increment;
 	lower = e->vadjustment->lower;
 
+	g_print("(step increment: %f)", step_increment);
+
 	/* Otherwise we scroll down into a page of black. */
 	upper = e->vadjustment->upper - page_increment - step_increment;
+
+	g_print("(order: %s)", order->str);
 
 	if (strcmp(order->str, "lost") == 0) {
 		/* Do something. */
@@ -195,6 +200,7 @@ void exhibit_do_order(Exhibit* e, GString* order) {
 		return;
 	}
 
+		g_print("(change: %f --> %f)", current, current + change);
 	if (change) {
 		gtk_adjustment_set_value(e->vadjustment, CLAMP(current + change, lower, upper));
 		gtk_adjustment_value_changed(e->vadjustment);
