@@ -18,9 +18,10 @@
 */
 
 #include "common.h"
+#include "dlisting.h"
+#include "feedback.h"
 #include "file_box.h"
 #include "wrap_box.h"
-#include "dlisting.h"
 #include <gtk/gtk.h>
 #include <string.h>      /* For strcmp */
 
@@ -67,7 +68,6 @@ static gint cmp_ordering_win(gconstpointer a, gconstpointer b);
 static gpointer parent_class = NULL;
 static GdkPixbuf* file_type_icons[8] = { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
 static GCompareFunc ordering_func = cmp_ordering_ls;
-static GIOChannel* out_channel = NULL;
 
 
 /* --- functions --- */
@@ -329,12 +329,6 @@ void file_box_set_icon(FileType type, GdkPixbuf* icon) {
 }
 
 
-void file_box_set_out_channel(GIOChannel* channel) {
-	g_return_if_fail(channel != NULL);
-	out_channel = channel;
-}
-
-
 gboolean file_box_get_show_hidden_files(FileBox* fbox) {
 	g_return_val_if_fail(IS_FILE_BOX(fbox), FALSE);
 	return fbox->show_hidden_files;
@@ -571,56 +565,38 @@ static void fitem_build_widgets(FItem* fi) {
 
 static gboolean fitem_button_press_event(GtkWidget* widget, GdkEventButton* event, FItem* fi) {
 
-	GError* error = NULL;
-	gsize bytes_written;
-	gboolean in_loop = TRUE;
-	GString* data;
+	GString* string;
 
-	/* Write out the FItem's name opon a double click. */
+	g_return_val_if_fail(event != NULL, FALSE);
+	g_return_val_if_fail(fi != NULL, FALSE);
+
+	/* Write out the FItem's name upon a double click. */
 	if (event->type == GDK_2BUTTON_PRESS && event->button == 1) {
-		if (out_channel) {
 
-			data = g_string_new("file:");
+			string = g_string_new("file:");
 
 			/* If shift is held, write out the full path. */
 			if ( (event->state & GDK_SHIFT_MASK) && fi->widget->parent && fi->widget->parent->parent) {
-				data = g_string_append(data, DLISTING(fi->widget->parent->parent)->name->str);
+				string = g_string_append(string, DLISTING(fi->widget->parent->parent)->name->str);
 
 				/* If the parent dir is / (root), it already has a '/' on the end. */
-				if ( *(data->str + strlen(data->str) - 1) != '/')
-					data = g_string_append(data, "/");
+				if ( *(string->str + string->len - 1) != '/')
+					string = g_string_append(string, "/");
 			}
 
-			data = g_string_append(data, fi->name);
+			string = g_string_append(string, fi->name);
+
+			/* Trailing '/' on directories. */
+			if (fi->type == FT_DIRECTORY)
+				string = g_string_append(string, "/");
 
 			/* Write out the file name. */
-			while (in_loop) {
-				switch (g_io_channel_write_chars(out_channel, data->str, strlen(data->str) + 1,  &bytes_written, &error)) {
-					case (G_IO_STATUS_ERROR):
-						g_printerr("gviewglob: %s\n", error->message);
-						in_loop = FALSE;
-						break;
+			feedback_write_string(string->str, string->len + 1);
 
-					case (G_IO_STATUS_NORMAL):
-						in_loop = FALSE;
-						break;
-
-					case (G_IO_STATUS_AGAIN):
-						break;
-
-					default:
-						g_warning("Unexpected result from g_io_channel_write_chars.");
-						in_loop = FALSE;
-						break;
-				}
-			}
-
-			g_string_free(data, TRUE);
-		}
-
+			g_string_free(string, TRUE);
 	}
 
-	return TRUE;
+	return FALSE;
 }
 
 

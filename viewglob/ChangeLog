@@ -1,3 +1,13 @@
+2004-09-25 19:41  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* feedback.c, feedback.h: added
+	* Makefile.am: updated for feedback.{c,h}
+	* seer.c: don't escape '/' characters in filenames.
+	* file_box.c, dlisting.c:
+	  - Context menu only on dl header.
+	  - Trailing '/' when inserting directory files.
+	  - Double clicking directory header inserts path.
+
 2004-09-25 16:43  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* cmdline.c, cmdline.h, seer.c, seer.h, viewglob.in:

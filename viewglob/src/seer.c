@@ -528,7 +528,6 @@ static bool user_activity(void) {
 				}
 				XFREE(filename);
 			}
-
 		}
 	}
 
@@ -712,7 +711,6 @@ static char* convert_file_name(enum process_level pl, char* holdover, Buffer* b)
 			case '{':
 			case '}':
 			case '~':
-			case '/':
 			case '\\':
 			case '!':
 				if (pl == PL_AT_PROMPT || !opts.smart_insert)
@@ -774,7 +772,6 @@ static char* convert_file_name(enum process_level pl, char* holdover, Buffer* b)
 			case '{':
 			case '}':
 			case '~':
-			case '/':
 			case '\\':
 			case '!':
 				if (pl == PL_AT_PROMPT || !opts.smart_insert) {

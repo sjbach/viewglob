@@ -19,6 +19,7 @@
 
 #include "common.h"
 #include "file_box.h"
+#include "feedback.h"
 #include "dlisting.h"
 #include <gtk/gtk.h>
 #include <string.h>   /* For strcmp */
@@ -38,7 +39,7 @@ static void  dlisting_reset_file_count_label(DListing* dl);
 
 static gboolean is_zero(const gchar* string);
 
-static gint show_context_menu(GtkWidget *widget, GdkEvent *event);
+static gboolean dlisting_button_press_event(GtkWidget *widget, GdkEventButton *event, DListing* dl);
 static void show_hidden_files_activate_handler(GtkMenuItem* menu_item, DListing* dl);
 static void show_all_files_activate_handler(GtkMenuItem* menu_item, DListing* dl);
 
@@ -50,6 +51,7 @@ static GdkPixbuf* show_hidden_pixbuf = NULL;
 static GdkPixbuf* show_all_pixbuf = NULL;
 static gboolean show_hidden_files;
 static gboolean show_all_files;
+
 
 /* --- functions --- */
 GType dlisting_get_type(void) {
@@ -195,7 +197,9 @@ static void dlisting_init(DListing* dl) {
 		g_signal_connect(image_menu_item, "activate", G_CALLBACK(show_all_files_activate_handler), dl);
 	gtk_menu_append(GTK_MENU_SHELL(dl->menu), image_menu_item);
 
-	g_signal_connect_swapped(box, "button_press_event", G_CALLBACK(show_context_menu), dl->menu);
+	/* For right-click context menu and double left-click. */
+	g_signal_connect(dl->heading_event_box, "button-press-event", G_CALLBACK(dlisting_button_press_event), dl);
+
 	gtk_widget_show(dl->menu);
 
 	/* Initialize the labels. */
@@ -438,22 +442,29 @@ static gboolean is_zero(const gchar* string) {
 }
 
 
-static gint show_context_menu(GtkWidget *widget, GdkEvent *event) {
-	GtkMenu* menu;
-	GdkEventButton* event_button;
+static gboolean dlisting_button_press_event(GtkWidget *widget, GdkEventButton *event, DListing* dl) {
 
-	g_return_val_if_fail (widget != NULL, FALSE);
-	g_return_val_if_fail (GTK_IS_MENU (widget), FALSE);
-	g_return_val_if_fail (event != NULL, FALSE);
+	GString* string;
 
-	menu = GTK_MENU(widget);
+	g_return_val_if_fail(dl != NULL, FALSE);
+	g_return_val_if_fail(event != NULL, FALSE);
 
-	if (event->type == GDK_BUTTON_PRESS) {
-		event_button = (GdkEventButton*) event;
-		if (event_button->button == 3) {
-			gtk_menu_popup (menu, NULL, NULL, NULL, NULL, event_button->button, event_button->time);
-			return TRUE;
-		}
+	if (event->type == GDK_BUTTON_PRESS && event->button == 3) {
+		/* Right-click -- popup the context menu. */
+		gtk_menu_popup (GTK_MENU(dl->menu), NULL, NULL, NULL, NULL, event->button, event->time);
+	}
+	else if (event->type == GDK_2BUTTON_PRESS && event->button == 1) {
+		/* Double left-click -- write out the directory name. */
+		string = g_string_new("file:");
+		string = g_string_append(string, dl->name->str);
+
+		/* Append a trailing '/' if need be. */
+		if ( *(string->str + string->len - 1) != '/')
+			string = g_string_append(string, "/");
+
+		feedback_write_string(string->str, string->len + 1);
+
+		g_string_free(string, TRUE);
 	}
 
 	return FALSE;
