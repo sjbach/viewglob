@@ -22,7 +22,6 @@
 #endif
 
 #include "common.h"
-#include "vgseer.h"
 #include "hardened_io.h"
 
 #include <sys/stat.h>

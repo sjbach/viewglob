@@ -17,8 +17,8 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#ifndef SEER_H
-#define SEER_H
+#ifndef SHELL_H
+#define SHELL_H
 
 #if HAVE_CONFIG_H
 #  include "config.h"
@@ -49,5 +49,5 @@ struct user_shell {
 
 G_END_DECLS
 
-#endif /* !SEER_H */
+#endif /* !SHELL_H */
 

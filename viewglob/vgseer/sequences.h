@@ -25,7 +25,7 @@
 #endif
 
 #include "common.h"
-#include "vgseer.h"
+#include "shell.h"
 #include "connection.h"
 
 G_BEGIN_DECLS

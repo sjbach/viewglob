@@ -20,7 +20,7 @@
 #include "config.h"
 
 #include "common.h"
-#include "vgseer.h"
+#include "shell.h"
 #include "actions.h"
 #include "connection.h"
 #include "sequences.h"

@@ -26,7 +26,7 @@
 #include "actions.h"
 #include "connection.h"
 #include "sequences.h"
-#include "vgseer.h"
+#include "shell.h"
 
 #include <stdio.h>
 #include <signal.h>
