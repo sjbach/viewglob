@@ -37,7 +37,7 @@ struct args {
 
 
 struct pty_child {
-	gchar* name;
+	gchar* exec_name;
 	struct args a;
 	pid_t pid;
 	gint fd;
@@ -70,6 +70,7 @@ gboolean display_cleanup(struct display* d);
 
 void args_init(struct args* a);
 void args_add(struct args* a, gchar* new_arg);
+
 
 G_END_DECLS
 

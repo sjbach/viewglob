@@ -323,7 +323,7 @@ gboolean pty_child_fork(struct pty_child* c, gint new_stdin_fd, gint new_stdout_
 
 	gboolean ok = TRUE;
 
-	c->a.argv[0] = c->name;
+	c->a.argv[0] = c->exec_name;
 
 	/* Delimit the args with NULL. */
 	args_add(&(c->a), NULL);
@@ -397,7 +397,7 @@ gboolean pty_child_fork(struct pty_child* c, gint new_stdin_fd, gint new_stdout_
 			}
 
 			(void)close(pty_slave_fd);
-			execvp(c->name, c->a.argv);
+			execvp(c->exec_name, c->a.argv);
 
 			child_fail:
 			g_critical("Exec failed: %s", g_strerror(errno));
@@ -424,10 +424,11 @@ gboolean pty_child_terminate(struct pty_child* c) {
 		g_critical("Could not close pty to child: %s", g_strerror(errno));
 		ok = FALSE;
 	}
-	
+
 	/* Terminate and wait the child's process. */
 	if (c->pid != -1) {
-		switch (kill(c->pid, SIGHUP)) {    /* SIGHUP terminates bash, but SIGTERM won't. */
+		/* SIGHUP terminates bash (cleanly), SIGTERM won't. */
+		switch (kill(c->pid, SIGHUP)) {
 			case 0:
 				ok &= waitpid_wrapped(c->pid);
 				c->pid = -1;
@@ -436,7 +437,8 @@ gboolean pty_child_terminate(struct pty_child* c) {
 				if (errno == ESRCH)
 					g_warning("Child already terminated");
 				else {
-					g_critical("Could not terminate child: %s", g_strerror(errno));
+					g_critical("Could not terminate child: %s",
+							g_strerror(errno));
 					ok = FALSE;
 				}
 				break;

@@ -26,17 +26,27 @@
 
 #include <string.h>
 
+static gchar* connection_types[CT_COUNT] = {
+	"user shell",
+	"sandbox shell",
+	"terminal",
+	"vgd",
+};
 
 /* Initialize the given Connection. */
-void connection_init(Connection* cnct, char* name, int fd_in, int fd_out,
-		size_t buflen, enum process_level pl) {
+void connection_init(Connection* cnct, enum connection_type type, int fd_in,
+		int fd_out, gchar* buf, gsize buflen, enum process_level pl) {
 
 	g_return_if_fail(cnct != NULL);
+	g_return_if_fail(type >= 0 && type < CT_COUNT);
+	g_return_if_fail(fd_in >= 0);
+	g_return_if_fail(fd_out >= 0);
+	g_return_if_fail(buf != NULL);
 
-	cnct->name = name;
+	cnct->type = type;
 	cnct->fd_in = fd_in;
 	cnct->fd_out = fd_out;
-	cnct->buf = g_malloc(buflen);
+	cnct->buf = buf;
 	cnct->size = buflen;
 	cnct->filled = 0;
 	cnct->pos = 0;
@@ -54,11 +64,6 @@ void connection_free(Connection* cnct) {
 
 	g_return_if_fail(cnct != NULL);
 
-	if (cnct->buf) {
-		g_free(cnct->buf);
-		cnct->buf = NULL;
-	}
-
 	if (cnct->holdover) {
 		g_free(cnct->holdover);
 		cnct->holdover = NULL;
@@ -66,52 +71,45 @@ void connection_free(Connection* cnct) {
 }
 
 
+gchar* connection_type_str(enum connection_type type) {
+
+	g_return_val_if_fail(type >= 0 && type < CT_COUNT, "(error)");
+
+	return connection_types[type];
+}
+
+
 /* Prepend the holdover from the last read onto the beginning
-   of the current buffer. */
+   of the current buffer. If there is no holdover, just initialize the
+   offsets. */
 void prepend_holdover(Connection* b) {
 
-	size_t ho_len;
-
 	g_return_if_fail(b != NULL);
-	g_return_if_fail(b->holdover != NULL);
 
-	ho_len = strlen(b->holdover);
+	if (b->holdover) {
+		size_t ho_len;
+		ho_len = strlen(b->holdover);
 
-	/* If needed, grow the buffer. */
-	if (b->filled + ho_len > b->size) {
-		DEBUG((df, "reallocing %d bytes more\n", ho_len));
-		b->buf = g_realloc(b->buf, b->size + ho_len);
-		b->size += ho_len;
+		/* Copy over the holdover and then free it. */
+		memcpy(b->buf, b->holdover, ho_len);
+		g_free(b->holdover);
+		b->holdover = NULL;
+
+		b->filled = ho_len;
+		b->pos = 0;
+		/* b->seglen has not changed since the create_holdover(). */
+
+		if (b->ho_written)
+			b->skip = ho_len;
+		else
+			b->skip = 0;
 	}
-
-	/* Make room at the beginning of the buffer. */
-	memmove(b->buf + ho_len, b->buf, b->filled);
-
-	DEBUG((df, "prepending \"%s\"\n", b->holdover));
-
-	/* Copy over the holdover and then free it. */
-	memcpy(b->buf, b->holdover, ho_len);
-	g_free(b->holdover);
-	b->holdover = NULL;
-
-	b->filled += ho_len;
-	b->pos = 0;
-	/* b->seglen has not changed since the create_holdover(). */
-
-	if (b->ho_written) {
-		DEBUG((df, "skipping write of %d chars (first char: \'%c\'\n", ho_len, *(b->buf + ho_len)));
-		b->skip = ho_len;
-	}
-	else
+	else {
+		b->filled = 0;
+		b->pos = 0;
+		b->seglen = 0;
 		b->skip = 0;
-
-	#if DEBUG_ON
-		size_t x;
-		DEBUG((df, "===============\n"));
-		for (x = 0; x < b->filled; x++)
-			DEBUG((df, "%c", b->buf[x]));
-		DEBUG((df, "\n===============\n"));
-	#endif
+	}
 }
 
 
@@ -125,47 +123,31 @@ void create_holdover(Connection* b, gboolean write_later) {
 	/* Copy as null-terminated string. */
 	b->holdover = g_strndup(b->buf + b->pos, b->seglen);
 
-	DEBUG((df, "copied \"%s\"\n", b->holdover));
-	DEBUG((df, "b->seglen: %d\n", b->seglen));
-
 	if (write_later) {
-		/* Writing of this segment is postponed until after the next buffer read. */
-		DEBUG((df, "writing this holdover later.\n"));
+		/* Writing of this segment is postponed until after the next buffer
+		   read. */
 		b->filled -= b->seglen;
 		b->ho_written = FALSE;
 	}
-	else {
-		DEBUG((df, "writing this holdover now.\n"));
+	else
 		b->ho_written = TRUE;
-	}
-
-	#if DEBUG_ON
-		size_t x;
-		DEBUG((df, "===============\n"));
-		for (x = 0; x < b->filled; x++)
-			DEBUG((df, "%c", b->buf[x]));
-		DEBUG((df, "\n===============\n"));
-	#endif
 }
 
 
 /* Remove the segment under investigation from the buffer. */
 void eat_segment(Connection* b) {
 
+	g_return_if_fail(b != NULL);
+
 	char* start;
 	char* end;
 	size_t length;
-
-	g_return_if_fail(b != NULL);
 
 	start = b->buf + b->pos;
 	end = b->buf + b->pos + b->seglen + 1;
 	length = b->filled - (b->pos + b->seglen + 1);
 
-	DEBUG((df, "moving %d bytes\n", length));
 	memmove(start, end, length);
-
-	DEBUG((df, "filed before: %d, filled after: %d\n", b->filled, b->filled - b->seglen + 1));
 
 	b->filled -= b->seglen + 1;
 	b->seglen = 0;
@@ -178,7 +160,6 @@ void pass_segment(Connection* b) {
 
 	g_return_if_fail(b != NULL);
 
-	DEBUG((df, "passing %d bytes\n", b->seglen));
 	b->pos += b->seglen + 1;
 	b->seglen = 0;
 }

@@ -195,14 +195,14 @@ static void process_client(struct state* s, struct vgseer_client* v) {
 
 		case P_STATUS:
 			if ( (new_status = string_to_shell_status(value)) == SS_ERROR) {
-				g_warning("Invalid shell status from client on %d: %s",
+				g_warning("(%d) Invalid shell status from client: %s",
 						v->fd, value);
 				drop_client(s, v);
 			}
 
 			if (new_status != v->status) {
 				v->status = new_status;
-				g_message("New status: %s", value);
+				g_message("(%d) New status: %s", v->fd, value);
 				//FIXME update display (no reglob) if active
 			}
 			break;
@@ -211,7 +211,7 @@ static void process_client(struct state* s, struct vgseer_client* v) {
 			if (v->pwd == NULL || !STREQ(v->pwd, value)) {
 				g_free(v->pwd);
 				v->pwd = g_strdup(value);
-				g_message("New pwd: %s", v->pwd);
+				g_message("(%d) New pwd: %s", v->fd, v->pwd);
 				//FIXME update display (no reglob) if active
 			}
 			break;
@@ -220,26 +220,26 @@ static void process_client(struct state* s, struct vgseer_client* v) {
 			if (v->cli == NULL || !STREQ(v->cli, value)) {
 				g_free(v->cli);
 				v->cli = g_strdup(value);
-				g_message("New cli: %s", v->cli);
+				g_message("(%d) New cli: %s", v->fd, v->cli);
 				//FIXME update display (with reglob) if active
 			}
 			break;
 
 		case P_ORDER:
-			g_message("Received P_ORDER");
+			g_message("(%d) Received P_ORDER", v->fd);
 			break;
 
 		case P_VGEXPAND_DATA:
-			g_message("Received vgexpand_data");
+			g_message("(%d) Received vgexpand_data", v->fd);
 			break;
 
 		case P_EOF:
-			g_message("EOF from client on %d", v->fd);
+			g_message("(%d) EOF from client", v->fd);
 			drop_client(s, v);
 			break;
 
 		default:
-			g_warning("Unexpected parameter (%d): %s", param, value);
+			g_warning("(%d) Unexpected parameter: %d = %s", v->fd, param, value);
 			drop_client(s, v);
 			break;
 	}
@@ -255,7 +255,7 @@ static void drop_client(struct state* s, struct vgseer_client* v) {
 	s->clients = g_list_remove(s->clients, v);
 
 	(void) close(v->fd);
-	g_message("Dropped client on %d", v->fd);
+	g_message("(%d) Dropped client", v->fd);
 	g_free(v->expand_opts);
 	g_free(v);
 }
@@ -280,12 +280,12 @@ static void new_client(struct state* s) {
 		if (errno == EINTR)
 			goto again;
 		else {
-			g_warning("Error while accepting client: %s", g_strerror(errno));
+			g_warning("Error while accepting new client: %s", g_strerror(errno));
 			return;
 		}
 	}
 
-	g_message("New client accepted on fd %d", new_fd);
+	g_message("(%d) New client accepted", new_fd);
 
 	// TODO add time limits to get_param
 	/* Receive client's purpose. */
@@ -295,10 +295,10 @@ static void new_client(struct state* s) {
 		else if (STREQ(value, "vgseer"))
 			new_vgseer_client(s, new_fd);
 		else
-			g_warning("Unexpected purpose (fd %d): \"%s\"", new_fd, value);
+			g_warning("(%d) Unexpected purpose: \"%s\"", new_fd, value);
 	}
 	else
-		g_warning("Did not receive purpose from client (fd %d)", new_fd);
+		g_warning("(%d) Did not receive purpose from client", new_fd);
 }
 
 
@@ -306,9 +306,9 @@ static void new_ping_client(int ping_fd) {
 
 	g_return_if_fail(ping_fd >= 0);
 
-	g_message("Client on fd %d is pinging", ping_fd);
+	g_message("(%d) Client is pinging", ping_fd);
 	if (!put_param(ping_fd, P_STATUS, "yo"))
-		g_warning("Couldn't ping back to fd %d", ping_fd);
+		g_warning("(%d) Couldn't ping back", ping_fd);
 
 	(void) close(ping_fd);
 }
@@ -323,7 +323,7 @@ static void new_vgseer_client(struct state* s, int client_fd) {
 	gchar* value;
 	struct vgseer_client* v;
 
-	g_message("Client on fd %d is a vgseer", client_fd);
+	g_message("(%d) Client is a vgseer", client_fd);
 
 	v = g_new(struct vgseer_client, 1);
 	vgseer_client_init(v);
@@ -336,7 +336,7 @@ static void new_vgseer_client(struct state* s, int client_fd) {
 	else if (STREQ(value, "remote"))
 		v->local = FALSE;
 	else {
-		g_warning("Unexpected locality: \"%s\"", value);
+		g_warning("(%d) Unexpected locality: \"%s\"", client_fd, value);
 		goto reject;
 	}
 
@@ -348,7 +348,7 @@ static void new_vgseer_client(struct state* s, int client_fd) {
 	else if (STREQ(value, "zsh"))
 		v->shell = ST_ZSH;
 	else {
-		g_warning("Unexpected shell: \"%s\"", value);
+		g_warning("(%d) Unexpected shell: \"%s\"", client_fd, value);
 		goto reject;
 	}
 
@@ -358,7 +358,7 @@ static void new_vgseer_client(struct state* s, int client_fd) {
 	switch (v->pid = strtol(value, NULL, 10)) {
 		case LONG_MIN:
 		case LONG_MAX:
-			g_warning("Pid value is too big or too small: \"%s\"", value);
+			g_warning("(%d) Pid value is out of bounds: \"%s\"", client_fd, value);
 			goto reject;
 	}
 
@@ -382,9 +382,10 @@ static void new_vgseer_client(struct state* s, int client_fd) {
 		goto reject;
 	}
 	if ( (v->win = get_xid_from_title(s->Xdisplay, title)) == 0) {
-		g_warning("Couldn't locate client's window");
+		g_warning("(%d) Couldn't locate client's window", client_fd);
 		goto reject;
 	}
+	g_message("(%d) Client has window id %lu", client_fd, v->win);
 	if (!put_param(client_fd, P_ORDER, "continue"))
 		goto reject;
 
@@ -394,9 +395,9 @@ static void new_vgseer_client(struct state* s, int client_fd) {
 	return;
 
 out_of_sync:
-	g_warning("Client sent unexpected data");
+	g_warning("(%d) Client sent unexpected data", client_fd);
 reject:
-	g_warning("Client on fd %d rejected", client_fd);
+	g_warning("(%d) Client rejected", client_fd);
 	g_free(v);
 	(void) close(client_fd);
 }

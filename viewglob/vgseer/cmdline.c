@@ -1,26 +1,25 @@
 /*
 	Copyright (C) 2004, 2005 Stephen Bach
-	This file is part of the viewglob package.
+	This file is part of the Viewglob package.
 
-	viewglob is free software; you can redistribute it and/or modify
+	Viewglob is free software; you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
 	the Free Software Foundation; either version 2 of the License, or
 	(at your option) any later version.
 
-	viewglob is distributed in the hope that it will be useful,
+	Viewglob is distributed in the hope that it will be useful,
 	but WITHOUT ANY WARRANTY; without even the implied warranty of
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 	GNU General Public License for more details.
 
 	You should have received a copy of the GNU General Public License
-	along with viewglob; if not, write to the Free Software
+	along with Viewglob; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
 #include "config.h"
 
 #include "common.h"
-#include "vgseer.h"
 #include "sequences.h"
 #include "actions.h"
 #include "cmdline.h"
@@ -29,10 +28,11 @@
 
 /* Initialize working command line and sequence buffer. */
 void cmd_init(struct cmdline* cmd) {
-
-	/* Initialize u.cmd */
 	cmd->data = g_string_sized_new(256);
 	cmd->pos = 0;
+	cmd->rebuilding = FALSE;
+	cmd->expect_newline = FALSE;
+	cmd->pwd = NULL;
 }
 
 
@@ -77,6 +77,7 @@ gboolean cmd_whitespace_to_left(struct cmdline* cmd, gchar* holdover) {
 	return result;
 }
 
+
 //FIXME test whitespace_to_left, whitespace_to_right functions
 /* Determine whether there is whitespace to the right of the cursor
    (i.e. underneath the cursor). */
@@ -100,9 +101,10 @@ gboolean cmd_whitespace_to_right(struct cmdline* cmd) {
 
 /* Overwrite the char in the working command line at pos in command;
    realloc if necessary. */
-gboolean cmd_overwrite_char(struct cmdline* cmd, gchar c, gboolean preserve_cret) {
+gboolean cmd_overwrite_char(struct cmdline* cmd, gchar c,
+		gboolean preserve_CR) {
 
-	while ( preserve_cret && *(cmd->data->str + cmd->pos) == '\015' ) {
+	while (preserve_CR && *(cmd->data->str + cmd->pos) == '\015') {
 		/* Preserve ^Ms. */
 		cmd->pos++;
 	}
@@ -120,7 +122,7 @@ gboolean cmd_overwrite_char(struct cmdline* cmd, gchar c, gboolean preserve_cret
 }
 
 
-/* Remove n chars from the working command line at u.cmd.pos. */
+/* Remove n chars from the working command line at cmd->pos. */
 gboolean cmd_del_chars(struct cmdline* cmd, gint n) {
 
 	g_return_val_if_fail(n >= 0, FALSE);
@@ -140,26 +142,28 @@ gboolean cmd_del_chars(struct cmdline* cmd, gint n) {
 
 /* Trash everything. */
 gboolean cmd_wipe_in_line(struct cmdline* cmd, enum direction dir) {
-	gchar* cret_p_l;
-	gchar* cret_p_r;
+	gchar* CR_l;
+	gchar* CR_r;
 
 	switch (dir) {
 
 		case D_RIGHT:	/* Clear to right (in this line) */
 			DEBUG((df, "(right)\n"));
-			cret_p_r = g_strstr_len(
+			CR_r = g_strstr_len(
 					cmd->data->str + cmd->pos,
 					cmd->data->len - cmd->pos,
 					"\015");
-			if (cret_p_r == NULL) {
-				/* Erase everything to the right -- no ^Ms to take into account. */
+			if (CR_r == NULL) {
+				/* Erase everything to the right -- no ^Ms to take into
+				   account. */
 				cmd->data = g_string_truncate(cmd->data, cmd->pos);
 			}
 			else {
 				/* Erase to the right up to the first ^M. */
-				cmd_del_chars(cmd, (cret_p_r - cmd->data->str) - cmd->pos);
+				cmd_del_chars(cmd, (CR_r - cmd->data->str) - cmd->pos);
 
-				/* If we were at pos 0, this is the new pos 0; delete the cret. */
+				/* If we were at pos 0, this is the new pos 0; delete the
+				   CR. */
 				if (cmd->pos == 0)
 					cmd_del_chars(cmd, 1);
 			}
@@ -174,21 +178,21 @@ gboolean cmd_wipe_in_line(struct cmdline* cmd, enum direction dir) {
 			DEBUG((df, "(all)\n"));
 
 			/* Find the ^M to the right. */
-			cret_p_r = g_strstr_len(
+			CR_r = g_strstr_len(
 					cmd->data->str + cmd->pos,
 					cmd->data->len - cmd->pos,
 					"\015");
-			if (cret_p_r == NULL)
-				cret_p_r = cmd->data->str + cmd->data->len;
+			if (CR_r == NULL)
+				CR_r = cmd->data->str + cmd->data->len;
 			
 			/* Find the ^M to the left. */
-			cret_p_l = g_strrstr_len(cmd->data->str, cmd->pos, "\015");
-			if (cret_p_l == NULL)
-				cret_p_l = cmd->data->str;
+			CR_l = g_strrstr_len(cmd->data->str, cmd->pos, "\015");
+			if (CR_l == NULL)
+				CR_l = cmd->data->str;
 
 			/* Delete everything in-between. */
-			cmd->pos = cret_p_l - cmd->data->str;
-			cmd_del_chars(cmd, cret_p_r - cret_p_l);
+			cmd->pos = CR_l - cmd->data->str;
+			cmd_del_chars(cmd, CR_r - CR_l);
 
 			break;
 		default:
@@ -216,14 +220,16 @@ gboolean cmd_insert_chars(struct cmdline* cmd, gchar c, gint n) {
 	return TRUE;
 }
 
+
 //FIXME modify function to remove collected CRs? eg. abc^M^M^Mdef --> abc^Mdef
 /* Remove trailing ^Ms.
    These have a tendency to collect after a lot of modifications in a command
    line.  They're mostly harmless, and this is treating the symptom rather
    than the sickness, but it seems to work all right. */
-void cmd_del_trailing_crets(struct cmdline* cmd) {
+void cmd_del_trailing_CRs(struct cmdline* cmd) {
 	gint temp;
-	while (cmd->data->str[cmd->data->len - 1] == '\015' && cmd->pos < cmd->data->len - 1) {
+	while (cmd->data->str[cmd->data->len - 1] == '\015' &&
+			cmd->pos < cmd->data->len - 1) {
 		temp = cmd->pos;
 		cmd->pos = cmd->data->len - 1;
 		cmd_del_chars(cmd, 1);

@@ -43,9 +43,18 @@ enum process_level {
 };
 
 
+enum connection_type {
+	CT_USER_SHELL,
+	CT_SANDBOX_SHELL,
+	CT_TERMINAL,
+	CT_VGD,
+	CT_COUNT,
+};
+
+
 typedef struct _Connection Connection;
 struct _Connection {
-	char* name;
+	enum connection_type type;
 	int fd_in;
 	int fd_out;
 	char* buf;              /* Read/write buffer. */
@@ -64,13 +73,15 @@ struct _Connection {
 };
 
 
-void connection_init(Connection* cnct, char* name, int fd_in, int fd_out,
-		size_t buflen, enum process_level pl);
+void connection_init(Connection* cnct, enum connection_type type, int fd_in,
+		int fd_out, gchar* buf, gsize buflen, enum process_level pl);
 void connection_free(Connection* cnct);
 void prepend_holdover(Connection* b);
 void create_holdover(Connection* b, gboolean write_later);
 void eat_segment(Connection* b);
 void pass_segment(Connection* b);
+gchar* connection_type_str(enum connection_type type);
+
 
 G_END_DECLS
 

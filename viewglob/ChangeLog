@@ -1,3 +1,12 @@
+2005-03-24 13:56  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* vgseer.h: removed again
+	* hardened-io.c: cleanup
+	* vgd.c: consistent message logging
+	* vgseer/Makefile.am, children.c, children.h, cmdline.c, cmdline.h,
+	  connection.c, connection.h, sequences.c sequences.h, vgseer.c,:
+	  Smarter data passing, much fewer gotos, general cleanup.
+
 2005-03-23 20:21  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* shell.h: moved to common
@@ -5,7 +14,7 @@
 	* Makefile.am: debug compile flag added
 	* common/Makefile.am, param-io.c, param-io.h, vgd/Makefile.am,
 	  vgd.c, vgseer/Makefile.am, cmdline.c, sequences.c, sequences.h,
-	  vgseer.c:
+	  vgseer.c sequences.c, :
 	  Connecting vgd to vgseer.
 
 

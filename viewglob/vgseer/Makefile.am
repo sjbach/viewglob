@@ -11,5 +11,5 @@ vgseer_SOURCES = vgseer.c children.c cmdline.c sequences.c \
                $(COMMON)/param-io.c $(COMMON)/shell.c
 
 noinst_HEADERS = children.h cmdline.h sequences.h \
-                 tc_setraw.h actions.h connection.h vgseer.h
+                 tc_setraw.h actions.h connection.h
 

@@ -37,7 +37,8 @@ gint open_warning(gchar* file_name, gint flags, mode_t mode) {
 	gint fd;
 
 	if ((fd = open(file_name, flags, mode)) == -1)
-		g_warning("Could not open file \"%s\": %s", file_name, g_strerror(errno));
+		g_warning("Could not open file \"%s\": %s", file_name,
+				g_strerror(errno));
 
 	return fd;
 }
@@ -46,7 +47,8 @@ gint open_warning(gchar* file_name, gint flags, mode_t mode) {
 /* Attempt to close the given file.  Emit warning on failure. */
 void close_warning(gint fd, gchar* file_name) {
 	if (fd != -1 && close(fd) == -1)
-		g_warning("Could not close file \"%s\": %s", file_name, g_strerror(errno));
+		g_warning("Could not close file \"%s\": %s", file_name,
+				g_strerror(errno));
 }
 
 

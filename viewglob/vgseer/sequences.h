@@ -25,7 +25,8 @@
 #endif
 
 #include "common.h"
-#include "vgseer.h"
+#include "shell.h"
+#include "cmdline.h"
 #include "connection.h"
 
 G_BEGIN_DECLS
@@ -46,7 +47,7 @@ enum _MatchEffect {
 
 /* Sequence functions. */
 void  init_seqs(enum shell_type shell);
-void  check_seqs(Connection* b, struct user_shell* u);
+void  check_seqs(Connection* b, struct cmdline* cmd);
 void  enable_all_seqs(enum process_level pl);
 void  clear_seqs(enum process_level pl);
 

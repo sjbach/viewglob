@@ -28,15 +28,16 @@
 
 G_BEGIN_DECLS
 
-#define CMD_STEP_SIZE 512
 
 struct cmdline {
 	GString* data;
-//	gchar* command;
 	gint pos;
-//	gint length;
 	gboolean rebuilding;
+	gboolean expect_newline;
+
+	gchar* pwd;
 };
+
 
 /* For cmd_wipe_in_line() -- maintain order of enumeration */
 enum direction { D_RIGHT = 0, D_LEFT = 1, D_ALL = 2 };
@@ -49,11 +50,12 @@ gboolean cmd_whitespace_to_left(struct cmdline* cmd, gchar* holdover);
 gboolean cmd_whitespace_to_right(struct cmdline* cmd);
 
 gboolean cmd_overwrite_char(struct cmdline* cmd, gchar c,
-		gboolean preserve_cret);
+		gboolean preserve_CR);
 gboolean cmd_insert_chars(struct cmdline* cmd, gchar c, gint n);
 gboolean cmd_del_chars(struct cmdline* cmd, gint n);
 gboolean cmd_wipe_in_line(struct cmdline* cmd, enum direction dir);
-void     cmd_del_trailing_crets(struct cmdline* cmd);
+void     cmd_del_trailing_CRs(struct cmdline* cmd);
+
 
 G_END_DECLS
 
