@@ -40,7 +40,6 @@ struct pty_child {
 	struct args a;
 	pid_t pid;
 	int fd;
-	int transcript_fd;
 };
 
 

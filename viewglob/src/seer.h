@@ -35,7 +35,7 @@
 BEGIN_C_DECLS
 
 struct options {
-	char* shell_mode;
+	enum shell_type shell_type;
 	char* executable;
 	char* display;
 	char* config_file;
@@ -46,12 +46,15 @@ struct options {
 };
 
 
-/* Data structure for the shell that users use. */
+/* Data structure for the user's shell. */
 struct user_shell {
 	char* pwd;
 	struct cmdline cmd;
 	struct sequence_buff seqbuff;
 	struct pty_child s;
+
+	int shell_transcript_fd;
+	int term_transcript_fd;
 
 	enum process_level pl;
 	bool term_size_changed;

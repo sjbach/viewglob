@@ -18,12 +18,11 @@ else
 		export PROMPT="%{"$'\e[44;1;33m'"%}*%{"$'\e[0m'"%}${PROMPT}"
 	fi
 
-	# Can't deal with RPROMPT right now :-(
-	unset RPROMPT
-
 	# Adding semaphores to the ends of these variables.
 	export PROMPT="${PROMPT}%{"$'\e[0;30m'"%}%{"$'\e[0m'"%}%{"$'\e[1;37m'"%}%{"$'\e[0m'"%}"
-	export PS2="${PS2}%{"$'\e[0;34m'"%}%{"$'\e[0m'"%}%{"$'\e[0;31m'"%}%{"$'\e[0m'"%}"
+
+	RPROMPT="%{"$'\e[0;34m'"%}%{"$'\e[0m'"%}%{"$'\e[0;31m'"%}%{"$'\e[0m'"%}${RPROMPT}"
+	export RPROMPT="${RPROMPT}%{"$'\e[0;34m'"%}%{"$'\e[0m'"%}%{"$'\e[0;31m'"%}%{"$'\e[0m'"%}"
 
 	if typeset -f precmd >/dev/null; then
 		# The user already has a precmd function.  Gotta do some finagling.
@@ -55,4 +54,3 @@ fi
 unset VG_ASTERISK
 unset VG_SANDBOX
 unset VG_TEMP_FILE
-

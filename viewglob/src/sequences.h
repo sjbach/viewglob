@@ -38,23 +38,33 @@ enum _MatchEffect {
 	ME_CMD_REBUILD,
 	ME_PWD_CHANGED,
 	ME_EAT_STARTED,
-	ME_DUMMY };
+	ME_RPROMPT_STARTED,
+	ME_DUMMY,
+};
 
 /* Status of a match attempt. */
 typedef enum _MatchStatus MatchStatus;
 enum _MatchStatus {
 	MS_NO_MATCH = 0,
 	MS_IN_PROGRESS = 1,
-	MS_MATCH = 2 };
+	MS_MATCH = 2,
+};
 
-#define NUM_PROCESS_LEVELS 3
+/* Used in initialization of sequences. */
+enum shell_type {
+	ST_BASH,
+	ST_ZSH,
+};
+
 enum process_level {
 	PL_AT_PROMPT,      /* When user is typing away. */
 	PL_EXECUTING,      /* When a command is executing. */
-	PL_EATING };       /* When we're removing data before it gets to the terminal. */
+	PL_EATING,         /* When we're removing data before it gets to the terminal. */
+	PL_AT_RPROMPT,     /* When the zsh RPROMPT is being printed. */
+};
 
 /* Sequence functions. */
-void         init_seqs(void);
+void         init_seqs(enum shell_type shell);
 MatchStatus  check_seqs(enum process_level pl, char c, MatchEffect* effect);
 void         enable_all_seqs(enum process_level pl);
 void         clear_seqs(enum process_level pl);

@@ -35,6 +35,7 @@ struct cmdline {
 	char* command;
 	int pos;
 	int length;
+	bool rebuilding;
 };
 
 struct sequence_buff {

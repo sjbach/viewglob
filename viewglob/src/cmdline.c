@@ -149,6 +149,12 @@ bool cmd_overwrite_char(char c, bool preserve_cret) {
 
 /* Remove n chars from the working command line at u.cmd.pos. */
 bool cmd_del_chars(int n) {
+
+	if (u.cmd.pos + n > u.cmd.length) {
+		/* We've failed to keep up. */
+		return false;
+	}
+
 	memmove(u.cmd.command + u.cmd.pos, u.cmd.command + u.cmd.pos + n, u.cmd.length - (u.cmd.pos + n));
 	memset(u.cmd.command + u.cmd.length - n, '\0', n);
 	u.cmd.length -= n;
@@ -222,6 +228,11 @@ bool cmd_backspace(int n) {
 
 
 bool cmd_insert_chars(char c, int n) {
+	if (n < 0) {
+		viewglob_error("<0 in cmd_insert_chars");
+		return false;
+	}
+
 	memmove(u.cmd.command + u.cmd.pos + n, u.cmd.command + u.cmd.pos, u.cmd.length - u.cmd.pos);
 	memset(u.cmd.command + u.cmd.pos, c, n);
 	u.cmd.length += n;

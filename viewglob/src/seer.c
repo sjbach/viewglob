@@ -55,7 +55,6 @@ static bool scan_for_newline(const char* buff, size_t n);
 static bool process_input(char* buff, size_t* n);
 static bool match_loop(enum process_level pl);
 static bool eat(char* buff, size_t* n, size_t* start);
-static void analyze_effect(MatchEffect effect);
 
 static void send_sane_cmd(struct display* d);
 
@@ -83,7 +82,8 @@ int main(int argc, char* argv[]) {
 	set_program_name(argv[0]);
 
 	/* Initialize program options. */
-	opts.shell_mode = opts.executable = opts.display = NULL;
+	opts.shell_type = ST_BASH;
+	opts.executable = opts.display = NULL;
 	opts.config_file = opts.shell_out_file = opts.term_out_file = NULL;
 	opts.init_loc = opts.expand_command = NULL;
 
@@ -104,12 +104,12 @@ int main(int argc, char* argv[]) {
 	u.s.name = x.s.name = opts.executable;
 
 	/* Get ready for the user shell child fork. */
-	if (strcmp(opts.shell_mode, "bash") == 0) {
+	if (opts.shell_type == ST_BASH) {
 		/* Bash is simple. */
 		args_add(&(u.s.a), "--init-file");
 		args_add(&(u.s.a), opts.init_loc);
 	}
-	else if (strcmp(opts.shell_mode, "zsh") == 0) {
+	else if (opts.shell_type == ST_ZSH) {
 		/* Zsh requires the init file be named ".zshrc", and its location determined
 		   by the ZDOTDIR environment variable. */
 		char* zdotdir = XMALLOC(char, strlen("ZDOTDIR=") + strlen(opts.init_loc) + 1);
@@ -130,11 +130,11 @@ int main(int argc, char* argv[]) {
 	}
 
 	/* Open up the log files, if possible. */
-	u.s.transcript_fd = open_warning(opts.shell_out_file, O_CREAT | O_WRONLY | O_TRUNC, PERM_FILE);
-	if (u.s.transcript_fd == -1)
+	u.shell_transcript_fd = open_warning(opts.shell_out_file, O_CREAT | O_WRONLY | O_TRUNC, PERM_FILE);
+	if (u.shell_transcript_fd == -1)
 		XFREE(opts.shell_out_file);
-	x.s.transcript_fd = open_warning(opts.term_out_file, O_CREAT |O_WRONLY | O_TRUNC, PERM_FILE);
-	if (x.s.transcript_fd == -1)
+	u.term_transcript_fd = open_warning(opts.term_out_file, O_CREAT |O_WRONLY | O_TRUNC, PERM_FILE);
+	if (u.term_transcript_fd == -1)
 		XFREE(opts.term_out_file);
 
 	/* Setup a shell for the user. */
@@ -208,8 +208,8 @@ int main(int argc, char* argv[]) {
 #endif
 
 done:
-	close_warning(x.s.transcript_fd, opts.term_out_file);
-	close_warning(u.s.transcript_fd, opts.shell_out_file);
+	close_warning(u.term_transcript_fd, opts.term_out_file);
+	close_warning(u.shell_transcript_fd, opts.shell_out_file);
 	ok &= display_terminate(&disp);
 	ok &= pty_child_terminate(&(x.s));
 	ok &= pty_child_terminate(&(u.s));
@@ -238,9 +238,12 @@ static void parse_args(int argc, char** argv) {
 
 			case 'c':
 				/* Set the shell mode. */
-				XFREE(opts.shell_mode);
-				opts.shell_mode = XMALLOC(char, strlen(optarg) + 1);
-				strcpy(opts.shell_mode, optarg);
+				if (strcmp(optarg, "bash") == 0)
+					opts.shell_type = ST_BASH;
+				else if (strcmp(optarg, "zsh") == 0)
+					opts.shell_type = ST_ZSH;
+				else
+					viewglob_fatal("Unknown shell mode");
 				break;
 
 			case 'd':
@@ -315,8 +318,6 @@ static void parse_args(int argc, char** argv) {
 
 	if (!opts.display)
 		viewglob_fatal("No display program specified");
-	else if (!opts.shell_mode)
-		viewglob_fatal("No shell mode specified");
 	else if (!opts.executable)
 		viewglob_fatal("No shell executable specified");
 	else if (!opts.init_loc)
@@ -348,7 +349,7 @@ static bool main_loop(struct display* disp) {
 	}
 
 	/* Initialize the sequences. */
-	init_seqs();
+	init_seqs(opts.shell_type);
 
 	while (in_loop) {
 
@@ -466,8 +467,7 @@ static bool user_activity(void) {
 			ok = false;
 			goto done;
 		}
-		// FIXME this should actually be aprt of u, not x.
-		if (x.s.transcript_fd != -1 && !hardened_write(x.s.transcript_fd, buff, nread))
+		if (u.term_transcript_fd != -1 && !hardened_write(u.term_transcript_fd, buff, nread))
 			viewglob_warning("Could not write term transcript");
 
 	}
@@ -506,7 +506,7 @@ static bool user_activity(void) {
 			ok = false;
 			goto done;
 		}
-		if (u.s.transcript_fd != -1 && !hardened_write(u.s.transcript_fd, buff, nread))
+		if (u.shell_transcript_fd != -1 && !hardened_write(u.shell_transcript_fd, buff, nread))
 			viewglob_warning("Could not write shell transcript");
 	}
 
@@ -599,7 +599,6 @@ static bool eat(char* buff, size_t* n, size_t* start) {
 			*n -= (i - 1) - *start;
 			*start = i;
 			u.pl = PL_EXECUTING;
-			seqbuff_dequeue(u.seqbuff.pos, false);
 
 			return true;
 		}
@@ -652,8 +651,6 @@ static bool match_loop(enum process_level pl) {
 			/* Pop off the matched sequence, and start over with any remaining characters.
 			   Do not copy the matched sequence to u.cmd. */
 			clear_seqs(pl);
-			analyze_effect(effect);
-			seqbuff_dequeue(u.seqbuff.pos, false);
 			break;
 		}
 	}
@@ -661,62 +658,6 @@ static bool match_loop(enum process_level pl) {
 	return is_done;
 }
 
-
-/* React (or not) on the instance of a sequence match. */
-/* FIXME probably should return a bool for graceful crash. */
-static void analyze_effect(MatchEffect effect) {
-	static bool rebuilding = false;     /* This variable does nothing. */
-
-	switch (effect) {
-
-		case ME_ERROR:
-			DEBUG((df, "**ERROR**\n"));
-			break;
-
-		case ME_NO_EFFECT:
-			DEBUG((df, "**NO_EFFECT**\n"));
-			break;
-
-		case ME_CMD_EXECUTED:
-			DEBUG((df, "**CMD_EXECUTED**\n"));
-			cmd_clear();
-			u.pl = PL_EXECUTING;
-			break;
-
-		case ME_CMD_STARTED:
-			DEBUG((df, "**CMD_STARTED**\n"));
-			if (rebuilding)
-				rebuilding = false;
-			else
-				cmd_wipe_in_line(D_ALL);
-			u.pl = PL_AT_PROMPT;
-			break;
-
-		case ME_CMD_REBUILD:
-			DEBUG((df, "**CMD_REBUILD**\n"));
-			rebuilding = true;
-			u.pl = PL_EXECUTING;
-			break;
-
-		case ME_PWD_CHANGED:
-			/* Send the new current directory. */
-			action_queue(A_SEND_PWD);
-			break;
-
-		case ME_EAT_STARTED:
-			u.pl = PL_EATING;
-			break;
-
-		case ME_DUMMY:
-			DEBUG((df, "**DUMMY**\n"));
-			break;
-
-		default:
-			/* Error -- this shouldn't happen unless I've screwed up */
-			viewglob_fatal("Received unexpected match result");
-			break;
-		}
-}
 
 /* This function writes out stuff that looks like this:
    cmd:<command>
@@ -785,6 +726,7 @@ enum action action_queue(enum action o) {
 	switch (o) {
 
 		case (A_SEND_CMD):
+			DEBUG((df, "send_cmd_here"));
 			send_cmd = true;
 			break;
 
@@ -828,8 +770,8 @@ void sigwinch_handler(int signum) {
 
 
 void sigterm_handler(int signum) {
-	close_warning(x.s.transcript_fd, opts.term_out_file);
-	close_warning(u.s.transcript_fd, opts.shell_out_file);
+	close_warning(u.term_transcript_fd, opts.term_out_file);
+	close_warning(u.shell_transcript_fd, opts.shell_out_file);
 	(void) display_terminate(&disp);
 	(void) pty_child_terminate(&(x.s));
 	(void) pty_child_terminate(&(u.s));
