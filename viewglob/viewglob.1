@@ -1,4 +1,4 @@
-.TH VIEWGLOB 1 "20 September 2004"
+.TH VIEWGLOB 1 "28 September 2004"
 .SH NAME
 viewglob, gviewglob \- display shell expansion and globbing dynamically
 .SH SYNOPSIS
@@ -120,7 +120,7 @@ If you are executing another program in the terminal (say a text editor or somet
 .PD 0
 .TP 2
 -
-The text is inserted as-is, without any escaping or spacing.
+The text is inserted as\-is, without any escaping or spacing.
 .PD
 .RE
 .LP
@@ -216,9 +216,9 @@ The location of the default configuration file.
 .PP
 Command line tracking seems to be pretty good for general use, but is far from perfect.
 .PP
-Resizing the terminal window after you've typed a multi\-line command will often cause viewglob's command line to become temporarily out of sync with the true command line, though it tries really hard to keep up.  No big deal if this happens \-\- viewglob should sync up at the start of the next command.
+Resizing the terminal window after you've typed a multi\-line command will often cause viewglob's command line to become temporarily out of sync with the true command line, though it tries really hard to keep up.  No big deal if this happens \-\- viewglob should be in sync by the start of the next command.
 .PP
-Ctrl\-C may not work in terminals with FreeBSD.
+Ctrl\-C does not work in terminals under FreeBSD.  I've spent a lot of time on this issue to no avail \-\- any terminal I/O savvy BSD users have some insight?
 .PP
 And there are certainly others.  If you spot any bugs (and they aren't explained by \fBNOTES\fP above), send me a message, okay?  Ideas and code contributions are also very welcome.
 .SH AUTHORS

@@ -1,6 +1,25 @@
+New in 1.0, released 2004-09-28:
+	Features:
+	  * Added functionality to insert file/directory name/path into
+	    terminal upon double click and shift-double click.
+	  * Added "smart-insert" functionality and program flag.
+	  * Keystrokes typed into the display are written to the terminal.
+	  * Display titlebar shows the path of the current directory.
+	
+	Bug fixes:
+	  * Long-standing display resize issue fixed (window no longer
+	    sometimes enforces a ridiculous minimum width).
+	  * No more zombie process when the display is toggled off.
+	  * No more lingering fifos after quitting the program.
+	  * viewglob will no longer deadlock if used extensively for a long
+	    period of time.
+	  * BSD: viewglob no longer crashes when toggling the display.
+	  * BSD: (long-standing issue): both shells are now terminated
+	    correctly upon program exit.
+
 New in 0.9.1, released 2004-09-20:
-	* The display can now be toggled on and off from the terminal (and from
-	  the display).  Idea contributed by Andy Bastien.
+	* The display can now be toggled on and off from the terminal (and
+	  from the display).  Idea contributed by Andy Bastien.
 	* viewglob can be disabled from the terminal (leaving shell intact).
 	* Fixed some command line tracking issues introduced in 0.9.
 	* Fixed the "Show Hidden" context menu functionality.

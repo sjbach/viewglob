@@ -4,9 +4,9 @@
 .so giftcurs.tmac
 .
 .TL
-viewglob 0.9.1 README
+viewglob 1.0 README
 .br
-September 20, 2004
+September 28, 2004
 .AU
 Stephen Bach <sjbach@users.sourceforge.net>
 .
@@ -20,7 +20,9 @@ A tool that sits as a layer between the shell and X terminal, keeping track of t
 A graphical display which shows the layouts of directories referenced on the command line (including pwd).
 .RE
 .LP
-The display also shows the results of file globs and expansions as they are typed (hence the name), highlighting selected files and potential name completions.
+The display reveals the results of file globs and expansions as they are typed (hence the name), highlighting selected files and potential name completions.
+.LP
+It can also be used as a surrogate terminal, where keystrokes typed in the display are passed to the shell.  Files and directories can be double-clicked to insert their names and/or paths into the terminal.
 .LP
 The website is here:
 .IP
@@ -39,31 +41,15 @@ Feedback is welcome!
 .
 .Sh NEW IN THIS RELEASE
 .LP
-First of all, if you've got a previous installation of viewglob that's not from a package manager (i.e. you just ran make && make install), you should remove it before installing this version.  I was incorrectly installing some binaries to .../share/viewglob instead of .../lib/viewglob, which goes against the Filesystem Hierarchy Standard.  If you've still got the sources to the old install, a make uninstall should do the job.  If not, the directory which you want to remove is, by default, /usr/local/share/viewglob.
+The biggest change is the addition of file name insert functionality.  If you double click a file in the display (or the directory header), its name will be passed as text to the terminal.  Holding shift will send the full path to the file.
 .LP
-The display can now be toggled on and off with the sequence Ctrl-G <SPACE> (or Ctrl-G Ctrl-<SPACE>).  If the display is closed manually, viewglob now interprets it as toggling off, and doesn't disable itself.  A toggled-off display still follows the state of the shell (i.e. when it's toggled on it'll be at the right place).
+By default viewglob is in "smart insert" mode.  There's more info about that in the man page.
 .LP
-To disable viewglob (which you used to be able to do by closing the display), you can use the sequence Ctrl-G Q (but not Ctrl-G Ctrl-Q, because that's too easy to type accidentally).  Disabling a viewglob shell is non-recoverable.
+This release also allows you to type into the display and have the keystrokes passed to the terminal.  This works well in my testing, but let me know if you're finding that the display doesn't pass something along correctly.  Note that navigation keys are captured by the display instead of being passed on.
 .LP
-When you might want to toggle off the display (C-g <SPACE>):
-.RS
-.IP - 3n
-You're dealing with a directory or a series of directories that have a lot of files, and the display's refresh time is slowing you down.
-.IP -
-You need the extra memory (the display's memory footprint is sometimes not as small as it probably should be); when the display is "toggled off", all of its memory is freed.
-.IP -
-It's just in the way.
-.RE
+Two large issues with FreeBSD (and assumedly the other BSDs as well) are also fixed.  I've been unable to track down the problem with Ctrl-C and SIGINT, though; if you are a terminal I/O savvy BSD user willing to help, please get in touch with me.
 .LP
-When you might want to disable viewglob (C-g q):
-.RS
-.IP - 3n
-You just want a regular shell, but you want to keep the current environment.
-.IP -
-Maybe you're compiling in the background, and your viewglob shell has begun to stutter.
-.RE
-.LP
-See NEWS for the full list of changes.
+See NEWS for the full list of important changes.
 .
 .Sh INSTALLATION
 .LP
