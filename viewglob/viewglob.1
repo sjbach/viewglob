@@ -45,6 +45,9 @@ Don't show file type icons in the display.
 .B \-t, \-\-disable\-star
 Disable the asterisk icon at the beginning of your shell prompt when in a viewglob\-supervised shell.
 .TP
+.B \-m, \-\-disable\-smart\-insert
+File and directory names from the display are always inserted to the terminal escaped and without space padding.
+.TP
 .B \-w, \-\-show\-hidden
 Never hide hidden files (ha).
 .TP
@@ -60,12 +63,14 @@ Show the version of the program.
 .SH USAGE
 When you start viewglob, you'll be presented with your familiar prompt and a new window showing the file layout of the current directory.  As you begin to type a command, the display window will highlight to show potential filename completions (dull highlight) and file selections and globs/expansions (vibrant highlight).  Also, as you reference other directories (e.g. \fI../\fP or \fI/usr/local/\fP), their layouts will appear as well.
 .PP
-If the number of files in a shown directory is above the given max, viewglob will truncate the results (with an indicator).  You can force viewglob to display the whole directory by right\-clicking anywhere on the listing for that directory and choosing "Show all files".  By default hidden files are not shown, but you can view them using the same mechanism.
-.PP
 At the bottom of the display window is a textbox with your command line.  This is what viewglob is actually globbing on; if you find the display is not showing what you expected, check to make sure the display's command line is the same as the one in the shell, as they can be different (see \fBNOTES\fP below).
 .PP
-You can navigate the display from the terminal by pressing C\-g (Ctrl\-G) followed by a direction character.  They are:
+With a few exceptions, any text you type into the display is passed to the terminal as input.  So if you wished, you could use the display as your interface to the shell \-\- this actually works quite well if you're doing a lot of file management.  Arrow keys, Page Up, Page Down, Home, and End are interpreted by the display and not passed to the terminal.
 .PP
+\fBNavigation\fP
+.RS 4
+You can navigate the display from the terminal by pressing C\-g (Ctrl\-G) followed by a direction character.  They are:
+.LP
 .RS
 .PD 0
 .TP 16n
@@ -86,8 +91,48 @@ Toggle on/off:
 .PD
 .RE
 .LP
-Their C\- counterparts also work.  To enter a real C\-g to the shell, type it twice.  If the display is closed through the window manager (e.g. you clicked the little "x" icon), it's only been toggled off.  To get it back, type C-g <SPACE> in the terminal.  To disable viewglob functionality (i.e. close the display and stop tracking the command line, etc.), you can type C-g q.  Once viewglob has been disabled in this manner, it can't be re-enabled without exiting.
+Their C\- counterparts also work.  To enter a real C\-g to the shell, type it twice.  If the display is closed through the window manager (e.g. you clicked the little "x" icon), it's only been toggled off.  To get it back, type C\-g <SPACE> in the terminal.
+.LP
+To disable viewglob functionality (i.e. close the display and stop tracking the command line, etc.), you can type C\-g q.  Once viewglob has been disabled in this manner, it can't be re\-enabled without exiting.
+.RE
 .PP
+\fBFile/Directory Name Insertion\fP
+.RS 4
+The name of any file or directory can be passed to the terminal by double left\-clicking.  If shift is held, the full path of the file or directory is passed.  By default viewglob is in "\fIsmart\-insert\fP" mode, which means it inserts the names or paths the way it thinks you want to (but may be wrong sometimes \-\- it's "smart" as defined by Microsoft).  \fISmart\-insert\fP works as follows:
+.LP
+.RS 4
+If you are currently at the command line (i.e. the shell has control of the terminal):
+.PD 0
+.TP 2
+-
+Special characters (*, ?, !, etc.) are escaped.
+.TP
+-
+If there is no whitespace to the left of the cursor, a space is prepended to the inserted text.
+.TP
+-
+If there is no whitespace to the right of the cursor, a space is appended to the inserted text.
+.PD
+.RE
+.LP
+.RS 4
+If you are executing another program in the terminal (say a text editor or something):
+.PD 0
+.TP 2
+-
+The text is inserted as-is, without any escaping or spacing.
+.PD
+.RE
+.LP
+If \fIsmart\-insert\fP has been disabled with the \-\-disable\-smart\-insert flag, the file/directory names/paths are always inserted escaped but without spacing.
+.LP
+Note that insertion of file names works pretty much the same as just pasting text into the terminal \-\- it's interpreted only as a series of keystrokes.  This means it's your responsibility to be sure that the shell is in a state cooperative to the reception of text.  For example, if you use vi\-mode in your shell, and you insert a file name while you're in command mode, the shell will receive the data as a series of commands \- probably not what you wanted to do.
+.RE
+.PP
+\fBDisplay Peculiarities\fP
+.RS 4
+If the number of files in a shown directory is above the given max, viewglob will truncate the results (with an indicator).  You can force viewglob to display the contents of the whole directory by right\-clicking the heading for the listing and choosing "Show all files".  By default hidden files are not shown, but you can view them using the same mechanism.
+.LP
 Directories referenced in several different ways will always be interpreted as the same directory if they're on the same device and have the same inode (i.e. they are indeed the same).  Therefore these three names are equivalent to viewglob (and a trailing slash does not differentiate a directory from one without a trailing slash):
 .IP
 /usr/local/lib/
@@ -95,10 +140,11 @@ Directories referenced in several different ways will always be interpreted as t
 /usr/local/lib/./
 .br
 /usr/local/lib/../lib/
-.PP
+.LP
 Note however that the name of the first reference will be the name that appears in the viewglob display.  So if you refer to files in /usr/local/../local/lib and then /usr/local/lib on the same command line, viewglob understands they are the same directory, but will use the less practical name /usr/local/../local/lib, since it appears first (and is just as valid as /usr/local/lib)
-.PP
+.LP
 Since people generally don't type such things as /usr/local/../local/lib, this shouldn't be an issue.
+.RE
 
 .SH FILES
 .I ~/.viewglobrc
@@ -132,7 +178,7 @@ The configuration file has a lower priority than options specified on the comman
 .SH NOTES
 First of all, when I say below "such\-and\-such feature of bash/zsh doesn't work in viewglob", I just mean that the viewglob display will not show expansion information for that feature.  The functionality of both shells is UNCHANGED by running viewglob.  Anyhow.
 .PP
-Unfortunately, I haven't found a good way to predict history expansion (stuff involving the special char "!").  If this makes you sad, I feel your pain, as I find !$ very useful.  If you've got any ideas, I'd like to hear from you.  For now, the viewglob display will pretend any construction starting with an unescaped ! does not exist.  Exceptions: a ! by itself, or the !(foo) pattern match.
+Unfortunately, I haven't found a good way to predict history expansion (stuff involving the special char "!").  The viewglob display will pretend any construction starting with an unescaped ! does not exist.  Exceptions: a ! by itself, or the !(foo) pattern match.
 .PP
 A viewglob'd shell session will not extend to subshells.  That is, if while in a viewglob session you run, say, "\fIbash\fP" or "\fIsu\fP", viewglob will probably be temporarily disabled until you exit the new shell.  This is a consequence of viewglob's implementation, but I'd probably keep this behaviour even if I could get around it.
 .PP
@@ -152,7 +198,7 @@ Only the first command in a compound command will be interpreted by viewglob.  F
 .IP
 $ mv *.jp{e,}g ~/photos/ && rm *
 .PP
-viewglob will stop listening when it sees "&&", and the display will only register *.jp{e,}g.  This isn't an implementation problem \- it's just that showing globbing for the subsequence commands could be deceptive, as the filesystem could be changed by executing the first command (as it is in this case).
+viewglob will stop listening when it sees "&&", and the display will only register *.jp{e,}g.  This isn't an implementation problem \- it's just that showing globbing for the subsequent commands could be deceptive, as the filesystem could be changed by executing the first command (as it is in this case).
 .PP
 Command substitution (stuff with backticks (`) or $(command)) is ignored by viewglob for the reason given above.  Works fine in your shell though.
 .PP
@@ -167,9 +213,10 @@ For more information, please visit:
 .SM HOME
 The location of the default configuration file.
 .SH BUGS
-Sometimes the heading labels in the display enforce a minimum width (which I find annoying), sometimes they don't.  I haven't yet figured out why, but I think I'm getting close to tracking it down.
 .PP
-Resizing the terminal window after you've typed a multi\-line command will often cause viewglob's command line to become temporarily out of sync with the true command line, though it tries really hard to keep up.  No big deal if this happens \-\- viewglob will catch up at the start of the next command.
+Command line tracking seems to be pretty good for general use, but is far from perfect.
+.PP
+Resizing the terminal window after you've typed a multi\-line command will often cause viewglob's command line to become temporarily out of sync with the true command line, though it tries really hard to keep up.  No big deal if this happens \-\- viewglob should sync up at the start of the next command.
 .PP
 Ctrl\-C may not work in terminals with FreeBSD.
 .PP

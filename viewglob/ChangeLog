@@ -1,3 +1,7 @@
+2004-09-26 18:21  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* viewglob.1: updated with new features
+
 2004-09-26 16:47  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* gviewglob.c: don't send navigation keys to terminal.
