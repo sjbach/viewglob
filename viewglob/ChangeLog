@@ -1,3 +1,7 @@
+2004-08-19 22:28  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* glob-expand.c: fixed bug where directories at root had double leading slashes.
+
 2004-08-19 22:06  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* fitem.c, fitem.h: incorporated into file_box.{c,h} and removed.
