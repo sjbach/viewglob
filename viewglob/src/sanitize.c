@@ -160,7 +160,9 @@ char* make_sane_cmd(char* full_command, int length) {
 			case ('\t'):
 				if (s.last_char_exclamation)
 					s.last_char_exclamation = false;
-				if (s.skip_word) {         /* Only ' ' and \t can turn off skip_word. */
+				else if (s.last_char_backslash)
+					s.last_char_backslash = false;
+				else if (s.skip_word) {         /* Only ' ' and \t can turn off skip_word. */
 					s.skip_word = false;
 				}
 				sane_add_char(&s, c);

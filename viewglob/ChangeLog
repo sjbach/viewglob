@@ -1,6 +1,8 @@
 2004-08-10 18:10  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* seer.c, seer.h, misc.c: graceful exit on SIGTERM.
+	* sanitize.c: fixed processing error with \ and ' '.
+	* gviewglob.c: use GtkEntry instead of GtkTextView for cmdline widget to prevent forced window resizing.
 
 2004-08-08 13:56  Stephen Bach <sjbach@users.sourceforge.net>
 

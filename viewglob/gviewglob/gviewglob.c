@@ -288,6 +288,14 @@ static void process_data(const char* buff, gsize bytes, Exhibit* e) {
 	gsize pos = 0;
 	DEBUG((df, "&&"));
 
+	DEBUG((df, "((("));
+	for (pos = 0; pos < bytes; pos++) {
+		DEBUG((df, "%c", buff[pos]));
+
+	}
+	pos = 0;
+	DEBUG((df, ")))"));
+
 	while (pos < bytes) {
 
 		/* Skip the next character (the delimiter). */
@@ -318,8 +326,9 @@ static void process_data(const char* buff, gsize bytes, Exhibit* e) {
 			case RS_CMD:
 				string = read_string(buff, &pos, bytes, '\n', &completed);
 				if (completed) {
+					/* Set the cmdline text. */
 					DEBUG((df, "cmd: %s\n", string->str));
-					gtk_text_buffer_set_text(gtk_text_view_get_buffer(GTK_TEXT_VIEW(e->cmdline)), string->str, string->len);
+					gtk_entry_set_text(GTK_ENTRY(e->cmdline), string->str);
 					rs = RS_DONE;
 					advance = TRUE;
 					g_string_free(string, TRUE);
@@ -375,7 +384,7 @@ static void process_data(const char* buff, gsize bytes, Exhibit* e) {
 					else {
 						/* It's a new DListing. */
 						/* DEBUG((df, "<new_dir>")); */
-						DEBUG((df, "(copt: %d)", e->optimal_width));
+						//DEBUG((df, "(copt: %d)", e->optimal_width));
 						dl = dlisting_new(string, dir_rank, selected_count, total_count, hidden_count, e->optimal_width);
 						e->dl_slist = g_slist_append(e->dl_slist, dl);
 					}
@@ -450,7 +459,7 @@ static void process_data(const char* buff, gsize bytes, Exhibit* e) {
 						}
 					}
 					else {
-						DEBUG((df, "here1: %s\n", string->str));
+						//DEBUG((df, "here1: %s\n", string->str));
 						/* It's a new FItem. */
 						gboolean hidden = g_str_has_prefix(string->str, ".");    /* Check if it's a hidden file. */
 
@@ -458,13 +467,13 @@ static void process_data(const char* buff, gsize bytes, Exhibit* e) {
 						if ( (v.file_display_limit == 0 || dl->n_v_fis < v.file_display_limit) &&          /* Check if we're under the limit. */
 						     ((hidden && (v.show_hidden_files || dl->force_show_hidden)) || !hidden)) {   /* Check if we should display it. */
 							/* We're good to go.  Build the widgets. */
-						DEBUG((df, "here2\n"));
+						//DEBUG((df, "here2\n"));
 							fi = fitem_new(string, state, type, TRUE);
 							dl->n_v_fis++;
 							dl->update_file_table = TRUE;
 						}
 						else {
-						DEBUG((df, "here3\n"));
+						//DEBUG((df, "here3\n"));
 							/* Don't build the widgets. */
 							fi = fitem_new(string, state, type, FALSE);
 						}
@@ -712,8 +721,7 @@ int main(int argc, char *argv[]) {
 	GtkWidget* vbox;
 	GtkWidget* scrolled_window;
 
-	GtkWidget* command_line_text_view;
-	GtkTextBuffer* command_line_buffer;
+	GtkWidget* command_line_entry;
 
 	Exhibit	e;        /* This is pretty central -- it gets passed around a lot. */
 	e.dl_slist = NULL;
@@ -754,14 +762,12 @@ int main(int argc, char *argv[]) {
 	gtk_widget_show(scrolled_window);
 
 	/* Command line text widget. */
-	command_line_text_view = gtk_text_view_new();
-	command_line_buffer = gtk_text_buffer_new(NULL);
-	gtk_text_view_set_buffer(GTK_TEXT_VIEW(command_line_text_view), command_line_buffer);
-	gtk_text_view_set_editable(GTK_TEXT_VIEW(command_line_text_view), FALSE);
-	gtk_text_view_set_cursor_visible(GTK_TEXT_VIEW(command_line_text_view), FALSE);
-	gtk_box_pack_start(GTK_BOX(vbox), command_line_text_view, FALSE, FALSE, 0);
-	gtk_widget_show(command_line_text_view);
-	e.cmdline = command_line_text_view;
+	command_line_entry = gtk_entry_new();
+	gtk_editable_set_editable(GTK_EDITABLE(command_line_entry), FALSE);
+	gtk_widget_set_state(command_line_entry, GTK_STATE_INSENSITIVE);
+	gtk_box_pack_start(GTK_BOX(vbox), command_line_entry, FALSE, FALSE, 0);
+	gtk_widget_show(command_line_entry);
+	e.cmdline = command_line_entry;
 
 	/* The DListing separator looks better if it's filled instead of sunken, so use the text color.
 	   This probably isn't the best way to do this. */

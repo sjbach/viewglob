@@ -140,7 +140,7 @@ bool display_terminate(struct display* d) {
 	}
 
 	/* Remove the fifo. */
-	if (d->fifo_name != NULL) {
+	if (d->fifo_name) {
 		if ( unlink(d->fifo_name) == -1 ) {
 			if (errno != ENOENT) {
 				viewglob_warning("Could not delete fifo");
