@@ -26,6 +26,7 @@ vg_usage() {
 usage: $SCRIPT_NAME [-d <display program>] [-f <config file>]
                    [-o <shell output file>] [-O <terminal output file]
                    [-p <name|inode>] [-s <ls|windows>] [-n <##>]
+                   [-r <descending|ascending|ascending-pwd-first>]
                    [-b] [-t] [-m] [-w] [ -e <executable>]
 -c, --shell-mode            Shell to use (bash or zsh).
 -d, --display               Path to a display program to use instead of the
@@ -36,6 +37,7 @@ usage: $SCRIPT_NAME [-d <display program>] [-f <config file>]
 -O, --term-output           Output a transcript of the terminal's input to given
                             file (i.e. the stuff you type into the shell).
 -s, --sort-style            File sorting style.
+-r, --dir-order             Order in which to list directories in the display.
 -n, --show-max              Maximum number of files to show per directory
                             (you can still force show if max is reached).
 -b, --disable-icons         Don't show file/directory icons in display.
@@ -107,6 +109,14 @@ vg_test_sort_style() {
 	fi
 }
 
+vg_test_dir_order() {
+	if [ "$1" != descending ] && \
+	   [ "$1" != ascending ] && \
+	   [ "$1" != ascending-pwd-first ];
+		then vg_error "Invalid directory ordering \"$1\"" 1
+	fi
+}
+
 vg_test_show_max() {
 	if [[ "$1" != *([0-9]) ]]
 		then vg_error "Argument to show-max must be a real number" 1
@@ -132,7 +142,7 @@ export VG_ASTERISK=yep
 . $VG_DIR/getopt.sh
 
 # Parse the options.
-while getoptex "b; c: e: d: f: m; n: o: O: s: t; w; h; v; V; shell-mode: executable: display: config-file: shell-output: show-hidden; show-max: sort-style: term-output: disable-star; disable-icons; disable-smart-insert; help; version;" "$@"
+while getoptex "b; c: e: d: f: m; n: o: O: r: s: t; w; h; v; V; shell-mode: executable: display: config-file: shell-output: show-hidden; show-max: sort-style: dir-order: term-output: disable-star; disable-icons; disable-smart-insert; help; version;" "$@"
 	do case "$OPTOPT" in
 
 		b|disable-icons)
@@ -179,6 +189,11 @@ while getoptex "b; c: e: d: f: m; n: o: O: s: t; w; h; v; V; shell-mode: executa
 			VG_SORT_STYLE=$OPTARG
 			;;
 
+		r|dir-order)
+			vg_test_dir_order "$OPTARG"
+			VG_DIR_ORDER=$OPTARG
+			;;
+
 		t|disable-star)
 			VG_ASTERISK=nope
 			;;
@@ -214,13 +229,16 @@ if [ -r "$VG_CONFIG_FILE" ]; then
 				# Ignore comments.
 				;;
 			shell-mode)
-				[[ -z "$VG_SHELL_MODE" ]] && vg_test_shell_mode "$arg" && VG_SHELL_MODE="$arg"
+				[[ -z "$VG_SHELL_MODE" ]] && vg_test_shell_mode "$arg" && \
+					VG_SHELL_MODE="$arg"
 				;;
 			display)
-				[[ -z "$VG_DISPLAY" ]] && vg_test_display "$arg" && VG_DISPLAY="$arg"
+				[[ -z "$VG_DISPLAY" ]] && vg_test_display "$arg" && \
+					VG_DISPLAY="$arg"
 				;;
 			executable)
-				[[ -z "$VG_EXECUTABLE" ]] && vg_test_executable "$arg" && VG_EXECUTABLE="$arg"
+				[[ -z "$VG_EXECUTABLE" ]] && vg_test_executable "$arg" && \
+					VG_EXECUTABLE="$arg"
 				;;
 			disable-icons)
 				VG_DISPLAY_OPTS="${VG_DISPLAY_OPTS} -b"
@@ -235,14 +253,20 @@ if [ -r "$VG_CONFIG_FILE" ]; then
 				# Do nothing -- this is for compatibility with old config files.
 				;;
 			show-max)
-				[[ -z "$VG_SHOW_MAX" ]] && vg_test_show_max "$arg" && VG_SHOW_MAX=$arg
+				[[ -z "$VG_SHOW_MAX" ]] && vg_test_show_max "$arg" && \
+					VG_SHOW_MAX=$arg
 				;;
 			show-hidden)
 				VG_DISPLAY_OPTS="${VG_DISPLAY_OPTS} -w"
 				;;
 			sort-style)
 				[ "$arg" == windows ] && arg="win"
-				[[ -z "$VG_SORT_STYLE" ]] && vg_test_sort_style "$arg" && VG_SORT_STYLE=$arg
+				[[ -z "$VG_SORT_STYLE" ]] && vg_test_sort_style "$arg" && \
+					VG_SORT_STYLE=$arg
+				;;
+			dir-order)
+				[[ -z "$VG_DIR_ORDER" ]] && vg_test_dir_order "$arg" && \
+					VG_DIR_ORDER=$arg
 				;;
 			*)
 				if [[ "$opt" ]]
@@ -266,6 +290,7 @@ fi
 [[ -z "$VG_DISPLAY" ]] && VG_DISPLAY="$VG_DIR/gviewglob"
 [[ -z "$VG_SHOW_MAX" ]] && VG_SHOW_MAX=500
 [[ -z "$VG_SORT_STYLE" ]] && VG_SORT_STYLE=ls
+[[ -z "$VG_DIR_ORDER" ]] && VG_DIR_ORDER=descending
 
 if [[ "$VG_SHELL_MODE" = bash ]]; then
 	# The bash initialization requires a file.
@@ -275,6 +300,17 @@ else
 	VG_SHELL_INIT="$VG_DIR"
 fi
 
+# The glob-expand flags are not reprocessed by seer.
+VG_EXPAND_COMMAND="$VG_DIR/glob-expand"
+if [[ "$VG_DIR_ORDER" = descending ]]
+	then VG_EXPAND_COMMAND="$VG_EXPAND_COMMAND -d"
+elif [[ "$VG_DIR_ORDER" = ascending ]]
+	then VG_EXPAND_COMMAND="$VG_EXPAND_COMMAND -a"
+elif [[ "$VG_DIR_ORDER" = ascending-pwd-first ]]
+	then VG_EXPAND_COMMAND="$VG_EXPAND_COMMAND -p"
+fi
+VG_EXPAND_COMMAND="$VG_EXPAND_COMMAND --"
+
 # Exec seer.
 exec "$VG_DIR"/seer -c "$VG_SHELL_MODE" -e "$VG_EXECUTABLE"     \
                     -f "$VG_CONFIG_FILE"                        \
@@ -282,5 +318,5 @@ exec "$VG_DIR"/seer -c "$VG_SHELL_MODE" -e "$VG_EXECUTABLE"     \
                     -d "$VG_DISPLAY" $VG_DISPLAY_OPTS           \
                     -n "$VG_SHOW_MAX" -s "$VG_SORT_STYLE"       \
                     -i "$VG_SHELL_INIT"                         \
-                    -x "$VG_DIR/glob-expand --"
+                    -x "$VG_EXPAND_COMMAND"
 

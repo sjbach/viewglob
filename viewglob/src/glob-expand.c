@@ -46,8 +46,11 @@ static int   parse_args(int argc, char** argv);
 static void  report_version(void);
 static void  compile_data(int, char**);
 static void  report(void);
+static void  print_dir(Directory* dir);
 static void  initiate(dev_t pwd_dev_id, ino_t pwd_inode);
 static void  correlate(char*, char*, dev_t, ino_t);
+
+static Directory* reverse_list(Directory* head);
 
 static long   get_max_path(const char*);
 static char*  vg_dirname(const char*);
@@ -60,9 +63,11 @@ static Directory*      make_new_dir(char* dir_name, dev_t dev_id, ino_t inode);
 static bool            mark_files(Directory* dir, char* file_name);
 static bool            have_dir(char* name, dev_t dev_id, ino_t inode, Directory** return_dir);
 
-
 /* Directory comparisons are done by inode and device id. */
 static bool compare_by_inode(char* name1, char* name2, dev_t dev_id1, ino_t inode1, dev_t dev_id2, ino_t inode2);
+
+/* Order in which to list the directories. */
+enum sort_order ordering = SO_DESCENDING;
 
 static char* pwd;
 static size_t pwd_length;
@@ -129,6 +134,12 @@ static int parse_args(int argc, char** argv) {
 			if ( (strcmp("-v", *(argv + j)) == 0) ||
 			     (strcmp("-V", *(argv + j)) == 0))
 				report_version();
+			else if (strcmp("-d", *(argv + j)) == 0)
+				ordering = SO_DESCENDING;
+			else if (strcmp("-a", *(argv + j)) == 0)
+				ordering = SO_ASCENDING;
+			else if (strcmp("-p", *(argv + j)) == 0)
+				ordering = SO_ASCENDING_PWD_FIRST;
 		}
 		i++;
 	}
@@ -216,31 +227,83 @@ static bool has_trailing_slash(const char* path) {
 
 static void report(void) {
 	Directory* dir_iter;
-	File* file_iter;
-	char types[8];
-	char selections[3];
 
-	types[FT_REGULAR] = 'r';
-	types[FT_EXECUTABLE] = 'e';
-	types[FT_DIRECTORY] = 'd';
-	types[FT_BLOCKDEV] = 'b';
-	types[FT_CHARDEV] = 'c';
-	types[FT_FIFO] = 'f';
-	types[FT_SOCKET] = 's';
-	types[FT_SYMLINK] = 'y';
+	switch (ordering) {
 
-	selections[S_YES] = '*';
-	selections[S_MAYBE] = '~';
-	selections[S_NO] = '-';
+		case SO_ASCENDING:
+			dirs = reverse_list(dirs);
+			break;
 
-	for (dir_iter = dirs; dir_iter; dir_iter = dir_iter->next_dir) {
-		printf("%d %d %d %s\n", dir_iter->selected_count, dir_iter->file_count, dir_iter->hidden_count, dir_iter->name);
-		
-		for (file_iter = dir_iter->file_list; file_iter; file_iter = file_iter->next_file)
-			printf("\t%c %c %s\n", selections[file_iter->selected], types[file_iter->type], file_iter->name);
+		case SO_ASCENDING_PWD_FIRST:
+			/* Print off the first dir in the list and then drop it.  We're
+			   Exiting soon, so don't worry about freeing it. */
+			if (dirs) {
+				print_dir(dirs);
+				dirs = dirs->next_dir;
+				dirs = reverse_list(dirs);
+			}
+			break;
+
+		case SO_DESCENDING:
+		default:
+			break;
 	}
 
+	for (dir_iter = dirs; dir_iter; dir_iter = dir_iter->next_dir)
+		print_dir(dir_iter);
+
 	printf("\n");   /* Always end output with a double \n. */
+}
+
+
+static Directory* reverse_list(Directory* head) {
+	Directory* p1;
+	Directory* p2;
+
+	if (head) {
+		p1 = head;
+		p2 = head->next_dir;
+		p1->next_dir = NULL;
+
+		while(p2) {
+			Directory *q = p2->next_dir;
+			p2->next_dir = p1;
+			p1 = p2;
+			p2 = q;
+		}
+	}
+
+	return p1;
+}
+
+
+static void print_dir(Directory* dir) {
+
+	static char types[FILE_TYPE_COUNT] = {
+		/*FT_REGULAR*/    'r',
+		/*FT_EXECUTABLE*/ 'e',
+		/*FT_DIRECTORY*/  'd',
+		/*FT_BLOCKDEV*/   'b',
+		/*FT_CHARDEV*/    'c',
+		/*FT_FIFO*/       'f',
+		/*FT_SOCKET*/     's',
+		/*FT_SYMLINK*/    'y',
+	};
+
+	static char selections[SELECTION_COUNT] = {
+		/*S_YES*/    '*',
+		/*S_NO*/     '-',
+		/*S_MAYBE*/  '~',
+	};
+
+	File* file_iter;
+
+	if (dir) {
+		printf("%d %d %d %s\n", dir->selected_count, dir->file_count, dir->hidden_count, dir->name);
+		
+		for (file_iter = dir->file_list; file_iter; file_iter = file_iter->next_file)
+			printf("\t%c %c %s\n", selections[file_iter->selected], types[file_iter->type], file_iter->name);
+	}
 }
 
 

@@ -25,22 +25,13 @@
 #endif
 
 BEGIN_C_DECLS
-
-struct _Directory {
-	char* name;
-	dev_t dev_id;
-	ino_t inode;
-	int selected_count;
-	int file_count;
-	int hidden_count;
-	struct _File* file_list;
-	struct _Directory* next_dir;
-};
-
 /* A file has two stages of being selected:
      YES:   the file has been explicitly named or expanded from a file glob.
 	 MAYBE: the beginning of the file has been named (or expanded). */
+#define SELECTION_COUNT 3
 enum selection { S_YES, S_NO, S_MAYBE };
+
+#define FILE_TYPE_COUNT 8
 enum file_type {
 	FT_REGULAR,
 	FT_EXECUTABLE,
@@ -52,15 +43,36 @@ enum file_type {
 	FT_SYMLINK,
 };
 
+/* Order in which to list the directories:
+	SO_DESCENDING: listed in order of appearance on the command line.
+	SO_ASCENDING: listed in reverse order.
+	SO_ASCENDING_PWD_FIRST: listed in reverse order with pwd first. */
+enum sort_order {
+	SO_DESCENDING,
+	SO_ASCENDING,
+	SO_ASCENDING_PWD_FIRST,
+};
+
+typedef struct _File File;
 struct _File {
 	char* name;
 	enum selection selected;
 	enum file_type type;
-	struct _File* next_file;
+	File* next_file;
 };
 
 typedef struct _Directory Directory;
-typedef struct _File File;
+struct _Directory {
+	char* name;
+	dev_t dev_id;
+	ino_t inode;
+	int selected_count;
+	int file_count;
+	int hidden_count;
+	File* file_list;
+	Directory* next_dir;
+};
+
 
 END_C_DECLS
 
