@@ -858,7 +858,7 @@ int main(int argc, char *argv[]) {
 	v.separator_color = &style->fg[GTK_STATE_NORMAL];
 
 	/* Setup the listings display. */
-	e.listings_box = gtk_vbox_new(FALSE, 7);
+	e.listings_box = gtk_vbox_new(FALSE, 5);
 	gtk_box_set_homogeneous(GTK_BOX(e.listings_box), FALSE);
 	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scrolled_window), e.listings_box);
 	gtk_container_set_resize_mode(GTK_CONTAINER(e.listings_box), GTK_RESIZE_IMMEDIATE);

@@ -162,7 +162,8 @@ DListing* dlisting_new(const GString* name, gint rank, const GString* selected_c
 	file_box_set_optimal_width(FILE_BOX(new_dl->file_box), width);
 	file_box_set_show_hidden_files(FILE_BOX(new_dl->file_box), v.show_hidden_files);
 	file_box_set_file_display_limit(FILE_BOX(new_dl->file_box), v.file_display_limit);
-	wrap_box_set_hspacing(WRAP_BOX(new_dl->file_box), 5);
+	wrap_box_set_hspacing(WRAP_BOX(new_dl->file_box), 3);
+	gtk_container_set_border_width(GTK_CONTAINER(new_dl->file_box), 2);
 	wrap_box_set_line_justify(WRAP_BOX(new_dl->file_box), GTK_JUSTIFY_LEFT);
 	gtk_box_pack_start(GTK_BOX(vbox), new_dl->file_box, FALSE, FALSE, 0);
 	gtk_widget_show(new_dl->file_box);

@@ -639,6 +639,9 @@ void wrap_box_size_request_optimal(GtkWidget* widget, GtkRequisition* requisitio
 	guint col, cols;
 	guint16 n_visible_children;
 
+	/* Take into account the border. */
+	optimal_width -= GTK_CONTAINER(this)->border_width * 2;
+
 	cols = get_upper_bound_cols(this, optimal_width);
 	n_visible_children = get_n_visible_children(this);
 
@@ -694,18 +697,18 @@ void wrap_box_size_request_optimal(GtkWidget* widget, GtkRequisition* requisitio
 			/* This column wasn't completed. */
 			total_width += col_width;
 		}
+		/* Remember to take into account the border. */
 		requisition->width = total_width + GTK_CONTAINER(this)->border_width * 2;
 		requisition->height = (rows - 1) * this->vspacing + rows * this->max_child_height + GTK_CONTAINER(this)->border_width * 2;
 	}
 	else {
 		/* Make the best of the situation. */
-		/*g_printerr("{no go}");*/
 		requisition->width = optimal_width + GTK_CONTAINER(this)->border_width * 2;
 		requisition->height = n_visible_children * this->vspacing + n_visible_children * this->max_child_height + GTK_CONTAINER(this)->border_width * 2;
 	}
 
-	/*g_printerr("\ncols: %d, rows: %d\n", cols, rows);*/
-	/*g_printerr("req: width: %d, height: %d\n", requisition->width, requisition->height);*/
+	/*g_printerr("(cols: %d, rows: %d)", cols, rows);*/
+	/*g_printerr("(req: width: %d, height: %d)", requisition->width, requisition->height);*/
 }
 
 
@@ -992,7 +995,7 @@ static void wrap_box_size_allocate(GtkWidget *widget, GtkAllocation *allocation)
 	area.width = MAX (1, (gint) allocation->width - border * 2);
 
 	/*<h2v-off>*/
-	/*g_printerr ("got: width %d, height %d\n\n", allocation->width, allocation->height);*/
+	/*g_printerr ("(got: width %d, height %d)", allocation->width, allocation->height);*/
 	/*<h2v-on>*/
 
 	layout_cols (wbox, &area);

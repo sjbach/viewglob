@@ -238,10 +238,8 @@ void file_box_set_optimal_width(FileBox* fbox, guint optimal_width) {
 	g_return_if_fail(IS_FILE_BOX(fbox));
 	g_return_if_fail(optimal_width >= GTK_CONTAINER(fbox)->border_width * 2);
 
-	optimal_width -= GTK_CONTAINER(fbox)->border_width * 2;
-
 	if (fbox->optimal_width != optimal_width) {
-		DEBUG((df, "<new optimal_width: %d>\n", optimal_width));
+		/*g_printerr("<new optimal_width: %d>", optimal_width);*/
 		fbox->optimal_width = optimal_width;
 		gtk_widget_queue_resize(GTK_WIDGET(fbox));
 		/* FIXME */
@@ -523,7 +521,7 @@ static void fitem_build_widgets(FItem* fi) {
 	gtk_widget_set_state(eventbox, fi->selection);
 
 	/* HBox */
-	hbox = gtk_hbox_new(FALSE, 2);
+	hbox = gtk_hbox_new(FALSE, 0);
 	gtk_box_set_homogeneous(GTK_BOX(hbox), FALSE);
 	gtk_widget_show(hbox);
 	gtk_container_add(GTK_CONTAINER(eventbox), hbox);
@@ -532,6 +530,7 @@ static void fitem_build_widgets(FItem* fi) {
 	if (file_type_icons[fi->type]) {
 		GtkWidget* icon_image;
 		icon_image = gtk_image_new_from_pixbuf(file_type_icons[fi->type]);
+		gtk_misc_set_padding(GTK_MISC(icon_image), 1, 0);
 		gtk_widget_show(icon_image);
 		gtk_box_pack_start(GTK_BOX(hbox), icon_image, FALSE, FALSE, 0);
 	}
@@ -541,11 +540,12 @@ static void fitem_build_widgets(FItem* fi) {
 	temp = g_filename_to_utf8(fi->name->str, fi->name->len, NULL, NULL, NULL);
 	gtk_label_set_text(GTK_LABEL(label), temp);
 	g_free(temp);
+	gtk_misc_set_padding(GTK_MISC(label), 1, 0);
 	gtk_widget_show(label);
 	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
 
 	fi->widget = eventbox;
-	gtk_widget_show(eventbox);
+	/*gtk_widget_show(eventbox);*/
 }
 
 
