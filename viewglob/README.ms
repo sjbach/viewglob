@@ -4,15 +4,15 @@
 .so giftcurs.tmac
 .
 .TL
-viewglob 1.0.1 README
+viewglob 1.0.2 README
 .br
-October 12, 2004
+November 19, 2004
 .AU
 Stephen Bach <sjbach@users.sourceforge.net>
 .
 .Sh INTRODUCTION
 .LP
-\fIviewglob\fP is a utility designed to complement the Unix shell in graphical environments. It has two parts:
+\fIviewglob\fP is a utility designed to extend bash and zsh when used in windowing environments.  It has two parts:
 .RS
 .IP 1.
 A tool that sits as a layer between the shell and X terminal, keeping track of the user's current directory and command line.
@@ -41,15 +41,9 @@ Feedback is welcome!
 .
 .Sh NEW IN THIS RELEASE
 .LP
-It was sometimes inconvenient to be in directories with long listings because you wouldn't be able to see the listings of other directories without scrolling.  There is now an option to list directories in reverse order, i.e. the directory you reference last appears at the top of the display.  Actually, there are now three ordering modes (used with the flag --dir-order):
-.RS
-.IP ascending
-Directories appear in reverse order.
-.IP ascending-pwd-first
-Directories appear in reverse order, but the current directory is always at the top.
-.IP descending
-Classic ordering and the default mode: directories appear in the order you reference them (and with the current directory at the top).
-.RE
+If you find the default font sizes in the display are too big / too small in your window manager, you can change them with the --font-size-modifier flag.  Passing +2 will increase all fonts by two, passing -2 will decrease all by two (duh).  Hardcores can now keep the font size so small that they can fit all of /usr/bin in the display at once, if they so choose.
+.LP
+Also, the code managing pseudo terminals has been replaced with code from rxvt, which has been shown to improve compatibility.  BSD users may now Ctrl-C to their heart's content.
 .
 .Sh INSTALLATION
 .LP
@@ -68,6 +62,18 @@ I don't have access to Solaris, so I can only hope for the best -- it would be a
 .Sh REQUIREMENTS
 .LP
 viewglob requires a version of bash (any, as far as I know) and GTK+ 2.4.  A version of zsh is also obviously required if you wish to use zsh under viewglob.
+.
+.Sh NEW IN PREVIOUS RELEASE 1.0.1
+.LP
+It was sometimes inconvenient to be in directories with long listings because you wouldn't be able to see the listings of other directories without scrolling.  There is now an option to list directories in reverse order, i.e. the directory you reference last appears at the top of the display.  Actually, there are now three ordering modes (used with the flag --dir-order):
+.RS
+.IP ascending
+Directories appear in reverse order.
+.IP ascending-pwd-first
+Directories appear in reverse order, but the current directory is always at the top.
+.IP descending
+Classic ordering and the default mode: directories appear in the order you reference them (and with the current directory at the top).
+.RE
 .
 .Sh NEW IN PREVIOUS RELEASE 1.0
 .LP

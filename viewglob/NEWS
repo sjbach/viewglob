@@ -1,3 +1,14 @@
+New in 1.0.2, released 2004-11-19:
+	Features:
+	  * Added option to increase/decrease base font size in the display.
+
+	Bug fixes:
+	  * BSD: Ctrl-C will now work in a viewglob shell.  Thanks to Ron
+	    Ross.
+	  * Replaced pseudo terminal code with some stuff from rxvt, which
+	    should go a long way towards improving compatibility.
+	  * Fixed an infinite forking bug which could take down a machine.
+
 New in 1.0.1, released 2004-10-12:
 	Features:
 	  * Added options to display directories in reverse order or

@@ -1,6 +1,6 @@
-.TH VIEWGLOB 1 "12 October 2004"
+.TH VIEWGLOB 1 "19 November 2004"
 .SH NAME
-viewglob, gviewglob \- display shell expansion and globbing dynamically
+viewglob, gviewglob \- shell add\-on for windowing environments.
 .SH SYNOPSIS
 .B viewglob
 .RI [ options ]
@@ -11,7 +11,7 @@ viewglob, gviewglob \- display shell expansion and globbing dynamically
 .SH DESCRIPTION
 \fIviewglob\fP is a utility which supervises your shell activity and tracks file selections and globs in a display showing the layout of relevant directories.  The display is written in GTK+, so \fIviewglob\fP requires that the shell be run in an X terminal (e.g. \fIxterm\fP, \fIrxvt\fP, etc.).
 .PP
-\fIviewglob\fP should be compatible with any recent version of \fIbash\fP or \fIzsh\fP, and doesn't assume any particular configuration.
+\fIviewglob\fP should be compatible with any recent version of \fIbash\fP or \fIzsh\fP, and doesn't assume any particular shell configuration.
 .PP
 Note: either name is equivalent for calling the program.
 
@@ -41,6 +41,9 @@ List directories in descending order (the default), ascending (last referenced d
 .TP
 .B \-n, \-\-show\-max=number
 Maximum number of files to show in the display for each directory.  A [Results Truncated] indicator will show if the max has been reached.  Note that you can always force show all files with the context menu.  If \-\-show\-max is passed 0, there is no limit.
+.TP
+.B \-z, \-\-font\-size\-modifier=<+/-##>
+Increase or decrease the base font size in the display by the given number.  E.g. "\-z +2" increases the window manager's default by 2, while "\-z -2" decreases the default by 2.
 .TP
 .B \-b, \-\-disable\-icons
 Don't show file type icons in the display.
@@ -220,8 +223,6 @@ The location of the default configuration file.
 Command line tracking seems to be pretty good for general use, but is far from perfect.
 .PP
 Resizing the terminal window after you've typed a multi\-line command will often cause viewglob's command line to become temporarily out of sync with the true command line, though it tries really hard to keep up.  No big deal if this happens \-\- viewglob should be in sync by the start of the next command.
-.PP
-Ctrl\-C does not work in terminals under FreeBSD.  I've spent a lot of time on this issue to no avail \-\- any terminal I/O savvy BSD users have some insight?
 .PP
 And there are certainly others.  If you spot any bugs (and they aren't explained by \fBNOTES\fP above), send me a message, okay?  Ideas and code contributions are also very welcome.
 .SH AUTHORS

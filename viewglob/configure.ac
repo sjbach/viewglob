@@ -1,8 +1,8 @@
 dnl Process this file with autoconf to produce a configure script.
-AC_INIT([viewglob], [1.0.1])
+AC_INIT([viewglob], [1.0.2])
 AM_INIT_AUTOMAKE
 AM_CONFIG_HEADER([config.h])
-RELEASE_DATE="October 12, 2004"
+RELEASE_DATE="November 19, 2004"
 
 AC_DEFINE_UNQUOTED([VG_RELEASE_DATE], ["$RELEASE_DATE"] , [Date of release])
 
@@ -54,7 +54,7 @@ AC_SUBST(RELEASE_DATE)
 
 
 dnl =====================================================================
-dnl All the rest of this is for pty stuff, and is taken from rxvt 2.7.10.
+dnl The following is for pty stuff, and is taken from rxvt 2.7.10.
 dnl =====================================================================
 
 AC_CACHE_CHECK(for getpt, rxvt_cv_func_getpt,
@@ -141,6 +141,9 @@ if test x$pch2 != x; then
   AC_DEFINE_UNQUOTED(PTYCHAR2, "$pch2", Define for second char in devptyXX)
 fi
 
+dnl =====================================================================
+dnl End of pty stuff.
+dnl =====================================================================
 
 
 AC_CONFIG_FILES([Makefile src/Makefile gviewglob/Makefile])
