@@ -1,3 +1,11 @@
+2004-09-08 23:58  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* init-viewglob.bashrc, init-viewglob.zshrc, viewglob.in:
+	  - Really disable saving of history in the zsh sandbox shell (the man page
+	    seems to be wrong about setopt norcs).
+	  - Sandbox shells can only call programs in the viewglob directory (from
+	    the path).
+
 2004-09-08 16:54  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* actions.c, buffer.c, buffer.h, circular.h, cmdline.c, cmdline.h, seer.c,

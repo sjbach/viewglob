@@ -24,6 +24,12 @@ if [ "$VG_SANDBOX" = yep ]; then
 	# Disable history expansion.
 	set +o history
 
+	# Don't save the history.
+	unset HISTFILE
+
+	# Only viewglob programs (glob-expand) in the path.
+	PATH="$VG_DIR"
+
 else
 	# This is all for the user's shell.
 
@@ -50,4 +56,5 @@ fi
 # Don't want to clutter the environment.
 unset VG_ASTERISK
 unset VG_SANDBOX
+unset VG_DIR
 

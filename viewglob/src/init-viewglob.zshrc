@@ -30,6 +30,7 @@ if [ "$VG_SANDBOX" = yep ]; then
 	# BAD_PATTERN can prevent glob-expand from running.
 	# The sandbox should NEVER modify the file system, but turn off clobbering
 	#   and star_silent just in case.
+	# Don't save history in the sandbox.
 	# The user could put setopt zle in their .zshrc, overriding seer's +Z.
 	setopt \
 		NO_BANG_HIST      \
@@ -40,11 +41,18 @@ if [ "$VG_SANDBOX" = yep ]; then
 		NO_BAD_PATTERN    \
 		NO_CLOBBER        \
 		NO_RM_STAR_SILENT \
+		NO_RCS            \
 		NO_ZLE
 
 	# And we don't want these functions in the sandbox.
 	unfunction chpwd periodic precmd preexec        2>/dev/null
 	unfunction TRAPHUP TRAPDEBUG TRAPEXIT TRAPZERR  2>/dev/null
+
+	# Seriously, don't save the history.
+	unset HISTFILE
+
+	# Only viewglob programs (glob-expand) in the path.
+	PATH="$VG_DIR"
 
 else
 	# This is all for the user's shell.
@@ -108,4 +116,5 @@ fi
 unset VG_ASTERISK
 unset VG_SANDBOX
 unset VG_TEMP_FILE
+unset VG_DIR
 
