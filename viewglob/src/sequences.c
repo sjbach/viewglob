@@ -170,7 +170,7 @@ static enum shell_type shell;
 /* Grab the first set of digits from the string
    and convert into an integer. */
 static int parse_digits(const char* string, size_t len) {
-	int i;
+	unsigned int i;
 	bool digits = false;
 	for (i = 0; string[i] != '\0' && i < len && !digits; i++) {
 		if (isdigit(string[i])) {

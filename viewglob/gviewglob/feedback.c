@@ -20,6 +20,7 @@
 #include "config.h"
 
 #include "common.h"
+#include "feedback.h"
 #include <glib.h>
 
 GIOChannel* out_channel = NULL;

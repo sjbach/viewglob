@@ -37,7 +37,7 @@
 static gboolean  receive_data(GIOChannel* source, gchar* buff, gsize size, gsize* bytes_read);
 static GString*  read_string(const gchar* buff, gsize* start, gsize n, gchar delim, struct holdover* ho, gboolean* finished);
 
-static void        set_icons(Exhibit* e);
+static void        set_icons(void);
 
 static gboolean  parse_args(int argc, char** argv);
 static void      report_version(void);
@@ -485,7 +485,7 @@ static void process_glob_data(const gchar* buff, gsize bytes, Exhibit* e) {
 }
 
 
-static void set_icons(Exhibit* e) {
+static void set_icons(void) {
 #include "app_icons.h"
 
 	GList* icons = NULL;
@@ -761,7 +761,7 @@ int main(int argc, char *argv[]) {
 	g_signal_connect(G_OBJECT(e.window), "delete_event", G_CALLBACK(window_delete_event), NULL);
 	g_signal_connect(G_OBJECT(e.window), "key-press-event", G_CALLBACK(window_key_press_event), NULL);
 
-	set_icons(&e);
+	set_icons();
 
 	/* Setup a watch for glob input. */
 	if (v.glob_fifo)

@@ -19,7 +19,16 @@
 
 /* Just throwing together a quick header file. */
 
+#ifndef PTYTTY_H
+#define PTYTTY_H
+
+#if HAVE_CONFIG_H
+#  include "config.h"
+#endif
+
 int rxvt_get_pty(int *fd_tty, const char **ttydev);
 int rxvt_get_tty(const char *ttydev);
 int rxvt_control_tty(int fd_tty, const char *ttydev);
+
+#endif /* !PTYTTY_H */
 

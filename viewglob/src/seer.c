@@ -444,10 +444,10 @@ static bool main_loop(struct display* disp) {
    the shell receives input, it's examined thoroughly with process_input. */
 static bool user_activity(void) {
 
-	static Buffer term_b =  { NULL, BUFSIZ, 0, 0, 0, PL_TERMINAL,  MS_NO_MATCH, NULL };
-	static Buffer shell_b = { NULL, BUFSIZ, 0, 0, 0, PL_EXECUTING, MS_NO_MATCH, NULL };
-	static Buffer sandbox_b = { NULL, BUFSIZ, 0, 0, 0, PL_EXECUTING, MS_NO_MATCH, NULL };
-	static Buffer display_b = { NULL, BUFSIZ, 0, 0, 0, PL_TERMINAL, MS_NO_MATCH, NULL };
+	static Buffer term_b =  { NULL, BUFSIZ, 0, 0, 0, PL_TERMINAL,  MS_NO_MATCH, NULL, false, 0 };
+	static Buffer shell_b = { NULL, BUFSIZ, 0, 0, 0, PL_EXECUTING, MS_NO_MATCH, NULL, false, 0 };
+	static Buffer sandbox_b = { NULL, BUFSIZ, 0, 0, 0, PL_EXECUTING, MS_NO_MATCH, NULL, false, 0 };
+	static Buffer display_b = { NULL, BUFSIZ, 0, 0, 0, PL_TERMINAL, MS_NO_MATCH, NULL, false, 0 };
 
 	fd_set fdset_read;
 	int max_fd;
