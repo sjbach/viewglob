@@ -1,3 +1,8 @@
+2005-03-15 00:04  Stephen Bach <sjbach@users.sourceforge.net>
+	* actions.c, actions.h: using proper queue terms
+	* circular.h, cmdline.c, cmdline.h, connection.c, vgseer.c:
+	  Code cleanup.
+
 2005-03-11 22:40  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* cmdline.c, cmdline.h, sequences.c, vgseer.c:

@@ -53,15 +53,15 @@ struct _Connection {
 	char* name;
 	int fd_in;
 	int fd_out;
-	char* buf;
-	size_t size;            /* malloc'd size. */
+	char* buf;              /* Read/write buffer. */
+	size_t size;
 	size_t filled;          /* The amount of the buffer that is actually filled. */
 	size_t pos;             /* The offset of the segment being examined. */
-	size_t n;               /* Length of the examined segment. */
-	enum process_level pl;
+	size_t seglen;          /* Length of the examined segment. */
+	enum process_level pl;  /* Processing level of the buffer. */
 	MatchStatus status;     /* Result of the last check_seqs() attempt. */
 	char* holdover;         /* Segment leftover from the last read. */
-	gboolean ho_written;        /* The holdover was written already (and thus should be skipped. */
+	gboolean ho_written;    /* The holdover was written already (and thus should be skipped. */
 	size_t skip;            /* Number of bytes to skip writing (already written). */
 };
 

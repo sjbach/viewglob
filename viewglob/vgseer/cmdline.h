@@ -41,7 +41,7 @@ struct cmdline {
 /* For cmd_wipe_in_line() -- maintain order of enumeration */
 enum direction { D_RIGHT = 0, D_LEFT = 1, D_ALL = 2 };
 
-gboolean cmd_init(struct cmdline* cmd);
+void cmd_init(struct cmdline* cmd);
 void cmd_free(struct cmdline* cmd);
 gboolean cmd_clear(struct cmdline* cmd);
 

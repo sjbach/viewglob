@@ -114,7 +114,7 @@ gboolean viewglob_enabled = TRUE;
    received from the daemon should not be escaped. */
 gboolean smart_insert = TRUE;
 
-
+/* Set whenever SIGWINCH is received. */
 gboolean term_size_changed = FALSE;
 
 int main(int argc, char** argv) {
@@ -164,6 +164,8 @@ int main(int argc, char** argv) {
 			break;
 
 		case ST_ZSH: ; /* <-- Semicolon required for variable declaration */
+			// FIXME get ZDOTDIR from environment, save as VG_ZDOTDIR, fork,
+			// fix in init-viewglob.zshrc.
 			/* Zsh requires the init file be named ".zshrc", and its location
 			   determined by the ZDOTDIR environment variable. */
 			gchar* zdotdir = g_strconcat("ZDOTDIR=", opts.init_loc, NULL);
@@ -206,7 +208,7 @@ int main(int argc, char** argv) {
 	}
 
 	if ( !tc_setraw() ) {
-		g_critical("Could not set raw terminal mode");
+		g_critical("Could not set raw terminal mode: %s", g_strerror(errno));
 		ok = FALSE;
 		goto done;
 	}
@@ -314,30 +316,15 @@ static gboolean main_loop(struct user_shell* u) {
 	gboolean ok = TRUE;
 	gboolean in_loop = TRUE;
 
-	/* Setup the buffers. */
-	Connection term_connection =  {
-		"terminal",
-		-1, -1,
-		NULL, BUFSIZ, 0, 0, 0,
-		PL_TERMINAL, MS_NO_MATCH,
-		NULL, FALSE, 0 };
+	/* Terminal reads from stdin and writes to the shell. */
+	Connection term_connection;
+	connection_init(&term_connection, "terminal", STDIN_FILENO, u->proc.fd,
+			BUFSIZ, PL_TERMINAL);
 
-	Connection shell_connection = {
-		"shell",
-		-1, -1,
-		NULL, BUFSIZ, 0, 0, 0,
-		PL_EXECUTING, MS_NO_MATCH,
-		NULL, FALSE, 0 };
-
-	term_connection.buf = g_malloc(term_connection.size);
-	shell_connection.buf = g_malloc(shell_connection.size);
-
-	/* Terminal reads from stdin and writes to the shell.
-	   Shell reads from shell and writes to stdout. */
-	term_connection.fd_in = STDIN_FILENO;
-	term_connection.fd_out = u->proc.fd;
-	shell_connection.fd_in = u->proc.fd;
-	shell_connection.fd_out = STDOUT_FILENO;
+	/* Shell reads from shell and writes to stdout. */
+	Connection shell_connection;
+	connection_init(&shell_connection, "shell", u->proc.fd, STDOUT_FILENO,
+			256, PL_EXECUTING);
 
 	Connection* connections[3];
 	connections[0] = &term_connection;
@@ -345,10 +332,7 @@ static gboolean main_loop(struct user_shell* u) {
 	connections[2] = NULL;
 
 	/* Initialize working command line and sequence buffer. */
-	if (!cmd_init(&u->cmd)) {
-		g_critical("Could not allocate space for command line");
-		return FALSE;
-	}
+	cmd_init(&u->cmd);
 
 	/* Initialize the sequences. */
 	init_seqs(u->type);
@@ -365,13 +349,12 @@ static gboolean main_loop(struct user_shell* u) {
 			break;
 		}
 
-		DEBUG2((df, "cmd: %s\n", u->cmd.data->str));
+		DEBUG2((df, "cmd: %s\t\t(%s)\n", u->cmd.data->str, u->pwd));
 
 
 		/* FIXME
-		   - A_SEND_PWD has no use.
-		   - rename action_queue() to action_stack() */
-		for (a = action_queue(A_POP); in_loop && (a != A_DONE); a = action_queue(A_POP)) {
+		   - A_SEND_PWD has no use. */
+		for (a = action_queue(A_DEQUEUE); in_loop && (a != A_DONE); a = action_queue(A_DEQUEUE)) {
 			switch (a) {
 				case A_EXIT:
 					DEBUG((df, "::d_exit::\n"));
@@ -438,6 +421,8 @@ static gboolean main_loop(struct user_shell* u) {
 	}
 
 	cmd_free(&u->cmd);
+	connection_free(&shell_connection);
+	connection_free(&term_connection);
 	return ok;
 }
 
@@ -509,6 +494,9 @@ static gboolean io_activity(Connection** connections, struct user_shell* u) {
 				break;
 			}
 
+			if (strcmp(cnt->name,"terminal") == 0)
+				DEBUG2((df, "termlen: %d\n", cnt->filled));
+
 			#if DEBUG_ON
 				size_t x;
 				DEBUG((df, "read %d bytes from the %s:\n===============\n", cnt->filled, cnt->name));
@@ -557,11 +545,11 @@ static gboolean process_input(Connection* b, struct user_shell* u) {
 		prepend_holdover(b);
 	else {
 		b->pos = 0;
-		b->n = 1;
+		b->seglen = 0;
 		b->skip = 0;
 	}
 
-	while (b->pos + (b->n - 1) < b->filled) {
+	while (b->pos + b->seglen < b->filled) {
 
 		DEBUG((df, "Pos at \'%c\' (%d of %d)\n", b->buf[b->pos], b->pos, b->filled - 1));
 
@@ -572,13 +560,12 @@ static gboolean process_input(Connection* b, struct user_shell* u) {
 
 		#if DEBUG_ON
 			size_t i;
-			DEBUG((df, "process level: %d checking: --%c %d--\n(", b->pl, b->buf[b->pos + (b->n - 1)], b->pos + (b->n - 1)));
-			for (i = 0; i < b->n; i++)
+			DEBUG((df, "process level: %d checking: --%c %d--\n(", b->pl, b->buf[b->pos + b->seglen], b->pos + b->seglen));
+			for (i = 0; i < b->seglen + 1; i++)
 				DEBUG((df, "%c", b->buf[b->pos + i]));
-			DEBUG((df, ") |%d|\n", b->n));
+			DEBUG((df, ") |%d|\n", b->seglen + 1));
 		#endif
 
-		//FIXME: return error value here!
 		check_seqs(b, u);
 
 		if (b->status & MS_MATCH) {
@@ -587,7 +574,7 @@ static gboolean process_input(Connection* b, struct user_shell* u) {
 		}
 		else if (b->status & MS_IN_PROGRESS) {
 			DEBUG((df, "*MS_IN_PROGRESS*\n"));
-			b->n++;
+			b->seglen++;
 		}
 		else if (b->status & MS_NO_MATCH) {
 			DEBUG((df, "*MS_NO_MATCH*\n"));
@@ -596,15 +583,19 @@ static gboolean process_input(Connection* b, struct user_shell* u) {
 				action_queue(A_SEND_CMD);
 			}
 			b->pos++;
-			b->n = 1;
+			b->seglen = 0;
 		}
 
 		DEBUG((df, "<<<%s>>> {%d = %c}\n", u->cmd.data->str, u->cmd.pos, *(u->cmd.data->str + u->cmd.pos)));
 		DEBUG((df, "length: %d\tpos: %d\tstrlen: %d\n\n", u->cmd.data->len, u->cmd.pos, strlen(u->cmd.data->str)));
 	}
 
+	/* We might be in the middle of matching a sequence, but we're at the end of
+	   the buffer.  If it's PL_AT_PROMPT, we've gotta write what we've got since it
+	   goes straight to the user.  Otherwise, it's safe to make a holdover to attach
+	   to the next buffer read. */
 	if (IN_PROGRESS(b->status)) {
-		DEBUG((df, "n = %d, pos = %d, filled = %d\n", b->n, b->pos, b->filled));
+		DEBUG((df, "seglen = %d, pos = %d, filled = %d\n", b->seglen, b->pos, b->filled));
 		create_holdover(b, b->pl != PL_AT_PROMPT);
 	}
 
@@ -905,13 +896,13 @@ static void sigterm_handler(gint signum) {
 }
 
 
-static void unexpected_termination_handler(struct pty_child* shell_to_kill) {
-	static struct pty_child* shell;
+static void unexpected_termination_handler(struct pty_child* new_shell_to_kill) {
+	static struct pty_child* shell_stored;
 
-	if (shell_to_kill)
-		shell = shell_to_kill;
-	else if (shell) {
-		(void) pty_child_terminate(shell);
+	if (new_shell_to_kill)
+		shell_stored = new_shell_to_kill;
+	else if (shell_stored) {
+		(void) pty_child_terminate(shell_stored);
 		(void) tc_restore();
 		printf("[Exiting Viewglob]\n");
 		_exit(EXIT_FAILURE);

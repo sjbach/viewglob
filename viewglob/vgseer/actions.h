@@ -39,7 +39,7 @@ enum _Action {
 	A_TOGGLE,      /* Enable/disable the display. */
 	A_REFOCUS,     /* Bring the focus back to the terminal and display. */
 	A_DISABLE,     /* Disable viewglob. */
-	A_POP,         /* Pop off the top queued action. */
+	A_DEQUEUE,     /* Dequeue and return the top queued action. */
 	A_DONE,        /* Nothing more to pop. */
 	A_EXIT,        /* Shell closed -- finish execution. */
 };

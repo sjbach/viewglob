@@ -29,12 +29,12 @@ struct action_list {
 
 
 /* Prototypes. */
-static void    al_push(Action a);
-static Action  al_pop(void);
+static void    al_enqueue(Action a);
+static Action  al_dequeue(void);
 
 
 /* This is kind-of a queue.  If o is A_SEND_CMD, A_SEND_PWD, or A_EXIT,
-   the action is queued.  If o is A_POP, then the correct queued action
+   the action is queued.  If o is A_DEQUEUE, then the correct queued action
    is dequeued.  Note that this doesn't follow first in, first out,
    since A_EXIT is a much more important action, so it gets dequeued
    first.  Also, a new A_SEND_PWD invalidates a previous A_SEND_CMD.
@@ -75,7 +75,7 @@ Action action_queue(Action o) {
 		case (A_SEND_PGDOWN):
 		case (A_TOGGLE):
 		case (A_REFOCUS):
-			al_push(o);
+			al_enqueue(o);
 			break;
 
 		case (A_DISABLE):
@@ -86,7 +86,7 @@ Action action_queue(Action o) {
 			do_exit = TRUE;
 			break;
 
-		case (A_POP):
+		case (A_DEQUEUE):
 			if (do_exit)
 				result = A_EXIT;
 			else if (disable) {
@@ -106,7 +106,7 @@ Action action_queue(Action o) {
 				result = A_SEND_CMD;
 			}
 			else
-				result = al_pop();
+				result = al_dequeue();
 			break;
 
 		default:
@@ -117,7 +117,7 @@ Action action_queue(Action o) {
 }
 
 
-static void al_push(Action a) {
+static void al_enqueue(Action a) {
 	struct action_list* new_al;
 	struct action_list* iter;
 
@@ -137,7 +137,7 @@ static void al_push(Action a) {
 }
 
 
-static Action al_pop(void) {
+static Action al_dequeue(void) {
 	Action a;
 
 	if (al) {

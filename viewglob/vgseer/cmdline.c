@@ -28,12 +28,11 @@
 #include <string.h>
 
 /* Initialize working command line and sequence buffer. */
-gboolean cmd_init(struct cmdline* cmd) {
+void cmd_init(struct cmdline* cmd) {
 
 	/* Initialize u.cmd */
 	cmd->data = g_string_sized_new(256);
 	cmd->pos = 0;
-	return TRUE;
 }
 
 
