@@ -1,5 +1,3 @@
--V option to seer, glob-expand, and gviewglob?
-
 seer:
 	- zsh functionality
 	- screen compatibility
@@ -17,7 +15,6 @@ gviewglob:
 	- slight highlighting difference between files named explicitly and files expanded from a glob?
 	- don't focus on gtk window when opened (is this viable?)
 	- wait indicator?
-	- fix command line forcing width minimum.
 	- sometimes (but not always) the wrapboxes or DListing headers force a width minimum.
 	- Truncate directory path label if it's too big.
 		- like this: "/path/to/dir/blah/" --> "/path/to/d..."

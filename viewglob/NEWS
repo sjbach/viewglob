@@ -1,3 +1,11 @@
+New in 0.8.1, released 2004-08-11:
+	* The display will no longer confuse command-line data with glob data if
+	  you type really fast.
+	* Command-line text box in the display will no longer grow the window.
+	* File layout of directories in the display is now easier on the eyes.
+	* Fixed small command-line processing error.
+	* Forced exit now a little more graceful.
+
 New in 0.8.0, released 2004-08-08:
 	* Initial release.
 

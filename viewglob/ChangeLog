@@ -1,3 +1,10 @@
+2004-08-11 14:21  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* viewglob.1: added info about the context menu.
+	* README.ms, README: removed the safety warning, as I'm now comfortable there's no danger.
+	* viewglob.in: updated version.
+	* NEWS: updated for next release.
+
 2004-08-11 14:11  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* glob-expand.c, glob-expand.h, seer.c, seer.h, gviewglob.c, gviewglob.h:

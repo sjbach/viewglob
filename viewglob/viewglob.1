@@ -64,7 +64,9 @@ A trick I use to quickly find out what's located in a given directory without ru
 .PP
 The display will always show at least the layout of your current directory.
 .PP
-At the bottom of the display window is a textbox with your command\-line.  This is the actual command\-line that viewglob is globbing on; if you find the display is not showing what you expected, check to make sure the display's command\-line is the same as the one in the shell, as they can be different (see \fBNOTES\fP below).
+If the number of files in a displayed directory is above the given max, viewglob will truncate the results (with an indicator).  You can force viewglob to display the whole directory by right-clicking anywhere on the listing for that directory and choosing "Show all files".  By default hidden files are not shown, but you can view them by the same mechanism.
+.PP
+At the bottom of the display window is a textbox with your command\-line.  This is the command\-line that viewglob is actually globbing on; if you find the display is not showing what you expected, check to make sure the display's command\-line is the same as the one in the shell, as they can be different (see \fBNOTES\fP below).
 .PP
 If you close the display without exiting the viewglob-supervised shell, you'll get a single error mesage while viewglob figures out what's going on.  It will then mostly disable itself and you'll have a regular shell.
 .PP
@@ -141,7 +143,7 @@ Window resizing can be very slow in directories with many files (give /usr/bin o
 .PP
 Resizing the terminal window will often cause viewglob's command\-line to become out of sync with the true command\-line, though it tries really hard to keep up.
 .PP
-In FreeBSD I couldn't get Ctrl-C to work in terminals.  At this point I'm not positive that it's not just my configuration.
+Ctrl-C may not work in terminals with FreeBSD.
 .PP
 And there are certainly others.  If you spot any bugs (and they aren't explained by \fBNOTES\fP above), send me a message, okay?  Contributions are also very welcome.
 .SH AUTHORS
