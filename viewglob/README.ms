@@ -57,7 +57,7 @@ FreeBSD 4.10 with GTK+ 2.4.3
 GNU/Linux (various) with GTK+ 2.4+
 Mac OS X 10.3.5 with fink unstable providing GTK+ 2.4.9 (Viewglob 0.9)
 .Ve
-I don't have access to Solaris, so I can only hope for the best -- it would be awesome if someone could try it for me.
+The program has been built with portability in mind, so it should (ha) run on most POSIX-compliant systems with minimal fuss.  I happily accept patches for portability issues.
 .
 .Sh REQUIREMENTS
 .LP
