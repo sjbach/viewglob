@@ -22,6 +22,8 @@
 #include "common.h"
 #include "sanitize.h"
 
+/*#define DEBUG(blah)	do { } while(0)*/
+
 #if DEBUG_ON
 extern FILE* df;
 #endif
