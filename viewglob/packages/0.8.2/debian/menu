@@ -1,0 +1,2 @@
+?package(viewglob):needs=X11 section=Apps/Tools\
+  title="viewglob" command="xterm -e /usr/bin/viewglob"
