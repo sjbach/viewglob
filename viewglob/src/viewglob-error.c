@@ -32,6 +32,7 @@
 
 #include "common.h"
 #include "viewglob-error.h"
+#include <string.h>
 
 char *program_name = NULL;
 
@@ -71,7 +72,7 @@ set_program_name (const char *path) {
 /* Takes a sanitized path and returns the base (file) name. */
 char* basename(const char* path) {
 	char* basename;
-	int slash_pos, i;
+	int slash_pos;
 	size_t path_length;
 
 	path_length = strlen(path);

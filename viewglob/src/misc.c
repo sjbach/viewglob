@@ -29,6 +29,7 @@
 #include "common.h"
 #include "seer.h"
 #include <signal.h>
+#include <string.h>
 
 bool handle_signals(void) {
 	sigset_t set;
@@ -98,7 +99,7 @@ void handler(int signum) {
 
 	/* clean_up(); */
 	for (i = 0; sigmsg[i].signum > 0; i++) {
-		if (sigmsg[i].signum = signum) {
+		if (sigmsg[i].signum == signum) {
 			(void)write(STDERR_FILENO, sigmsg[i].msg, strlen_safe(sigmsg[i].msg));
 			(void)write(STDERR_FILENO, "\n", 1);
 			break;

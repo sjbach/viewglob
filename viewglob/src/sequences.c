@@ -22,10 +22,11 @@
 #endif
 
 #include "common.h"
-#include <string.h>
 #include "seer.h"
 #include "sequences.h"
 
+#include <string.h>
+#include <ctype.h>
 
 typedef struct _Sequence Sequence;
 struct _Sequence {

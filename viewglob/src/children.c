@@ -22,11 +22,13 @@
 #endif
 
 #include "common.h"
+#include "viewglob-error.h"
 #include "children.h"
 #include "ptutil.viewglob.h"
 #include <sys/stat.h>
 #include <signal.h>
 #include <fcntl.h>
+#include <string.h>
 
 static bool create_fifo(char* name);
 
@@ -80,7 +82,6 @@ void display_add_arg(struct display* d, char* new_arg) {
 bool display_fork(struct display* d) {
 	pid_t pid;
 	char* pid_str;
-	int i;
 	bool ok = true;
 
 	d->argv[0] = d->name;
@@ -88,7 +89,7 @@ bool display_fork(struct display* d) {
 	/* Get the current pid and turn it into a string. */
 	pid_str = XMALLOC(char, 10 + 1);    /* 10 for the length of the pid, 1 for \0. */
 	pid = getpid();
-	sprintf(pid_str, "%ld", pid);
+	sprintf(pid_str, "%ld", (long int) pid);
 
 	/* Create the glob fifo name. */
 	d->glob_fifo_name = XMALLOC(char, strlen("/tmp/viewglob") + strlen(pid_str) + strlen("-1") + 1);

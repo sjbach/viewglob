@@ -37,15 +37,14 @@
 
 BEGIN_C_DECLS
 
-extern char *program_name;
-extern void set_program_name (const char *argv0);
+void set_program_name (const char *argv0);
 
-extern void viewglob_warning (const char *message);
-extern void viewglob_error   (const char *message);
-extern void viewglob_fatal   (const char *message);
+void viewglob_warning (const char *message);
+void viewglob_error   (const char *message);
+void viewglob_fatal   (const char *message);
 
-extern int find_prev(const char*, int, char);
-extern char* basename(const char*);
+int find_prev(const char*, int, char);
+char* basename(const char*);
 
 END_C_DECLS
 

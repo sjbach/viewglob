@@ -22,6 +22,7 @@
 #endif
 
 #include "common.h"
+#include "viewglob-error.h"
 
 #include "tc_setraw.viewglob.h"
 #include "hardened_io.h"
@@ -31,6 +32,7 @@
 #include <signal.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <string.h>
 
 #if HAVE_SYS_WAIT_H
 #  include <sys/wait.h>
@@ -46,6 +48,22 @@
 FILE* df;
 #endif
 
+/* Prototypes */
+static bool main_loop(struct display* d);
+static bool user_activity(void);
+static bool scan_for_newline(const char* buff, size_t n);
+static bool process_input(char* buff, size_t* n);
+static bool match_loop(enum process_level pl);
+static bool eat(char* buff, size_t* n, size_t* start);
+static void analyze_effect(MatchEffect effect);
+
+static void send_sane_cmd(struct display* d);
+
+static void parse_args(int argc, char** argv);
+static void report_version(void);
+
+
+/* Globals */
 struct options opts;
 
 struct user_shell u;	/* Almost everything revolves around this. */
@@ -185,7 +203,6 @@ done:
 
 static void parse_args(int argc, char** argv) {
 	bool in_loop = true;
-	char* temp = NULL;
 
 	opterr = 0;
 	while (in_loop) {
@@ -292,8 +309,6 @@ static bool main_loop(struct display* disp) {
 	enum action d;
 	bool ok = true;
 	bool in_loop = true;
-
-	char* sane_cmd;
 
 	/* Initialize working command line and sequence buffer. */
 	if (!cmd_init()) {
@@ -565,7 +580,6 @@ static bool match_loop(enum process_level pl) {
 	static MatchStatus status = MS_NO_MATCH;    /* Remember status of the last match_loop run. */
 	MatchEffect effect = ME_NO_EFFECT;
 	bool is_done = false;
-	int i;
 
 	while (true) {
 

@@ -65,16 +65,6 @@ struct _File {
 typedef struct _Directory Directory;
 typedef struct _File File;
 
-static long get_max_path(const char*);
-static char* vg_dirname(const char*);
-static char* normalize_path(const char*);
-
-enum file_type determine_type(const struct stat* file_stat);
-static File* make_new_file(char* name, enum file_type type);
-static Directory* make_new_dir(char* dir_name, dev_t dev_id, ino_t inode);
-static bool mark_files(Directory* dir, char* file_name);
-static bool have_dir(char* name, dev_t dev_id, ino_t inode, Directory** return_dir);
-
 END_C_DECLS
 
 #endif /* !GLOB_EXPAND_H */

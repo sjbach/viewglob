@@ -1,3 +1,10 @@
+2004-08-22 19:03  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* children.c, cmdline.c, glob-expand.c, glob-expand.h, hardened_io.c,
+	  misc.c, ptutil.c.diff, sanitize.c, sanitize.h, seer.c, seer.h,
+	  sequences.c, viewglob-error.c, viewglob-error.h:
+	  Fixed a bunch of build warnings and a few bugs (how did I miss these).
+
 2004-08-22 17:30  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* Makefile.am: create (symlink) and install gviewglob.1

@@ -28,6 +28,15 @@
 extern FILE* df;
 #endif
 
+static void   sane_add_char(struct sane_cmd* s, char c);
+static void   sane_delete_current_word(struct sane_cmd* s);
+static bool   sane_last_char(struct sane_cmd* s, char c);
+
+static bool             in_quote(struct sane_cmd* s, enum quote_type qt);
+static enum quote_type  ql_pop(struct sane_cmd* s);
+static void             ql_push(struct sane_cmd* s, enum quote_type);
+
+
 char* make_sane_cmd(char* full_command, int length) {
 	struct sane_cmd s;
 	int i;

@@ -22,9 +22,12 @@
 #endif
 
 #include "common.h"
+#include "viewglob-error.h"
 #include "seer.h"
 #include "sequences.h"
 #include "cmdline.h"
+
+#include <string.h>
 
 #if DEBUG_ON
 extern FILE *df;
@@ -172,7 +175,7 @@ bool cmd_wipe_in_line(enum direction dir) {
 				cmd_del_chars(cret_pos_r - u.cmd.pos);
 
 				/* If we were at pos 0, this is the new pos 0; delete the cret. */
-				if (u.cmd.pos = 0)
+				if (!u.cmd.pos)
 					cmd_del_chars(1);
 			}
 

@@ -22,6 +22,7 @@
 #endif
 
 #include "common.h"
+#include "viewglob-error.h"
 #include "seer.h"
 #include "viewglob-error.h"
 #include "hardened_io.h"
@@ -33,6 +34,9 @@
 #if GWINSZ_IN_SYS_IOCTL
 # include <sys/ioctl.h>
 #endif
+
+#include <sys/stat.h>
+#include <fcntl.h>
 
 extern struct user_shell u;
 

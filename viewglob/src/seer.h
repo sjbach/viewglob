@@ -76,19 +76,6 @@ enum action {
 
 
 /* Prototypes */
-static bool main_loop(struct display* d);
-static bool user_activity(void);
-static bool scan_for_newline(const char* buff, size_t n);
-static bool process_input(char* buff, size_t* n);
-static bool match_loop(enum process_level pl);
-static bool eat(char* buff, size_t* n, size_t* start);
-static void analyze_effect(MatchEffect effect);
-
-static void send_sane_cmd(struct display* d);
-
-static void parse_args(int argc, char** argv);
-static void report_version(void);
-
 enum action action_queue(enum action);
 
 void sigwinch_handler(int signum);

@@ -22,7 +22,10 @@
 #endif
 
 #include "common.h"
+#include "viewglob-error.h"
+#include "glob-expand.h"
 #include <sys/stat.h>
+#include <string.h>
 
 #if HAVE_DIRENT_H
 #  include <dirent.h>
@@ -41,15 +44,23 @@
 #  endif
 #endif
 
-#include "viewglob-error.h"
-#include "glob-expand.h"
+static int   parse_args(int argc, char** argv);
+static void  report_version(void);
+static void  compile_data(int, char**);
+static void  report(void);
+static void  initiate(dev_t pwd_dev_id, ino_t pwd_inode);
+static void  correlate(char*, char*, dev_t, ino_t);
 
-static int parse_args(int argc, char** argv);
-static void report_version(void);
-static void compile_data(int, char**);
-static void report(void);
-static void initiate(dev_t pwd_dev_id, ino_t pwd_inode);
-static void correlate(char*, char*, dev_t, ino_t);
+static long   get_max_path(const char*);
+static char*  vg_dirname(const char*);
+static char*  normalize_path(const char*);
+
+static enum file_type  determine_type(const struct stat* file_stat);
+static File*           make_new_file(char* name, enum file_type type);
+static Directory*      make_new_dir(char* dir_name, dev_t dev_id, ino_t inode);
+static bool            mark_files(Directory* dir, char* file_name);
+static bool            have_dir(char* name, dev_t dev_id, ino_t inode, Directory** return_dir);
+
 
 /* By default, directory comparisons are done by inode and device id, but this can be changed by passing in
    a -n.  If this is done, the following directories are different:
@@ -397,7 +408,7 @@ static Directory* make_new_dir(char* dir_name, dev_t dev_id, ino_t inode) {
 }
 
 
-enum file_type determine_type(const struct stat* file_stat) {
+static enum file_type determine_type(const struct stat* file_stat) {
 	if (S_ISREG(file_stat->st_mode)) {
 		if ( (file_stat->st_mode & S_IXUSR) == S_IXUSR ||
 		     (file_stat->st_mode & S_IXGRP) == S_IXGRP ||
@@ -431,7 +442,7 @@ static long get_max_path(const char* path) {
 	errno = 0;
 	max_path = pathconf(path, _PC_PATH_MAX);
 	if (max_path == -1) {
-		if (errno = 0)			/* No limit... */
+		if (errno == 0)			/* No limit... */
 			max_path = 4096;	/* ... So guess. */
 		else
 			return -1;
@@ -447,8 +458,6 @@ static char* vg_dirname(const char* path) {
 	char* dirname;
 	int slash_pos;
 	size_t path_length;
-
-	int i;
 
 	path_length = strlen(path);
 
