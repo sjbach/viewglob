@@ -17,8 +17,8 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#ifndef PTY_SHELL_H
-#define PTY_SHELL_H
+#ifndef CHILDREN_H
+#define CHILDREN_H
 
 #if HAVE_CONFIG_H
 #  include "config.h"
@@ -71,4 +71,4 @@ void args_add(struct args* a, char* new_arg);
 
 END_C_DECLS
 
-#endif /* !PTY_SHELL_H */
+#endif /* !CHILDREN_H */
