@@ -116,6 +116,14 @@ FileType map_file_type(gchar c) {
 }
 
 
+/* End the program. */
+gboolean window_delete_event(GtkWidget* widget, GdkEvent* event,
+		gpointer data) {
+	gtk_main_quit();
+	return FALSE;
+}
+
+
 /* A key has been pressed -- write it to stdout. */
 gboolean window_key_press_event(GtkWidget* window, GdkEventKey* event,
 		gpointer data) {

@@ -55,12 +55,10 @@ static void rearrange_and_show(struct vgmini* vg);
 static void do_order(struct vgmini* vg, const gchar* order);
 static void update_dc(struct vgmini* vg, DirCont* dc, gboolean setting);
 static void activate_dc(struct vgmini* vg, gboolean next);
-//static gboolean window_delete_event(GtkWidget* widget, GdkEvent* event,
-//		gpointer data);
-//static gboolean window_configure_event(GtkWidget* window,
-//		GdkEventConfigure* event, struct vgmini* vg);
-//static void window_allocate_event(GtkWidget* window,
-//		GtkAllocation* allocation, struct vgmini* vg);
+static gboolean window_configure_event(GtkWidget* window,
+		GdkEventConfigure* event, struct vgmini* vg);
+static void window_allocate_event(GtkWidget* window,
+		GtkAllocation* allocation, struct vgmini* vg);
 gint default_width(struct vgmini* vg);
 
 
@@ -89,6 +87,7 @@ gint main(gint argc, char** argv) {
 	vg.cmdline = gtk_drawing_area_new();
 	vg.dcs = NULL;
 	vg.active = NULL;
+	vg.width_change = 0;
 
 	/* Toplevel window. */
 	vg.window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
@@ -107,20 +106,16 @@ gint main(gint argc, char** argv) {
 
 	gtk_container_add(GTK_CONTAINER(vg.window), vg.vbox);
 
-	/*
 	g_signal_connect(G_OBJECT(vg.window), "configure-event",
 			G_CALLBACK(window_configure_event), &vg);
 	g_signal_connect(G_OBJECT(vg.window), "size-allocate",
 			G_CALLBACK(window_allocate_event), &vg);
-			*/
-//	g_signal_connect(G_OBJECT(vg.window), "delete_event",
-//			G_CALLBACK(window_delete_event), NULL);
-//	g_signal_connect(G_OBJECT(vg.window), "key-press-event",
-//			G_CALLBACK(window_key_press_event), NULL);
-//	g_signal_connect(G_OBJECT(area), "expose-event",
-//			G_CALLBACK(area_expose_event), NULL);
+	g_signal_connect(G_OBJECT(vg.window), "delete_event",
+			G_CALLBACK(window_delete_event), NULL);
 	g_signal_connect(G_OBJECT(vg.window), "key-press-event",
 			G_CALLBACK(window_key_press_event), NULL);
+//	g_signal_connect(G_OBJECT(area), "expose-event",
+//			G_CALLBACK(area_expose_event), NULL);
 
 	GIOChannel* stdin_ioc;
 	if ( (stdin_ioc = g_io_channel_unix_new(STDIN_FILENO)) == NULL) {
@@ -316,8 +311,10 @@ static DirCont* add_dircont(struct vgmini* vg, gchar* name, gint rank,
 	DirCont* dc;
 	GSList* search_result;
 
+	gboolean is_pwd = *name == PWD_CHAR;
+
 	/* If this directory is PWD, set it as the title of the window. */
-	if (*name == PWD_CHAR) {
+	if (is_pwd) {
 		name++;
 		gchar* new_title = g_strconcat("vg ", name, NULL);
 		gtk_window_set_title(GTK_WINDOW(vg->window), new_title);
@@ -332,6 +329,7 @@ static DirCont* add_dircont(struct vgmini* vg, gchar* name, gint rank,
 		/* It's a known DirCont. */
 		dc = search_result->data;
 		dircont_set_counts(dc, selected, total, hidden);
+		dircont_set_pwd(dc, is_pwd);
 		dircont_mark(dc, rank);
 
 		/* We'll be reading these next, at which point they'll be remarked. */
@@ -343,9 +341,17 @@ static DirCont* add_dircont(struct vgmini* vg, gchar* name, gint rank,
 		dc = DIRCONT(dircont_new());
 		dircont_set_name(dc, name);
 		dircont_set_counts(dc, selected, total, hidden);
+		dircont_set_pwd(dc, is_pwd);
 		/* Set optimal width as the width of the listings vbox. */
+		if (vg->active) {
+			dircont_set_optimal_width(dc,
+					vg->active->file_box->allocation.width);
+		}
+		else {
+			dircont_set_optimal_width(dc, 240); //FIXME
+		}
 //		dircont_set_optimal_width(dc, vg->listings_box->allocation.width);
-		dircont_set_optimal_width(dc, 240); //FIXME
+//		dircont_set_optimal_width(dc, 240); //FIXME
 		dircont_mark(dc, rank);
 		dc->score += 100;
 		vg->dcs = g_slist_append(vg->dcs, dc);
@@ -507,6 +513,34 @@ static void activate_dc(struct vgmini* vg, gboolean next) {
 		update_dc(vg, new_active, TRUE);
 		update_dc(vg, vg->active, FALSE);
 		vg->active = new_active;
+	}
+}
+
+
+/* Track the width of the toplevel window. */
+static gboolean window_configure_event(GtkWidget* window,
+		GdkEventConfigure* event, struct vgmini* vg) {
+	vg->width_change += event->width - window->allocation.width;
+	return FALSE;
+}
+
+
+/* Resize the DirConts if necessary. */
+static void window_allocate_event(GtkWidget* window,
+		GtkAllocation* allocation, struct vgmini* vg) {
+	GSList* iter;
+	DirCont* dc;
+
+	if (vg->width_change) {
+//		g_printerr("(width change: %d)", vg->width_change);
+		/* Cycle through the DirConts and set the new optimal width.  This
+		   will make them optimize themselves to the window's width. */
+		for (iter = vg->dcs; iter; iter = g_slist_next(iter)) {
+			dc = iter->data;
+			dircont_set_optimal_width(dc,
+					((gint)dc->optimal_width) + vg->width_change);
+		}
+		vg->width_change = 0;
 	}
 }
 

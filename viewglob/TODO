@@ -1,22 +1,31 @@
-- vgseer: sanitize mask
-- vgexpand: fix $HOME to ~
+
+Critical:
 - vgseer: sandbox vgexpand command options
-- vgseer: EIO when zsh exit
 - vgclassic: mask and developing mask
-- make: .PHONY build for the icons
 - make: option to build only vgseer/vgexpand (and thus no GTK requirement)
 - make: package getopt_long (or alternative)
-- vgd: vgseer_client into separate file
 - documentation: updates from 1.1.1
-- vgmini: create
-- vgseer, vgclassic: statuses
-- vgclassic: make icon disable work
-- vgd: syslog
+- vgseer, vgdisplay: statuses
+- vgdisplay: make icon disable work
+- vgd: remap g_log: syslog
+- vgseer: remap g_log
 - vgseer: close stderr in user shell
-- vgseer: filename insertion is buggy at inserting within a word
 - vgdisplays: --red --green --blue, etc.
+- vgmini: scroll to active part of filebox
+- vgmini: single click to activate dc
+
+Non-critical:
+- vgseer: sanitize mask better
+- vgexpand: fix $HOME to ~
+- vgseer: EIO when zsh exit
+- make: .PHONY build for the icons
+- vgd: vgseer_client into separate file
+- vgseer: filename insertion is buggy at inserting within a word
 - vgseer: rename Connection
+- vgmini: filebox negotiation
+- vgd/vgdisplay: sometimes not update on new pwd
 - all: pedantic
+- vgmini: white (base colour) background for fileboxes?
 
 - record timestamp for each byte to help predicting whether user typing or not (problem if pasting text though)
 - dlisting of current directory in display different colour?

@@ -48,18 +48,10 @@ static void report_version(void);
 
 static void process_glob_data(gchar* buf, gsize bytes, Exhibit* e);
 
-static gboolean window_delete_event(GtkWidget* widget, GdkEvent* event,
-		gpointer data);
 static gboolean window_configure_event(GtkWidget* window,
 		GdkEventConfigure* event, Exhibit* e);
 static void window_allocate_event(GtkWidget* window,
 		GtkAllocation* allocation, Exhibit* e);
-
-static gboolean window_delete_event(GtkWidget* widget, GdkEvent* event,
-		gpointer data) {
-	gtk_main_quit();
-	return FALSE;
-}
 
 
 /* Receive data from vgd. */

@@ -51,7 +51,8 @@ FileSelection map_selection_state(gchar c);
 FileType map_file_type(gchar c);
 gboolean window_key_press_event(GtkWidget* window, GdkEventKey* event,
 		gpointer data);
-
+gboolean window_delete_event(GtkWidget* widget, GdkEvent* event,
+		gpointer data);
 
 G_END_DECLS
 

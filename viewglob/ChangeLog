@@ -1,3 +1,12 @@
+2005-04-05 19:57  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* vgd.c: don't refocus unless display is open
+	* dircont.c, vgmini.c:
+	  - Setup vgmini resizing -- needs work still.
+	  - Headers painted in different ways, sometimes with colour gradient.
+	* vgclassic.c, display-common.c, display-common.h:
+	  Moved over more common code.
+
 2005-04-04 15:12  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* param-io.c:

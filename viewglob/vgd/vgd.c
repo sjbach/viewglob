@@ -118,8 +118,8 @@ gint main(gint argc, gchar** argv) {
 		exit(EXIT_FAILURE);
 	}
 
-	s.display.exec_name = "/home/steve/vg/vgdisplay/vgclassic";
-//	s.display.exec_name = "/home/steve/vg/vgdisplay/vgmini";
+//	s.display.exec_name = "/home/steve/vg/vgdisplay/vgclassic";
+	s.display.exec_name = "/home/steve/vg/vgdisplay/vgmini";
 
 	poll_loop(&s);
 
@@ -376,7 +376,7 @@ static void process_client(struct state* s, struct vgseer_client* v) {
 
 		case P_ORDER:
 			g_message("(%d) Received P_ORDER: %s", v->fd, value);
-			if (STREQ(value, "refocus"))
+			if (STREQ(value, "refocus") && child_running(&s->display))
 				refocus(s->Xdisplay, v->win, s->display_win);
 			else if (STREQ(value, "toggle")) {
 				if (child_running(&s->display))

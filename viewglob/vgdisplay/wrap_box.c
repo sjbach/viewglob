@@ -786,7 +786,7 @@ static GSList* reverse_list_col_children (WrapBox *wbox, WrapBoxChild **child_p,
 			if (GTK_WIDGET_VISIBLE (child->widget)) {
 				get_child_requisition (wbox, child->widget, &child_requisition);
 				if (height + wbox->vspacing + child_requisition.height > col_height) {
-					/*g_print("[[stop at: %d]]", height + wbox->vspacing + child_requisition.height);*/
+					/*g_printerr("[[stop at: %d]]", height + wbox->vspacing + child_requisition.height);*/
 					break;
 				}
 				height += wbox->vspacing + child_requisition.height;
@@ -799,7 +799,7 @@ static GSList* reverse_list_col_children (WrapBox *wbox, WrapBoxChild **child_p,
 		}
 	}
 
-	/*g_print("[[mcw: %u, limit: %d, height: %d ]]", *max_child_width, col_height, height);*/
+	/*g_printerr("[[mcw: %u, limit: %d, height: %d ]]", *max_child_width, col_height, height);*/
 
 	slist = g_slist_reverse (slist);
 	return slist;
@@ -1020,7 +1020,7 @@ static void wrap_box_size_allocate(GtkWidget *widget, GtkAllocation *allocation)
 	area.height = MAX (1, (gint) allocation->height - border * 2);
 	area.width = MAX (1, (gint) allocation->width - border * 2);
 
-	//g_printerr ("(f got: width %d, height %d)", allocation->width, allocation->height);
+	/*g_printerr ("(f got: width %d, height %d)", allocation->width, allocation->height);*/
 	/*g_printerr ("(p got: width %d, height %d)", widget->parent->allocation.width, widget->parent->allocation.height);*/
 
 	layout_cols (wbox, &area);

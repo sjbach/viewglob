@@ -27,11 +27,12 @@
 #include <gdk-pixbuf/gdk-pixbuf.h>
 #include <gdk-pixbuf/gdk-pixdata.h>
 
-#define WIDTH_BUFFER 0
+#define WIDTH_BUFFER 5
 #define DIR_NAME_SPACER 3
 #define COUNT_SPACER 20
 #define BASE_DIR_FONT_SIZE    +2
 #define BASE_COUNT_FONT_SIZE  -1
+//#define BASE_COUNT_FONT_SIZE  0
 
 /* --- prototypes --- */
 static void dircont_class_init(DirContClass* klass);
@@ -39,12 +40,13 @@ static void dircont_init(DirCont* dc);
 
 static gboolean button_press_event(GtkWidget *widget,
 		GdkEventButton *event, DirCont* dc);
-static gboolean header_expose_event(GtkWidget *area, GdkEventExpose *event,
+static gboolean header_expose_event(GtkWidget* header, GdkEventExpose* event,
 		DirCont* dc);
+static gboolean scrolled_window_expose_event(GtkWidget* header,
+		GdkEventExpose* event, DirCont* dc);
 static void reset_count_layout(DirCont* dc); 
-static GdkPixbuf *
-create_gradient(GdkColor *color1, GdkColor *color2, gint width, gint height, gboolean horz);
-
+static GdkPixbuf* create_gradient(GdkColor* color1, GdkColor* color2,
+		gint width, gint height, gboolean horz);
 
 
 /* --- variables --- */
@@ -103,9 +105,9 @@ static void dircont_class_init(DirContClass* class) {
 	pango_layout_get_pixel_size(layout, NULL, &height);
 	header_height += height;
 	markup = g_strconcat(
-			count_tag_open->str,
+			count_tag_open->str, "<b>",
 			"0123456789()",
-			count_tag_close->str, NULL);
+			"</b>", count_tag_close->str, NULL);
 	pango_layout_set_markup(layout, markup, -1);
 	g_free(markup);
 	pango_layout_get_pixel_size(layout, NULL, &height);
@@ -148,15 +150,18 @@ static void dircont_init(DirCont* dc) {
 	/* The header is a drawing area. */
 	dc->header = gtk_drawing_area_new();
 	gtk_widget_set_size_request(dc->header, -1, header_height);
+	gtk_widget_set_state(dc->header, GTK_STATE_ACTIVE);
 	gtk_widget_show(dc->header);
-	g_signal_connect(G_OBJECT(dc->header), "expose-event",
-			G_CALLBACK(header_expose_event), dc);
-	g_signal_connect(G_OBJECT(dc->header), "button-press-event",
-			G_CALLBACK(button_press_event), dc);
 
 	/* Create initial layouts. */
 	dc->name_layout = gtk_widget_create_pango_layout(dc->header, NULL);
 	dc->counts_layout = gtk_widget_create_pango_layout(dc->header, NULL);
+
+	/* If the scrolled window is not in an event box, it's not possible to
+	   paint along its whole height (don't know why), which looks crumby.
+	   This widget serves no further function. */
+	GtkWidget* paint_event_box = gtk_event_box_new();
+	gtk_widget_show(paint_event_box);
 
 	/* Setup the scrolled window (for the file box) */
 	dc->scrolled_window = gtk_scrolled_window_new(NULL, NULL);
@@ -170,6 +175,13 @@ static void dircont_init(DirCont* dc) {
 	wrap_box_set_line_justify(WRAP_BOX(dc->file_box), GTK_JUSTIFY_LEFT);
 	gtk_widget_show(dc->file_box);
 
+	g_signal_connect(G_OBJECT(dc->header), "expose-event",
+			G_CALLBACK(header_expose_event), dc);
+	g_signal_connect(G_OBJECT(dc->scrolled_window), "expose-event",
+			G_CALLBACK(scrolled_window_expose_event), dc);
+	g_signal_connect(G_OBJECT(dc->header), "button-press-event",
+			G_CALLBACK(button_press_event), dc);
+
 	/* Initialize the layout. */
 	dircont_set_name(dc, "<unset>");
 	dircont_set_counts(dc, "0", "0", "0");
@@ -177,8 +189,11 @@ static void dircont_init(DirCont* dc) {
 	/* Pack 'em in. */
 	gtk_scrolled_window_add_with_viewport(
 			GTK_SCROLLED_WINDOW(dc->scrolled_window), dc->file_box);
+//	gtk_container_set_resize_mode(GTK_CONTAINER(dc->file_box->parent),
+//			GTK_RESIZE_PARENT);
 	gtk_box_pack_start(box, dc->header, FALSE, FALSE, 0);
-	gtk_box_pack_start(box, dc->scrolled_window, TRUE, TRUE, 0);
+	gtk_container_add(GTK_CONTAINER(paint_event_box), dc->scrolled_window);
+	gtk_box_pack_start(box, paint_event_box, TRUE, TRUE, 0);
 }
 
 
@@ -311,11 +326,11 @@ static void reset_count_layout(DirCont* dc) {
 				count_tag_close->str, NULL);
 	}
 	else {
-		markup = g_strconcat(count_tag_open->str,
+		markup = g_strconcat(count_tag_open->str, "<b>",
 				dc->selected->str, " selected, ",
 				dc->total->str, " total (",
 				dc->hidden->str, " hidden)",
-				count_tag_close->str, NULL);
+				"</b>", count_tag_close->str, NULL);
 	}
 	pango_layout_set_markup(dc->counts_layout, markup, -1);
 	g_free(markup);
@@ -361,10 +376,18 @@ void dircont_set_active(DirCont* dc, gboolean setting) {
 	if (setting != dc->is_active) {
 		dc->is_active = setting;
 		reset_count_layout(dc);
-		if (dc->is_active)
-			gtk_widget_show(dc->scrolled_window);
+	}
+
+	if (dc->is_active) {
+		gtk_widget_set_state(dc->header, GTK_STATE_SELECTED);
+		gtk_widget_show(dc->scrolled_window);
+	}
+	else {
+		gtk_widget_hide(dc->scrolled_window);
+		if (dc->is_restricted)
+			gtk_widget_set_state(dc->header, GTK_STATE_INSENSITIVE);
 		else
-			gtk_widget_hide(dc->scrolled_window);
+			gtk_widget_set_state(dc->header, GTK_STATE_ACTIVE);
 	}
 }
 
@@ -404,43 +427,93 @@ void dircont_free(DirCont* dc) {
 }
 
 
-static gboolean header_expose_event(GtkWidget *header, GdkEventExpose *event,
+/* Colour that thin line of space between the window and the scroll bar. */
+static gboolean scrolled_window_expose_event(GtkWidget* scrollwin,
+		GdkEventExpose *event, DirCont* dc) {
+
+	if (dc->is_active && scrollwin->window) {
+		/* Colour the whole area of the scrolled window, just to be sure. */
+		GdkGC* light_gc =
+			scrollwin->style->light_gc[GTK_WIDGET_STATE(dc->header)];
+		gdk_draw_rectangle(
+				scrollwin->window,
+				light_gc,
+				TRUE,
+				0, 0,
+				scrollwin->allocation.width,
+				scrollwin->allocation.height);
+	}
+
+	return FALSE;
+}
+
+
+/* Paint the header in various ways, depending on the state of the dc. */
+static gboolean header_expose_event(GtkWidget* header, GdkEventExpose* event,
 		DirCont* dc) {
 
+	static GdkPixbuf* active_grad = NULL;
+	static GdkPixbuf* pwd_grad = NULL;
+
 	GdkGC* fg_gc = header->style->fg_gc[GTK_WIDGET_STATE(header)];
-//	GdkGC* bg_gc = header->style->bg_gc[GTK_WIDGET_STATE(header)];
-	GdkGC* bg_gc = header->style->bg_gc[GTK_STATE_ACTIVE];
+	GdkGC* bg_gc = header->style->bg_gc[GTK_WIDGET_STATE(header)];
+	GdkGC* light_gc = header->style->dark_gc[GTK_WIDGET_STATE(header)];
 
 	gint name_width, name_height;
 	pango_layout_get_pixel_size(dc->name_layout, &name_width, &name_height);
 
-	GdkGCValues fgv, bgv;
-	gdk_gc_get_values(fg_gc, &fgv);
-	gdk_gc_get_values(bg_gc, &bgv);
+	if (dc->is_active) {
 
-#if 0
-	GdkPixbuf* gradient = create_gradient(&bgv.background, &fgv.background, header->allocation.width, name_height, TRUE);
+		if (active_grad == NULL ||
+				gdk_pixbuf_get_width(active_grad) !=
+				header->allocation.width) {
+			active_grad = create_gradient(
+					&header->style->dark[GTK_STATE_SELECTED],
+					&header->style->light[GTK_STATE_SELECTED],
+					header->allocation.width,
+					header->allocation.height, FALSE);
+		}
 
+		gdk_draw_pixbuf(
+				header->window,
+				bg_gc,
+				active_grad,
+				0, 0, 0, 0,
+				header->allocation.width, header->allocation.height,
+				GDK_RGB_DITHER_NONE, 0, 0);
+	}
+	else if (dc->is_pwd) {
 
-	/* Draw background of name */
-	gdk_draw_pixbuf(
-			header->window,
-			bg_gc,
-			gradient,
-			0, 0, 0, 0,
-			header->allocation.width, name_height,
-			GDK_RGB_DITHER_NONE, 0, 0);
-#endif
-	gdk_draw_rectangle(
-			header->window,
-			bg_gc,
-			TRUE,
-			0, 0,
-			header->allocation.width, name_height);
+		if (pwd_grad == NULL || 
+				gdk_pixbuf_get_width(pwd_grad) !=
+				header->allocation.width) {
+			pwd_grad = create_gradient(
+					&header->style->dark[GTK_STATE_ACTIVE],
+					&header->style->light[GTK_STATE_ACTIVE],
+					header->allocation.width,
+					header->allocation.height, FALSE);
+		}
+
+		gdk_draw_pixbuf(
+				header->window,
+				bg_gc,
+				pwd_grad,
+				0, 0, 0, 0,
+				header->allocation.width, header->allocation.height,
+				GDK_RGB_DITHER_NONE, 0, 0);
+
+	}
+	else {
+		gdk_draw_rectangle(
+				header->window,
+				bg_gc,
+				TRUE,
+				0, 0,
+				header->allocation.width, name_height);
+	}
 
 	/* Draw separator. */
-	if (dc->rank != 0) {
-		// TODO -- if the dc goes from rank 0 to a different rank (or vice versa), its separator area needs to be redrawn
+	if (!dc->is_active && dc->rank != 0) {
 		gdk_draw_rectangle(
 				header->window,
 				fg_gc,
@@ -448,6 +521,7 @@ static gboolean header_expose_event(GtkWidget *header, GdkEventExpose *event,
 				0, 0,
 				header->allocation.width, 1);
 	}
+
 
 	/* Draw name */
 	gdk_draw_layout(
@@ -462,6 +536,7 @@ static gboolean header_expose_event(GtkWidget *header, GdkEventExpose *event,
 			fg_gc,
 			COUNT_SPACER, name_height,
 			dc->counts_layout);
+
 
 	/* If this is the active dc, show the mask as well. */
 	if (dc->is_active) {
@@ -490,6 +565,7 @@ static gboolean header_expose_event(GtkWidget *header, GdkEventExpose *event,
 					small_mask_layout);
 		}
 	}
+
 
 	return TRUE;
 }
@@ -603,9 +679,13 @@ void dircont_nav(DirCont* dc, DirContNav nav) {
 }
 
 
-static GdkPixbuf *
-create_gradient(GdkColor *color1, GdkColor *color2, gint width, gint height,
-		gboolean horz) {
+/* Grabbed this from xfce4.  It may have been written by any of the following
+   people:
+	   Brian Tarricone <bjt23@cornell.edu>
+	   Jasper Huijsmans <huysmans@users.sourceforge.net>
+	   Benedikt Meurer <benedikt.meurer@unix-ag.uni-siegen.de> */
+static GdkPixbuf*  create_gradient(GdkColor* color1, GdkColor* color2,
+		gint width, gint height, gboolean horz) {
 
 	g_return_val_if_fail(color1 != NULL && color2 != NULL, NULL);
 	g_return_val_if_fail(width > 0 && height > 0, NULL);
@@ -614,6 +694,7 @@ create_gradient(GdkColor *color1, GdkColor *color2, gint width, gint height,
 	gint i, j;
 	GdkPixdata pixdata;
 	guint8 rgb[3];
+    GError *err = NULL;
 
 	pixdata.magic = GDK_PIXBUF_MAGIC_NUMBER;
 	pixdata.length = GDK_PIXDATA_HEADER_LENGTH + (width * height * 3);
@@ -655,7 +736,11 @@ create_gradient(GdkColor *color1, GdkColor *color2, gint width, gint height,
 		}
 	}
 	
-	pix = gdk_pixbuf_from_pixdata(&pixdata, TRUE, NULL);
+	pix = gdk_pixbuf_from_pixdata(&pixdata, TRUE, &err);
+	if (!pix) {
+		g_warning("Unable to create color gradient: %s", err->message);
+		g_error_free(err);
+	}
 
 	return pix;
 }
