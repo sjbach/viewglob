@@ -4,9 +4,9 @@
 .so giftcurs.tmac
 .
 .TL
-Viewglob 1.0.3 README
+Viewglob 1.1.0 README
 .br
-March 5, 2005
+March 8, 2005
 .AU
 Stephen Bach <sjbach@users.sourceforge.net>
 .
@@ -32,22 +32,32 @@ The sourceforge listing is here:
 .IP
 http://sourceforge.net/projects/viewglob/
 .LP
-New releases are announced through Freshmeat, so if you'd like to stay up-to-date you may subscribe to the Viewglob project there:
-.IP
-http://freshmeat.net/projects/viewglob/
-.LP
 Feedback is welcome!
 .LP
 .
 .Sh NEW IN THIS RELEASE
 .LP
-My biggest issue with Viewglob has always been the awkwardness of dealing with separate windows.  As you shuffle around, the display gets separated from the terminal, and soon you're just using the shell and none of the Viewglob.  I considered creating a terminal with an integrated display, but that feels like giving up.
+Viewglob now understands the LS_COLORS environment variable used by GNU ls.  Filenames can be coloured (fg and bg), boldened, and underlined.  You shouldn't have to do anything special to make this work, assuming your system is setup to use dircolors already.
 .LP
-In my first attempt at combatting this problem I've added a key sequence, Cg-<TAB> or Cg-<ENTER> (Cg = Ctrl-G), which will ask the window manager to refocus the terminal and the display, bringing them both to the top layer.  So when you've got one but not the other, type this sequence and both will be visible.
-.LP
-This has necessitated a new reliance on Xlib (previously only implied with GTK), which may cause compatibility issues.  If so, please let me know.  Also, whether this feature works or not depends on your window manager.  If it has implemented a good portion of the EWMH specification you'll probably be okay.
-.LP
-The dircolors stuff will be in the next release (I needed a break from Pango).
+If you'd like to disable the LS_COLORS stuff in the display (but keep it working in your shell), you could use a wrapper script:
+.Vs
+#!/bin/sh
+export LS_COLORS=
+exec viewglob
+.Ve
+If you'd like to use a different colouring scheme for the display than for ls, you could do something similar:
+.Vs
+#!/bin/sh
+eval `dircolors ~/.vg_colors`
+exec viewglob
+.Ve
+And for BSD users:
+.Vs
+#!/bin/sh
+export LS_COLORS='no=00:fi=00:di=01;34:*.tar=01;31:*.tgz=01;31' # etc.
+exec viewglob
+.Ve
+On a separate note, the algorithm for the refocus shortcut (Cg-<TAB> or Cg-<ENTER>) has been tweaked to be a little smarter.
 .
 .Sh INSTALLATION
 .LP
@@ -66,6 +76,14 @@ The program has been built with portability in mind, so it should (ha) run on mo
 .Sh REQUIREMENTS
 .LP
 Viewglob requires a version of Bash (any, as far as I know) and GTK+ 2.4.  A version of Zsh is also obviously required if you wish to use Zsh under Viewglob.
+.
+.Sh NEW IN PREVIOUS RELEASE 1.0.3
+.LP
+My biggest issue with Viewglob has always been the awkwardness of dealing with separate windows.  As you shuffle around, the display gets separated from the terminal, and soon you're just using the shell and none of the Viewglob.  I considered creating a terminal with an integrated display, but that feels like giving up.
+.LP
+In my first attempt at combatting this problem I've added a key sequence, C-g <TAB> or C-g <ENTER> (C-g = Ctrl-G), which will ask the window manager to refocus the terminal and the display, bringing them both to the top layer.  So when you've got one but not the other, type this sequence and both will be visible.
+.LP
+This has necessitated a new reliance on Xlib (previously only implied with GTK), which may cause compatibility issues.  If so, please let me know.  Also, whether this feature works or not depends on your window manager.  If it has implemented a good portion of the EWMH specification you'll probably be okay.
 .
 .Sh NEW IN PREVIOUS RELEASE 1.0.2
 .LP
