@@ -32,7 +32,7 @@ extern struct viewable_preferences v;
 static gint show_context_menu(GtkWidget *widget, GdkEvent *event);
 static void show_hidden_files_activate_handler(GtkMenuItem* menu_item, DListing* dl);
 static void show_all_files_activate_handler(GtkMenuItem* menu_item, DListing* dl);
-static gboolean is_zero(const GString* string)
+static gboolean is_zero(const GString* string);
 
 
 static gint show_context_menu(GtkWidget *widget, GdkEvent *event) {
