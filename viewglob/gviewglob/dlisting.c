@@ -32,6 +32,7 @@ extern struct viewable_preferences v;
 static gint show_context_menu(GtkWidget *widget, GdkEvent *event);
 static void show_hidden_files_activate_handler(GtkMenuItem* menu_item, DListing* dl);
 static void show_all_files_activate_handler(GtkMenuItem* menu_item, DListing* dl);
+static gboolean is_zero(const GString* string)
 
 
 static gint show_context_menu(GtkWidget *widget, GdkEvent *event) {
@@ -72,6 +73,14 @@ static void show_all_files_activate_handler(GtkMenuItem* menu_item, DListing* dl
 }
 
 
+static gboolean is_zero(const GString* string) {
+	if (strcmp(string->str, "0") == 0)
+		return TRUE;
+	else
+		return FALSE;
+}
+	
+
 DListing* dlisting_new(const GString* name, gint rank, const GString* selected_count, const GString* total_count, const GString* hidden_count, gint width) {
 	DListing* new_dl;
 
@@ -111,7 +120,10 @@ DListing* dlisting_new(const GString* name, gint rank, const GString* selected_c
 
 	/* Event box for the directory header (so it can be a different color). */
 	dir_heading_event_box = gtk_event_box_new();
-	gtk_widget_set_state(dir_heading_event_box, GTK_STATE_ACTIVE);
+	if (is_zero(total_count))
+		gtk_widget_set_state(dir_heading_event_box, GTK_STATE_SELECTED);
+	else
+		gtk_widget_set_state(dir_heading_event_box, GTK_STATE_ACTIVE);
 	gtk_box_pack_start(GTK_BOX(vbox), dir_heading_event_box, FALSE, FALSE, 0);
 	gtk_widget_show(dir_heading_event_box);
 
@@ -158,7 +170,6 @@ DListing* dlisting_new(const GString* name, gint rank, const GString* selected_c
 
 	/* Create the file box. */
 	new_dl->file_box = file_box_new();
-	/* wrap_box_set_optimal_width(WRAP_BOX(new_dl->file_box), width - 4); */
 	file_box_set_optimal_width(FILE_BOX(new_dl->file_box), width);
 	file_box_set_show_hidden_files(FILE_BOX(new_dl->file_box), v.show_hidden_files);
 	file_box_set_file_display_limit(FILE_BOX(new_dl->file_box), v.file_display_limit);
@@ -259,7 +270,9 @@ void dlisting_reset_file_count_label(DListing* dl) {
 	else
 		n_displayed = atol(dl->total_count->str) - atol(dl->hidden_count->str);
 
-	if (display_limit == 0 || n_displayed <= display_limit) {
+	if (is_zero(dl->total_count))
+		temp_string = g_strdup("<small>(Restricted)</small>");
+	else if (display_limit == 0 || n_displayed <= display_limit) {
 		temp_string = g_strconcat("<small>",
 				dl->selected_count->str, " selected, ",
 				dl->total_count->str, " total (",

@@ -1,3 +1,7 @@
+2004-09-05 16:18  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* dlisting.c: differentiated the appearance of restricted dlistings.
+
 2004-09-05 14:51  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* README.ms, viewglob.1, seer.c, sequences.c, viewglob.in:
