@@ -1,3 +1,9 @@
+2004-09-08 01:47  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* gviewglob.c, gviewglob.h, actions.c, seer.c, sequences.c:
+	  Finished keyboard navigation for now.  Can use Ctrl-"key" in addition to
+	  just "key" (it's easier to type).
+
 2004-09-07 20:27  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* Makefile.am, HACKING: adding HACKING document

@@ -21,7 +21,6 @@
 
 #include "common.h"
 #include "viewglob-error.h"
-#include "children.h"
 #include "actions.h"
 
 struct action_list {

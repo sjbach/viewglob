@@ -48,6 +48,7 @@ static void process_glob_data(const gchar* buff, gsize bytes, Exhibit* e);
 static void exhibit_unmark_all(Exhibit* e);
 static void exhibit_cull(Exhibit* e);
 static void exhibit_rearrange_and_show(Exhibit* e);
+static void exhibit_do_order(Exhibit* e, GString* order);
 
 static FileSelection  map_selection_state(const GString* string);
 static FileType       map_file_type(const GString* string);
@@ -267,13 +268,15 @@ static void process_cmd_data(const gchar* buff, gsize bytes, Exhibit* e) {
 
 	gsize pos = 0;
 
-	DEBUG((df,"\n[["));
-	while (pos < bytes) {
-		DEBUG((df,"%c", buff[pos]));
-		pos++;
-	}
-	DEBUG((df,"\n]]"));
-	pos = 0;
+	#if DEBUG_ON
+		DEBUG((df,"\n[["));
+		while (pos < bytes) {
+			DEBUG((df,"%c", buff[pos]));
+			pos++;
+		}
+		DEBUG((df,"\n]]"));
+		pos = 0;
+	#endif
 
 	while (pos < bytes) {
 
@@ -321,14 +324,8 @@ static void process_cmd_data(const gchar* buff, gsize bytes, Exhibit* e) {
 			case CRS_ORDER:
 				string = read_string(buff, &pos, bytes, '\n', &ho, &completed);
 				if (completed) {
-					if (strcmp(string->str, "lost") == 0) {
-						/* Do something. */
-						gtk_entry_set_text(GTK_ENTRY(e->cmdline), "I give up!");
-					}
-					else {
-						g_error("Unexpected order in process_cmd_data.");
-						return;
-					}
+					exhibit_do_order(e, string);
+
 					advance = TRUE;
 					rs = CRS_DONE;
 					g_string_free(string, TRUE);
@@ -581,6 +578,43 @@ static void exhibit_unmark_all(Exhibit* e) {
 	for (iter = e->dl_slist; iter; iter = g_slist_next(iter)) {
 		dl = iter->data;
 		dl->marked = FALSE;
+	}
+}
+
+
+static void exhibit_do_order(Exhibit* e, GString* order) {
+
+	gdouble upper, lower, current, step_increment, page_increment, change;
+
+	change = 0;
+	current = gtk_adjustment_get_value(e->vadjustment);
+	step_increment = e->vadjustment->step_increment;
+	page_increment = e->vadjustment->page_increment;
+	lower = e->vadjustment->lower;
+
+	/* Otherwise we scroll down into a page of black. */
+	upper = e->vadjustment->upper - page_increment - step_increment;
+
+	if (strcmp(order->str, "lost") == 0) {
+		/* Do something. */
+		/*gtk_entry_set_text(GTK_ENTRY(e->cmdline), "I give up!");*/
+	}
+	else if (strcmp(order->str, "up") == 0)
+		change = -step_increment;
+	else if (strcmp(order->str, "down") == 0)
+		change = +step_increment;
+	else if (strcmp(order->str, "pgup") == 0)
+		change = -page_increment;
+	else if (strcmp(order->str, "pgdown") == 0)
+		change = +page_increment;
+	else {
+		g_error("Unexpected order in process_cmd_data.");
+		return;
+	}
+
+	if (change) {
+		gtk_adjustment_set_value(e->vadjustment, CLAMP(current + change, lower, upper));
+		gtk_adjustment_value_changed(e->vadjustment);
 	}
 }
 
@@ -868,6 +902,7 @@ int main(int argc, char *argv[]) {
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolled_window), GTK_POLICY_NEVER, GTK_POLICY_ALWAYS);
 	gtk_box_pack_start(GTK_BOX(vbox), scrolled_window, TRUE, TRUE, 0);
 	gtk_widget_show(scrolled_window);
+	e.vadjustment = gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(scrolled_window));
 
 	/* Command line text widget. */
 	command_line_entry = gtk_entry_new();

@@ -48,6 +48,7 @@ typedef struct _Exhibit Exhibit;
 struct _Exhibit {
 	GSList* dl_slist;           /* This is for DListing structs. */
 	GtkWidget* listings_box;    /* This is the vbox holding the dir/file listings. */
+	GtkAdjustment* vadjustment; /* Vertical scrollbar. */
 
 	GtkWidget* cmdline;         /* The entry holding the cmdline. */
 };

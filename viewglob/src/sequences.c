@@ -85,19 +85,16 @@ static MatchEffect seq_term_bell(Buffer* b);
 static MatchEffect seq_term_carriage_return(Buffer* b);
 static MatchEffect seq_term_newline(Buffer* b);
 
-/* In sequences: 
-  - The ENQ control character (005) stands for any sequence of digits (or none).
-  - The ACK control character (006) stands for any sequence of printable characters (or none).
-  - The EOT control character (004) stands for any non-linefeed, non-carriage return character.
-  - The ETX control character (003) stands for any single character. */
-#define DIGIT_C '\005'
-#define PRINTABLE_C '\006'
-#define DIGIT_S "\005"
-#define PRINTABLE_S "\006"
-#define NOT_LF_C '\004'
-#define NOT_LF_S "\004"
-/*#define ANY_C '\003'*/
-/*#define ANY_S "\003"*/
+/* The below characters don't appear in any of the sequences viewglob looks for, so we
+   can use them as special characters. */
+#define DIGIT_C '\021'            /* Any sequence of digits (or none). */
+#define DIGIT_S "\021"
+#define PRINTABLE_C '\022'        /* Any sequence of printable characters (or none). */
+#define PRINTABLE_S "\022"
+#define NOT_LF_C '\023'           /* Any single non-linefeed, non-carriage return character. */
+#define NOT_LF_S "\023"
+/*#define ANY_C '\024'*/          /* Any single character. */
+/*#define ANY_S "\024"*/
 
 /* viewglob escape sequences.
    Note: if these are changed, the init-viewglob.*rc files must be updated. */
@@ -108,17 +105,29 @@ static char* const NEW_PWD_SEQ = "\033P" PRINTABLE_S "\033\\";
 
 /* viewglob navigation sequences. */
 static char* const NAV_VI_UP_SEQ = "\007k";
+static char* const NAV_C_VI_UP_SEQ = "\007\013";
 static char* const NAV_VI_DOWN_SEQ = "\007j";
+static char* const NAV_C_VI_DOWN_SEQ = "\007\012";
 static char* const NAV_VI_PGUP_SEQ = "\007b";
+static char* const NAV_C_VI_PGUP_SEQ = "\007\002";
 static char* const NAV_VI_PGDOWN_SEQ = "\007f";
+static char* const NAV_C_VI_PGDOWN_SEQ = "\007\006";
 static char* const NAV_EMACS_UP_SEQ = "\007p";
+static char* const NAV_C_EMACS_UP_SEQ = "\007\020";
 static char* const NAV_EMACS_DOWN_SEQ = "\007n";
+static char* const NAV_C_EMACS_DOWN_SEQ = "\007\020";
 static char* const NAV_EMACS_PGUP_SEQ = "\007u";
+static char* const NAV_C_EMACS_PGUP_SEQ = "\007\025";
 static char* const NAV_EMACS_PGDOWN_SEQ = "\007d";
+static char* const NAV_C_EMACS_PGDOWN_SEQ = "\007\004";
 static char* const NAV_KEYBOARD_UP_SEQ = "\007\033[A";
+static char* const NAV_C_KEYBOARD_UP_SEQ = "\007\033Oa";
 static char* const NAV_KEYBOARD_DOWN_SEQ = "\007\033[B";
+static char* const NAV_C_KEYBOARD_DOWN_SEQ = "\007\033Ob";
 static char* const NAV_KEYBOARD_PGUP_SEQ = "\007\033[5~";
+static char* const NAV_C_KEYBOARD_PGUP_SEQ = "\007\033[5^";
 static char* const NAV_KEYBOARD_PGDOWN_SEQ = "\007\033[6~";
+static char* const NAV_C_KEYBOARD_PGDOWN_SEQ = "\007\033[6^";
 static char* const NAV_CTRL_G_SEQ = "\007\007";
 /*static char* const NAV_CATCH_ALL_SEQ = "\007" ANY_S "";*/
 
@@ -234,8 +243,8 @@ void init_seqs(enum shell_type shell) {
 	else
 		viewglob_error("Unexpected shell type");
 
-	seq_groups[PL_TERMINAL].n = 13;
-	seq_groups[PL_TERMINAL].seqs = XMALLOC(Sequence, 13);
+	seq_groups[PL_TERMINAL].n = 25;
+	seq_groups[PL_TERMINAL].seqs = XMALLOC(Sequence, 25);
 	for (i = 0; i < seq_groups[PL_TERMINAL].n; i++) {
 		seq_groups[PL_TERMINAL].seqs[i].pos = 0;
 		seq_groups[PL_TERMINAL].seqs[i].enabled = false;
@@ -305,6 +314,66 @@ void init_seqs(enum shell_type shell) {
 	seq_groups[PL_TERMINAL].seqs[12].seq = NAV_CTRL_G_SEQ;
 	seq_groups[PL_TERMINAL].seqs[12].length = strlen(NAV_CTRL_G_SEQ);
 	seq_groups[PL_TERMINAL].seqs[12].func = seq_nav_ctrl_g;
+
+	strcpy(seq_groups[PL_TERMINAL].seqs[13].name, "Nav C vi up");
+	seq_groups[PL_TERMINAL].seqs[13].seq = NAV_C_VI_UP_SEQ;
+	seq_groups[PL_TERMINAL].seqs[13].length = strlen(NAV_C_VI_UP_SEQ);
+	seq_groups[PL_TERMINAL].seqs[13].func = seq_nav_up;
+
+	strcpy(seq_groups[PL_TERMINAL].seqs[14].name, "Nav C vi down");
+	seq_groups[PL_TERMINAL].seqs[14].seq = NAV_C_VI_DOWN_SEQ;
+	seq_groups[PL_TERMINAL].seqs[14].length = strlen(NAV_C_VI_DOWN_SEQ);
+	seq_groups[PL_TERMINAL].seqs[14].func = seq_nav_down;
+
+	strcpy(seq_groups[PL_TERMINAL].seqs[15].name, "Nav C vi pgup");
+	seq_groups[PL_TERMINAL].seqs[15].seq = NAV_C_VI_PGUP_SEQ;
+	seq_groups[PL_TERMINAL].seqs[15].length = strlen(NAV_C_VI_PGUP_SEQ);
+	seq_groups[PL_TERMINAL].seqs[15].func = seq_nav_pgup;
+
+	strcpy(seq_groups[PL_TERMINAL].seqs[16].name, "Nav C vi pgdown");
+	seq_groups[PL_TERMINAL].seqs[16].seq = NAV_C_VI_PGDOWN_SEQ;
+	seq_groups[PL_TERMINAL].seqs[16].length = strlen(NAV_C_VI_PGDOWN_SEQ);
+	seq_groups[PL_TERMINAL].seqs[16].func = seq_nav_pgdown;
+
+	strcpy(seq_groups[PL_TERMINAL].seqs[17].name, "Nav C emacs up");
+	seq_groups[PL_TERMINAL].seqs[17].seq = NAV_C_EMACS_UP_SEQ;
+	seq_groups[PL_TERMINAL].seqs[17].length = strlen(NAV_C_EMACS_UP_SEQ);
+	seq_groups[PL_TERMINAL].seqs[17].func = seq_nav_up;
+
+	strcpy(seq_groups[PL_TERMINAL].seqs[18].name, "Nav C emacs down");
+	seq_groups[PL_TERMINAL].seqs[18].seq = NAV_C_EMACS_DOWN_SEQ;
+	seq_groups[PL_TERMINAL].seqs[18].length = strlen(NAV_C_EMACS_DOWN_SEQ);
+	seq_groups[PL_TERMINAL].seqs[18].func = seq_nav_down;
+
+	strcpy(seq_groups[PL_TERMINAL].seqs[19].name, "Nav C emacs pgup");
+	seq_groups[PL_TERMINAL].seqs[19].seq = NAV_C_EMACS_PGUP_SEQ;
+	seq_groups[PL_TERMINAL].seqs[19].length = strlen(NAV_C_EMACS_PGUP_SEQ);
+	seq_groups[PL_TERMINAL].seqs[19].func = seq_nav_pgup;
+
+	strcpy(seq_groups[PL_TERMINAL].seqs[20].name, "Nav C emacs pgdown");
+	seq_groups[PL_TERMINAL].seqs[20].seq = NAV_C_EMACS_PGDOWN_SEQ;
+	seq_groups[PL_TERMINAL].seqs[20].length = strlen(NAV_C_EMACS_PGDOWN_SEQ);
+	seq_groups[PL_TERMINAL].seqs[20].func = seq_nav_pgdown;
+
+	strcpy(seq_groups[PL_TERMINAL].seqs[21].name, "Nav C keyboard up");
+	seq_groups[PL_TERMINAL].seqs[21].seq = NAV_C_KEYBOARD_UP_SEQ;
+	seq_groups[PL_TERMINAL].seqs[21].length = strlen(NAV_C_KEYBOARD_UP_SEQ);
+	seq_groups[PL_TERMINAL].seqs[21].func = seq_nav_up;
+
+	strcpy(seq_groups[PL_TERMINAL].seqs[22].name, "Nav C keyboard down");
+	seq_groups[PL_TERMINAL].seqs[22].seq = NAV_C_KEYBOARD_DOWN_SEQ;
+	seq_groups[PL_TERMINAL].seqs[22].length = strlen(NAV_C_KEYBOARD_DOWN_SEQ);
+	seq_groups[PL_TERMINAL].seqs[22].func = seq_nav_down;
+
+	strcpy(seq_groups[PL_TERMINAL].seqs[23].name, "Nav C keyboard pgup");
+	seq_groups[PL_TERMINAL].seqs[23].seq = NAV_C_KEYBOARD_PGUP_SEQ;
+	seq_groups[PL_TERMINAL].seqs[23].length = strlen(NAV_C_KEYBOARD_PGUP_SEQ);
+	seq_groups[PL_TERMINAL].seqs[23].func = seq_nav_pgup;
+
+	strcpy(seq_groups[PL_TERMINAL].seqs[24].name, "Nav C keyboard pgdown");
+	seq_groups[PL_TERMINAL].seqs[24].seq = NAV_C_KEYBOARD_PGDOWN_SEQ;
+	seq_groups[PL_TERMINAL].seqs[24].length = strlen(NAV_C_KEYBOARD_PGDOWN_SEQ);
+	seq_groups[PL_TERMINAL].seqs[24].func = seq_nav_pgdown;
 
 	/*
 	strcpy(seq_groups[PL_TERMINAL].seqs[13].name, "Nav catch all");
@@ -1059,36 +1128,32 @@ static MatchEffect seq_term_newline(Buffer* b) {
 
 static MatchEffect seq_nav_up(Buffer* b) {
 	DEBUG((df, "seq_nav_up!\n"));
-	printf("(up)");
-	fflush(stdout);
 	eat_segment(b);
+	action_queue(A_SEND_UP);
 	return ME_NO_EFFECT;
 }
 
 
 static MatchEffect seq_nav_down(Buffer* b) {
 	DEBUG((df, "seq_nav_down!\n"));
-	printf("(down)");
-	fflush(stdout);
 	eat_segment(b);
+	action_queue(A_SEND_DOWN);
 	return ME_NO_EFFECT;
 }
 
 
 static MatchEffect seq_nav_pgup(Buffer* b) {
 	DEBUG((df, "seq_nav_pgup!\n"));
-	printf("(pgup)");
-	fflush(stdout);
 	eat_segment(b);
+	action_queue(A_SEND_PGUP);
 	return ME_NO_EFFECT;
 }
 
 
 static MatchEffect seq_nav_pgdown(Buffer* b) {
 	DEBUG((df, "seq_nav_pgdown!\n"));
-	printf("(pgdown)");
-	fflush(stdout);
 	eat_segment(b);
+	action_queue(A_SEND_PGDOWN);
 	return ME_NO_EFFECT;
 }
 

@@ -56,7 +56,7 @@ static bool scan_for_newline(const Buffer* b);
 static bool process_input(Buffer* b);
 
 static void send_sane_cmd(struct display* d);
-static void send_lost(struct display* d);
+static void send_order(struct display* d, Action a);
 
 static void parse_args(int argc, char** argv);
 static void report_version(void);
@@ -341,7 +341,7 @@ static void report_version(void) {
 /* Main program loop. */
 static bool main_loop(struct display* disp) {
 
-	Action d;
+	Action a = A_NOP;
 	bool ok = true;
 	bool in_loop = true;
 
@@ -362,35 +362,42 @@ static bool main_loop(struct display* disp) {
 
 		/* FIXME
 		   - A_SEND_PWD has no use. */
-		while (true) {
-			d = action_queue(A_POP);
-			if (d == A_EXIT) {
-				DEBUG((df, "::d_exit::\n"));
-				in_loop = false;
-				break;
-			}
-			else if (d == A_DONE) {
-				DEBUG((df, "::d_done::\n"));
-				break;
-			}
-			else if (d == A_SEND_CMD) {
-				DEBUG((df, "::send cmd::\n"));
-				if (viewglob_enabled)
-					send_sane_cmd(disp);
-			}
-			else if (d == A_SEND_PWD) {
-				/* Do nothing. */
-				DEBUG((df, "::send pwd::\n"));
-			}
-			else if (d == A_SEND_LOST) {
-				/* blah */
-				if (viewglob_enabled)
-					send_lost(disp);
-			}
-			else {
-				viewglob_error("Received unexpected action");
-				ok = in_loop = false;
-				break;
+		for (a = action_queue(A_POP); in_loop && (a != A_DONE); a = action_queue(A_POP)) {
+			switch (a) {
+				case A_EXIT:
+					DEBUG((df, "::d_exit::\n"));
+					in_loop = false;
+					break;
+
+				case A_SEND_CMD:
+					DEBUG((df, "::send cmd::\n"));
+					if (viewglob_enabled)
+						send_sane_cmd(disp);
+					break;
+
+				case A_SEND_PWD:
+					/* Do nothing. */
+					DEBUG((df, "::send pwd::\n"));
+					break;
+
+				case A_SEND_LOST:
+				case A_SEND_UP:
+				case A_SEND_DOWN:
+				case A_SEND_PGUP:
+				case A_SEND_PGDOWN:
+					DEBUG((df, "::send order::\n"));
+					if (viewglob_enabled)
+						send_order(disp, a);
+					break;
+
+				case A_DONE:
+					DEBUG((df, "::d_done::\n"));
+					break;
+
+				default:
+					viewglob_error("Received unexpected action");
+					ok = in_loop = false;
+					break;
 			}
 		}
 	}
@@ -552,7 +559,6 @@ static bool user_activity(void) {
 
 
 /* Look for characters which can break a line. */
-//static bool scan_for_newline(const char* buff, size_t n) {
 static bool scan_for_newline(const Buffer* b) {
 	size_t i;
 
@@ -565,9 +571,6 @@ static bool scan_for_newline(const Buffer* b) {
 			case '\015':   /* Carriage return -- this is the Enter key. */
 			case '\017':   /* Shift in -- Ctrl-O (operate-and-get-next in bash readline). */
 				return true;
-//			case '!':
-//				action_queue(A_SEND_LOST);
-				break;
 			default:
 				break;
 		}
@@ -696,8 +699,31 @@ static void send_sane_cmd(struct display* d) {
 }
 
 
-static void send_lost(struct display* d) {
-	if (!hardened_write(d->cmd_fifo_fd, "order:lost\n", strlen("order:lost\n"))) {
+static void send_order(struct display* d, Action a) {
+	char* order;
+
+	switch (a) {
+		case A_SEND_LOST:
+			order = "order:lost\n";
+			break;
+		case A_SEND_UP:
+			order = "order:up\n";
+			break;
+		case A_SEND_DOWN:
+			order = "order:down\n";
+			break;
+		case A_SEND_PGUP:
+			order = "order:pgup\n";
+			break;
+		case A_SEND_PGDOWN:
+			order = "order:pgdown\n";
+			break;
+		default:
+			viewglob_warning("Unexpection action in send_order().");
+			return;
+	}
+
+	if (!hardened_write(d->cmd_fifo_fd, order, strlen(order))) {
 		fprintf(stderr, "(viewglob disabled)");
 		viewglob_enabled = false;
 	}
