@@ -50,9 +50,10 @@ bool handle_signals(void) {
 		return false;
 	if (sigaction(SIGPIPE, &act, NULL) == -1)
 		return false;
-	act.sa_handler = handler;
+	act.sa_handler = sigterm_handler;
 	if (sigaction(SIGTERM, &act, NULL) == -1)
 		return false;
+	act.sa_handler = handler;
 	if (sigaction(SIGBUS, &act, NULL) == -1)
 		return false;
 	if (sigaction(SIGFPE, &act, NULL) == -1)

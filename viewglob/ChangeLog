@@ -1,3 +1,7 @@
+2004-08-10 18:10  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* seer.c, seer.h, misc.c: graceful exit on SIGTERM.
+
 2004-08-08 13:56  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* Initial release.

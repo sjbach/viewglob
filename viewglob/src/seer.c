@@ -50,6 +50,7 @@ struct options opts;
 
 struct user_shell u;	/* Almost everything revolves around this. */
 struct glob_shell x;
+struct display disp;
 
 bool viewglob_enabled;  /* This controls whether or not viewglob should actively do stuff.
                            If the display is closed, viewglob will disable itself and try
@@ -58,7 +59,6 @@ bool viewglob_enabled;  /* This controls whether or not viewglob should actively
 int main(int argc, char* argv[]) {
 
 	int devnull_fd, fifo_fd;
-	struct display disp;
 
 	bool ok = true;
 	viewglob_enabled = true;
@@ -778,4 +778,15 @@ void sigwinch_handler(int signum) {
 	return;
 }
 
+
+void sigterm_handler(int signum) {
+	close_warning(x.s.transcript_fd, opts.term_out_file);
+	close_warning(u.s.transcript_fd, opts.shell_out_file);
+	(void) display_terminate(&disp);
+	(void) pty_child_terminate(&(x.s));
+	(void) pty_child_terminate(&(u.s));
+	(void) tc_restore();
+	printf("[Exiting viewglob]\n");
+	_exit(EXIT_FAILURE);
+}
 

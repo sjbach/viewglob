@@ -93,6 +93,7 @@ static void add_display_arg(char* new_arg);
 enum action action_queue(enum action);
 
 void sigwinch_handler(int signum);
+void sigterm_handler(int signum);
 bool handle_signals(void);
 void handler(int signum);
 size_t strlen_safe(const char* string);
