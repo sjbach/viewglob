@@ -5,7 +5,7 @@
 	* vgd.c: consistent message logging
 	* vgseer/Makefile.am, children.c, children.h, cmdline.c, cmdline.h,
 	  connection.c, connection.h, sequences.c sequences.h, vgseer.c,:
-	  Smarter data passing, much fewer gotos, general cleanup.
+	  Smarter data passing, many fewer gotos, general cleanup.
 
 2005-03-23 20:21  Stephen Bach <sjbach@users.sourceforge.net>
 
