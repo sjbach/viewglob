@@ -78,8 +78,8 @@ DListing* exhibit_add(Exhibit* e, GString* name, gint rank, GString* selected_co
 		dl = DLISTING(dlisting_new());
 		dlisting_set_name(dl, name->str);
 		dlisting_set_file_counts(dl, selected_count->str, total_count->str, hidden_count->str);
-		/* Set optimal width as the width of the layout. */
-		dlisting_set_optimal_width(dl, e->listings_box->parent->allocation.width);
+		/* Set optimal width as the width of the listings vbox. */
+		dlisting_set_optimal_width(dl, e->listings_box->allocation.width);
 		dlisting_mark(dl, rank);
 		file_box_set_show_hidden_files(FILE_BOX(dl->file_box), v.show_hidden_files);
 		file_box_set_file_display_limit(FILE_BOX(dl->file_box), v.file_display_limit);

@@ -51,9 +51,9 @@ static FileType       map_file_type(const GString* string);
 
 static gboolean  window_delete_event(GtkWidget* widget, GdkEvent* event, gpointer data);
 static gboolean  window_configure_event(GtkWidget* window, GdkEventConfigure* event, Exhibit* e);
+static void      window_allocate_event(GtkWidget* window, GtkAllocation* allocation, Exhibit* e);
 static gboolean  window_state_event(GtkWidget *window, GdkEvent *event, Exhibit* e);
 static gboolean  window_key_press_event(GtkWidget* window, GdkEventKey* event, gpointer data);
-static void      listings_allocate_event(GtkWidget* widget, GtkAllocation* allocation, GtkWidget* layout);
 
 /* Globals. */
 struct viewable_preferences v;
@@ -638,32 +638,27 @@ static GdkPixbuf* make_pixbuf_scaled(const guint8 icon_inline[], gint scale_size
 }
 
 
-/* Set the optimal width of the dlistings using the new width. */
-static gboolean window_configure_event(GtkWidget* window, GdkEventConfigure* event, Exhibit* e) {
+/* Resize the DListings if necessary. */
+static void window_allocate_event(GtkWidget* window, GtkAllocation* allocation, Exhibit* e) {
 	GSList* dl_iter;
 	DListing* dl;
 
-	/*g_print("<window: (%d,%d) layout: (%d,%d) listings_box: (%d,%d)>",
-			window->allocation.width, window->allocation.height,
-			e->listings_box->parent->allocation.width, e->listings_box->parent->allocation.height,
-			e->listings_box->allocation.width, e->listings_box->allocation.height); */
-	/*g_print("<configure-event (%d --> %d)>", window->allocation.width, event->width);*/
-	if (event->width != window->allocation.width) {
+	if (e->width_change) {
+		/* Cycle through the DListings and set the new optimal width.  This will make them
+		   optimize themselves to the window's width. */
 		for (dl_iter = e->dl_slist; dl_iter; dl_iter = g_slist_next(dl_iter)) {
 			dl = dl_iter->data;
-			dlisting_set_optimal_width(dl, ((gint)dl->optimal_width) + event->width - window->allocation.width);
+			dlisting_set_optimal_width(dl, ((gint)dl->optimal_width) + e->width_change);
 		}
+		e->width_change = 0;
 	}
-
-	return FALSE;
 }
 
 
-/* Set the layout to the size of the listings so that the scrollbars work.
-   Set step_increment of the vadjustment, since it's not handled by the layout (?). */
-static void listings_allocate_event(GtkWidget* widget, GtkAllocation* allocation, GtkWidget* layout) {
-	gtk_layout_set_size(GTK_LAYOUT(layout), allocation->width, allocation->height);
-	gtk_layout_get_vadjustment(GTK_LAYOUT(layout))->step_increment = 0.1 * layout->allocation.height;
+/* Track the width of the toplevel window. */
+static gboolean window_configure_event(GtkWidget* window, GdkEventConfigure* event, Exhibit* e) {
+	e->width_change += event->width - window->allocation.width;
+	return FALSE;
 }
 
 
@@ -816,7 +811,6 @@ static void report_version(void) {
 int main(int argc, char *argv[]) {
 
 	GtkWidget* vbox;
-	GtkWidget* layout;
 	GtkWidget* scrolled_window;
 
 	GtkStyle* style;
@@ -847,6 +841,7 @@ int main(int argc, char *argv[]) {
 	gtk_container_set_border_width(GTK_CONTAINER(e.window), 5);
 	gtk_window_set_title(GTK_WINDOW(e.window), (gchar *) "gviewglob");
 	gtk_window_set_default_size(GTK_WINDOW(e.window), 340, 420);
+	e.width_change = 0;
 
 	/* VBox for the scrolled window and the command-line widget. */
 	vbox = gtk_vbox_new(FALSE, 2);
@@ -854,15 +849,10 @@ int main(int argc, char *argv[]) {
 	gtk_container_add(GTK_CONTAINER(e.window), vbox);
 	gtk_widget_show(vbox);
 
-	/* Layout for the file/directory display vbox. */
-	layout = gtk_layout_new(NULL, NULL);
-	gtk_widget_show(layout);
-
 	/* ScrolledWindow for the layout. */
 	scrolled_window = gtk_scrolled_window_new(NULL, NULL);
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolled_window), GTK_POLICY_NEVER, GTK_POLICY_ALWAYS);
 	gtk_box_pack_start(GTK_BOX(vbox), scrolled_window, TRUE, TRUE, 0);
-	gtk_container_add(GTK_CONTAINER(scrolled_window), layout);
 	gtk_widget_show(scrolled_window);
 	e.vadjustment = gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(scrolled_window));
 
@@ -885,14 +875,14 @@ int main(int argc, char *argv[]) {
 	/* Setup the listings display. */
 	e.listings_box = gtk_vbox_new(FALSE, 5);
 	gtk_box_set_homogeneous(GTK_BOX(e.listings_box), FALSE);
-	gtk_layout_put(GTK_LAYOUT(layout), e.listings_box, 0, 0);
+	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scrolled_window), e.listings_box);
 	gtk_widget_show(e.listings_box);
 
 	g_signal_connect(G_OBJECT(e.window), "configure-event", G_CALLBACK(window_configure_event), &e);
+	g_signal_connect(G_OBJECT(e.window), "size-allocate", G_CALLBACK(window_allocate_event), &e);
 	g_signal_connect(G_OBJECT(e.window), "window-state-event", G_CALLBACK(window_state_event), &e);
 	g_signal_connect(G_OBJECT(e.window), "delete_event", G_CALLBACK(window_delete_event), NULL);
 	g_signal_connect(G_OBJECT(e.window), "key-press-event", G_CALLBACK(window_key_press_event), NULL);
-	g_signal_connect(G_OBJECT(e.listings_box), "size-allocate", G_CALLBACK(listings_allocate_event), layout);
 
 	set_icons(&e);
 

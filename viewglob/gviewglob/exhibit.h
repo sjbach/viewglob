@@ -33,6 +33,7 @@ struct _Exhibit {
 	GSList* dl_slist;           /* This is for DListing structs. */
 	GtkWidget* listings_box;    /* This is the vbox holding the dir/file listings. */
 	GtkAdjustment* vadjustment; /* Vertical scrollbar. */
+	gint width_change;          /* Change in window width that needs to be applied to the DListings. */
 
 	GtkWidget* cmdline;         /* The entry holding the cmdline. */
 };
