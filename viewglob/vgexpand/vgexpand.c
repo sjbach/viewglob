@@ -44,7 +44,12 @@
 #  endif
 #endif
 
-static gint  parse_args(gint argc, gchar** argv);
+struct mask {
+	gchar* pattern;
+	gboolean dirs_only;
+};
+
+static gint  parse_args(gint argc, gchar** argv, gchar** mask_str);
 static void  report_version(void);
 static void  compile_data(gint argc, gchar** argv);
 static void  mask_match(void);
@@ -54,15 +59,14 @@ static void  print_dir(Directory* dir);
 static void  initiate(dev_t pwd_dev_id, ino_t pwd_inode);
 static void  correlate(gchar* dir_name, gchar* file_name, dev_t dev_id,
 		ino_t dir_inode);
-static gchar** split(gchar* mask);
+static struct mask** split(gchar* mask);
 
 static Directory* reverse_list(Directory* head);
 
 static glong    get_max_path(const gchar* path);
 static gchar*   vg_dirname(const gchar* path);
 static gchar*   vg_basename(const gchar* path);
-static gchar*   normalize_path(const gchar* path,
-		gboolean remove_trailing);
+static gchar*   normalize_path(const gchar* path, gboolean remove_trailing);
 static gboolean has_trailing_slash(const gchar* path);
 static gint     find_prev(const gchar* string, gint pos, gchar c);
 
@@ -94,8 +98,7 @@ GCompareFunc filename_cmp = cmp_ls;
 static gchar* pwd;
 static size_t pwd_length;
 
-gchar* mask = "*";
-gchar** masks = NULL;
+struct mask** masks = NULL;
 
 static Directory* dirs = NULL;
 
@@ -103,14 +106,15 @@ static Directory* dirs = NULL;
 gint main(gint argc, gchar* argv[]) {
 	glong max_path;
 	gint offset;
+	gchar* mask_string = "*";
 
 	/* Set the program name. */
 	gchar* basename = g_path_get_basename(argv[0]);
 	g_set_prgname(basename);
 	g_free(basename);
 
-	offset = parse_args(argc, argv);
-	masks = split(mask);
+	offset = parse_args(argc, argv, &mask_string);
+	masks = split(mask_string);
 
 	/* Get max path length. */
 	max_path = get_max_path(".");
@@ -143,7 +147,7 @@ gint main(gint argc, gchar* argv[]) {
 /* Figure out where vgexpand's options end and its expansion output
    begins.  Also determine which directory matching function will be used and
    the file mask. */
-static gint parse_args(gint argc, gchar** argv) {
+static gint parse_args(gint argc, gchar** argv, gchar** mask_string) {
 	gint i, j;
 	gboolean has_double_dash = FALSE;
 
@@ -170,7 +174,7 @@ static gint parse_args(gint argc, gchar** argv) {
 			else if (STREQ("-m", *(argv + j))) {
 				j++;
 				if (j < i)
-					mask = *(argv + j);
+					*mask_string = *(argv + j);
 			}
 		}
 		i++;
@@ -472,11 +476,14 @@ gboolean mask_traverse(gpointer key, gpointer value, gpointer data) {
 	Directory* dir = data;
 
 	if (file->selected != S_YES) {
-		gchar** mask_iter = masks;
+		struct mask** mask_iter = masks;
 		while (*mask_iter) {
-			if (fnmatch(*mask_iter, file->name, FNM_PERIOD) == 0) {
+			if ( (!(*mask_iter)->dirs_only || file->type == FT_DIRECTORY) &&
+					fnmatch((*mask_iter)->pattern,
+						file->name, FNM_PERIOD) == 0) {
 				file->shown = TRUE;
 				dir->hidden_count--;
+				break;
 			}
 			mask_iter++;
 		}
@@ -812,7 +819,7 @@ static gint cmp_win(gconstpointer a, gconstpointer b) {
 	   "*.c *.h" is split into "*.c" and "*.h".
    This function performs very little error checking, as it's assumed the
    mask has been sanitized by vgseer. */
-static gchar** split(gchar* mask) {
+static struct mask** split(gchar* mask) {
 
 	g_return_val_if_fail(mask != NULL, NULL);
 
@@ -865,12 +872,29 @@ static gchar** split(gchar* mask) {
 		end++;
 	}
 
-	/* Take the pointer array and delimit it with NULL.  This might not be
-	   necessary. */
-	gchar** array = g_new(gchar*, ptrarray->len + 1);
+	/* Take the patterns from the pointer array and check to see if any of
+	   them have the trailing slash special case for matching directories. */
+	struct mask** array = g_new(struct mask*, ptrarray->len + 1);
+	gchar* p;
 	gint i;
-	for (i = 0; i < ptrarray->len; i++)
-		array[i] = ptrarray->pdata[i];
+	for (i = 0; i < ptrarray->len; i++) {
+		array[i] = g_new(struct mask, 1);
+		array[i]->pattern = ptrarray->pdata[i];
+		for (p = array[i]->pattern; *p != '\0'; p++)
+			;
+		if (p == array[i]->pattern)
+			array[i]->dirs_only = FALSE;
+		else {
+			p--;
+			if (*p == '/') {
+				array[i]->dirs_only = TRUE;
+				*p = '\0';
+			}
+			else
+				array[i]->dirs_only = FALSE;
+		}
+	}
+	/* Delimit with NULL. */
 	array[i] = NULL;
 
 	g_ptr_array_free(ptrarray, FALSE);

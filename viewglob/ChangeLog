@@ -1,3 +1,7 @@
+2005-03-29 00:21  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* vgexpand.c: added special directory-only case for masks
+
 2005-03-28 20:55  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* bootstrap, common/Makefile.am vgseer/Makefile.am: changes
