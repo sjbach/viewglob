@@ -70,6 +70,18 @@ static struct color_mapping {
 	guint16 g;
 	guint16 b;
 } map[] = {
+	/* These work best on a light background */
+	{ 0x0000, 0x0000, 0x0000 }, /* TCC_NONE (not used) */
+	{ 0x0000, 0x0000, 0x0000 }, /* TCC_BLACK */
+	{ 0xc1c1, 0x1111, 0x2525 }, /* TCC_RED */
+	{ 0x5050, 0x8888, 0x1e1e }, /* TCC_GREEN */
+	{ 0xc4c4, 0xb4b4, 0x0000 }, /* TCC_YELLOW */
+	{ 0x1616, 0x6262, 0xa2a2 }, /* TCC_BLUE */
+	{ 0xefef, 0x7070, 0x9a9a }, /* TCC_MAGENTA */
+	{ 0x2c2c, 0xa3a3, 0xa4a4 }, /* TCC_CYAN */
+	{ 0xffff, 0xffff, 0xffff }, /* TCC_WHITE */
+#if 0
+	/* These work best on a black background */
 	{ 0x0000, 0x0000, 0x0000 }, /* TCC_NONE (not used) */
 	{ 0x0000, 0x0000, 0x0000 }, /* TCC_BLACK */
 	{ 0x9e9e, 0x1818, 0x2828 }, /* TCC_RED */
@@ -79,6 +91,7 @@ static struct color_mapping {
 	{ 0x9696, 0x3c3c, 0x5959 }, /* TCC_MAGENTA */
 	{ 0x7171, 0xbebe, 0xbebe }, /* TCC_CYAN */
 	{ 0xffff, 0xffff, 0xffff }, /* TCC_WHITE */
+#endif
 };
 
 /* Buffer for color sequences */
@@ -789,7 +802,7 @@ void label_set_attributes(gchar* name, FileType type, GtkLabel* label) {
 		color.blue = map[tta->fg].b;
 
 		gtk_widget_modify_fg(GTK_WIDGET(label), GTK_STATE_NORMAL, &color);
-		gtk_widget_modify_fg(GTK_WIDGET(label), GTK_STATE_ACTIVE, &color);
+		/*gtk_widget_modify_fg(GTK_WIDGET(label), GTK_STATE_ACTIVE, &color);*/
 	}
 }
 
