@@ -25,6 +25,8 @@ icons.h: Makefile
 CLEANFILES = icons.h
 noinst_HEADERS = gviewglob.h dlisting.h wrap_box.h file_box.h common.h
 EXTRA_DIST = icon_16x16.png icon_24x24.png icon_32x32.png icon_36x36.png \
-			 gnome-fs-regular.png gnome-fs-directory.png \
+			 gnome-fs-regular.png gnome-fs-directory.png gnome-fs-fifo.png \
+			 gnome-dev-symlink.png gnome-fs-blockdev.png gnome-fs-chardev.png \
+			 gnome-fs-socket.png gnome-fs-executable.png \
 			 all.png hidden.png
 

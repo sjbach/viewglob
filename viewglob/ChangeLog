@@ -3,6 +3,7 @@
 	* Makefile.am: create (symlink) and install gviewglob.1
 	* src/Makefile.am:
 	  Fixed small bug where scripts were being installed non-executable.
+	* gviewglob/Makefile.am: added the new .pngs.
 
 2004-08-22 14:10  Stephen Bach <sjbach@users.sourceforge.net>
 
