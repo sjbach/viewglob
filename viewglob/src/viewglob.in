@@ -188,7 +188,7 @@ while getoptex "b; c; e: d: f: n: o: O: p: s: t; w; h; v; V; executable: display
 
 		v|V|version) vg_version ;;
 
-		*) vg_error "invalid argument" 4 ;;
+		*) vg_error "invalid argument" 3 ;;
 	esac
 done
 shift $((OPTIND - 1))
@@ -201,6 +201,9 @@ fi
 if [ -r "$VG_CONFIG_FILE" ]; then
 	while read opt arg; do
 		case "$opt" in
+			\#*)
+				# Ignore comments.
+				;;
 			display)
 				[[ -z "$VG_DISPLAY" ]] && vg_test_display "$arg" && VG_DISPLAY="$arg"
 				;;
@@ -225,6 +228,12 @@ if [ -r "$VG_CONFIG_FILE" ]; then
 			sort-style)
 				[ "$arg" == windows ] && arg="win"
 				[[ -z "$VG_SORT_STYLE" ]] && vg_test_sort_style "$arg" && VG_SORT_STYLE=$arg
+				;;
+			*)
+				# Ignore empty lines.
+				if [[ "$opt" ]]
+					then vg_error "unknown option \"$opt\"" 3
+				fi
 				;;
 		esac
 	done < "$VG_CONFIG_FILE"
