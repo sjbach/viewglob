@@ -26,11 +26,16 @@ The website is here:
 .IP
 http://viewglob.sourceforge.net
 .LP
-The sourceforge project is here:
+The sourceforge listing is here:
 .IP
 http://sourceforge.net/projects/viewglob/
 .LP
+New releases are announced through Freshmeat, so if you'd like to stay up-to-date you may subscribe to the viewglob project there:
+.IP
+http://freshmeat.net/projects/viewglob/
+.LP
 Feedback is welcome!
+.LP
 .
 .Sh NEW IN THIS RELEASE
 .LP
