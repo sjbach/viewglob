@@ -31,6 +31,9 @@ AC_FUNC_CLOSEDIR_VOID
 AC_PROG_GCC_TRADITIONAL
 AC_CHECK_FUNCS([dup2 getcwd memchr memmove memset mkfifo pathconf select strchr grantpt unlockpt setsid setpgid setpgrp isastream])
 
+dnl Seer now uses some Xlib for focusing the display.
+AC_PATH_XTRA
+
 dnl The display requires GTK+ 2.4.0.
 AM_PATH_GTK_2_0(2.4.0)
 
