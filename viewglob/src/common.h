@@ -3,7 +3,7 @@
    Copyright (C) 2000 Gary V. Vaughan
 
    common.h -- Modified for viewglob's purposes.
-   Copyright (C) 2004 Stephen Bach
+   Copyright (C) 2004, 2005 Stephen Bach
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
