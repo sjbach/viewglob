@@ -163,19 +163,32 @@ int main(int argc, char** argv) {
 			args_add(&(u.proc.a), "-i");
 			break;
 
-		case ST_ZSH: ; /* <-- Semicolon required for variable declaration */
-			// FIXME get ZDOTDIR from environment, save as VG_ZDOTDIR, fork,
-			// fix in init-viewglob.zshrc.
+		case ST_ZSH:
 			/* Zsh requires the init file be named ".zshrc", and its location
 			   determined by the ZDOTDIR environment variable. */
-			gchar* zdotdir = g_strconcat("ZDOTDIR=", opts.init_loc, NULL);
+			; /* <-- Semicolon required for variable declaration */
+
+			/* First check to see if the user has already specified a ZDOTDIR. */
+			gchar* zdotdir = getenv("ZDOTDIR");
+			if (zdotdir) {
+				/* Save it as VG_ZDOTDIR so we can specify our own. */
+				zdotdir = g_strconcat("VG_ZDOTDIR=", zdotdir, NULL);
+				if (putenv(zdotdir) != 0) {
+					g_critical("Could not modify the environment: %s",
+							g_strerror(errno));
+					ok = FALSE;
+					goto done;
+				}
+			}
+
+			/* Use the location passed on the command line. */
+			zdotdir = g_strconcat("ZDOTDIR=", opts.init_loc, NULL);
 			if (putenv(zdotdir) != 0) {
 				g_critical("Could not modify the environment: %s",
 						g_strerror(errno));
 				ok = FALSE;
 				goto done;
 			}
-			g_free(zdotdir);
 			break;
 		default:
 			g_critical("Unknown shell mode");
@@ -221,7 +234,7 @@ int main(int argc, char** argv) {
 
 	/* Done -- Turn off terminal raw mode. */
 	if ( !tc_restore() )
-		g_warning("Could not restore terminal attributes");
+		g_warning("Could not restore terminal attributes: %s", g_strerror(errno));
 
 #if DEBUG_ON
 	if (fclose(df) != 0)

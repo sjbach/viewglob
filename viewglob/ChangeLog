@@ -1,4 +1,11 @@
+2005-03-15 01:20  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* vgseer.c, init-viewglob.zshrc:
+	  Allow user to specify a ZDOTDIR in zsh (so we're not always
+	  sourcing ~/.zshrc).
+
 2005-03-15 00:04  Stephen Bach <sjbach@users.sourceforge.net>
+
 	* actions.c, actions.h: using proper queue terms
 	* circular.h, cmdline.c, cmdline.h, connection.c, connection.h,
 	  vgseer.c, sequences.c:

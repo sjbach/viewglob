@@ -1,26 +1,31 @@
-# Copyright (C) 2004 Stephen Bach
-# This file is part of the viewglob package.
+# Copyright (C) 2004, 2005 Stephen Bach
+# This file is part of the Viewglob package.
 #
-# viewglob is free software; you can redistribute it and/or modify
+# Viewglob is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 #
-# viewglob is distributed in the hope that it will be useful,
+# Viewglob is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with viewglob; if not, write to the Free Software
+# along with Viewglob; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-# Make sure the user doesn't run viewglob on top of a viewglob shell
+# Make sure the user doesn't run Viewglob on top of a Viewglob shell
 # The naming is purposely ugly to ensure there's no clobbering.
 export VG_VIEWGLOB_ACTIVE=yep
 
 # Source the user's run-control file.
-[ -f ~/.zshrc ] && . ~/.zshrc
+# TODO: also source .zprofile?
+if [ "$VG_ZDOTDIR" ] && [ -f "$VG_ZDOTDIR/.zshrc" ]
+	then . "$VG_ZDOTDIR/.zshrc"
+elif [ -f ~/.zshrc ]
+	then . ~/.zshrc
+fi
 
 if [ "$VG_SANDBOX" = yep ]; then
 	# This is all for the sandbox shell.
@@ -121,4 +126,5 @@ unset VG_ASTERISK
 unset VG_SANDBOX
 unset VG_TEMP_FILE
 unset VG_DIR
+unset VG_ZDOTDIR
 
