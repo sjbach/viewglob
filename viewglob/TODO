@@ -1,4 +1,11 @@
-- install-strip in spec file.
+- install to /usr/lib instead of /usr/share
+- resizing problem (at / )
+
+Andy Bastien:
+- hide/show viewglob display with Ctrl-G <space>
+- rerunning viewglob after closing the display pops in a new display
+- double clicking file name pastes it into terminal
+	- user-defined formatting
 
 seer:
 	- screen compatibility
@@ -16,10 +23,11 @@ gviewglob:
 	- DIR_COLORS
 	- slight highlighting difference between files named explicitly and files expanded from a glob?
 	- don't focus on gtk window when opened (is this viable?)
-	- wait indicator?
+	- wait/lost indicators?
 	- sometimes (but not always) the wrapboxes or DListing headers force a width minimum.
 	- Truncate directory path label if it's too big.
 		- like this: "/path/to/dir/blah/" --> "/path/to/d..."
+		- same for single-column file lists (maybe split in the middle?)
 	- convert "2 selected, 10 total (4 hidden)" to "2, 10 (4)" if window size is too small
 		- then use "2, 10..." if it's really really small?
-	- Wrapbox resizing works, but is slow.
+	- Improve wrapbox resizing

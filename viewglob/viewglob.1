@@ -18,7 +18,7 @@ Note: either name is equivalent for calling the program.
 .SH OPTIONS
 This program follows the usual GNU command line syntax, with long options starting with two dashes.  A summary is included below.
 .TP
-.B \-c, \-\-shell-mode=name
+.B \-c, \-\-shell\-mode=name
 Shell to be used.  \fIname\fP can be "bash" or "zsh" (default is bash).
 .TP
 .B \-d, \-\-display=path
@@ -33,11 +33,11 @@ Copy a transcript of the shell's output to the given file.  Note that this keeps
 .B \-O, \-\-term\-output=filename
 Output a transcript of the terminal's input to the given file.  This is the stuff that you've typed, without any of the shell interpretation.
 .TP
-.B \-s, \-\-sort-style=<windows|ls>
+.B \-s, \-\-sort\-style=<windows|ls>
 Sort files with dirs first (Windows) or purely by name (ls).  ls mode is the default.
 .TP
-.B \-n, \-\-show-max=number
-Maximum number of files to show in the display for each directory.  A [Results Truncated] indicator will show if the max has been reached.  Note that you can always force show all files with the context menu.  If \-\-show-max is passed 0, there is no limit.
+.B \-n, \-\-show\-max=number
+Maximum number of files to show in the display for each directory.  A [Results Truncated] indicator will show if the max has been reached.  Note that you can always force show all files with the context menu.  If \-\-show\-max is passed 0, there is no limit.
 .TP
 .B \-b, \-\-disable\-icons
 Don't show file type icons in the display.
@@ -49,7 +49,7 @@ Disable the asterisk icon at the beginning of your shell prompt when in a viewgl
 Never hide hidden files (ha).
 .TP
 .B \-e, \-\-executable=path
-Use the given executable as the shell instead of its first reference in the path.  Note that if this isn't a version of the shell chosen with \-\-shell-mode, it won't do you much good, and could be harmful.
+Use the given executable as the shell instead of its first reference in the path.  Note that if this isn't a version of the shell chosen with \-\-shell\-mode, it won't do you much good, and could be harmful.
 .TP
 .B \-h, \-\-help
 Show summary of options.
@@ -60,13 +60,13 @@ Show the version of the program.
 .SH USAGE
 When you start viewglob, you'll be presented with your familiar prompt and a new window showing the file layout of the current directory.  As you begin to type a command, the display window will highlight to show potential filename completions (dull highlight) and file selections and globs/expansions (vibrant highlight).  Also, as you reference other directories (e.g. \fI../\fP or \fI/usr/local/\fP), their layouts will appear as well.
 .PP
-If the number of files in a shown directory is above the given max, viewglob will truncate the results (with an indicator).  You can force viewglob to display the whole directory by right-clicking anywhere on the listing for that directory and choosing "Show all files".  By default hidden files are not shown, but you can view them using the same mechanism.
+If the number of files in a shown directory is above the given max, viewglob will truncate the results (with an indicator).  You can force viewglob to display the whole directory by right\-clicking anywhere on the listing for that directory and choosing "Show all files".  By default hidden files are not shown, but you can view them using the same mechanism.
 .PP
 At the bottom of the display window is a textbox with your command line.  This is what viewglob is actually globbing on; if you find the display is not showing what you expected, check to make sure the display's command line is the same as the one in the shell, as they can be different (see \fBNOTES\fP below).
 .PP
-If you close the display without exiting the viewglob-supervised shell, you'll get a single warning while viewglob figures out what's going on.  It will then mostly disable itself and you'll have a regular shell.
+If you close the display without exiting the viewglob\-supervised shell, you'll get a single warning while viewglob figures out what's going on.  It will then mostly disable itself and you'll have a regular shell.
 .PP
-You can navigate the display from the terminal by pressing C-g (Ctrl-G) followed by a direction character.  They are:
+You can navigate the display from the terminal by pressing C\-g (Ctrl\-G) followed by a direction character.  They are:
 .PP
 .RS
 .PD 0
@@ -85,7 +85,7 @@ f, d, <PgDown>
 .PD
 .RE
 .LP
-Their C- counterparts should also work.  To enter a real C-g to the shell, type it twice.
+Their C\- counterparts should also work.  To enter a real C\-g to the shell, type it twice.
 .PP
 Directories referenced in several different ways will always be interpreted as the same directory if they're on the same device and have the same inode (i.e. they are indeed the same).  Therefore these three names are equivalent to viewglob (and a trailing slash does not differentiate a directory from one without a trailing slash):
 .IP
@@ -106,17 +106,25 @@ If present, this file specifies a default configuration for viewglob.  The file 
 .IP
 <\fIlong_option_name\fP> [ <\fIwhitespace\fP> <\fIvalue\fP> ]
 .IP
-So, to always use zsh, disable the asterisk at the prompt, use a display limit of 700, show hidden files, and use windows-style sorting, the file should contain:
+So, to always use zsh, disable the asterisk at the prompt, use a display limit of 700, show hidden files, and use windows\-style sorting, the file should contain:
 .IP
-shell-mode    zsh
-.br
+.RS
+.PD 0
+.TP 15n
+shell\-mode
+zsh
+.TP
 disable\-star
-.br
-show-max      700
-.br
-show-hidden
-.br
-sort-style    windows
+.TP
+show\-max
+700
+.TP
+show\-hidden
+.TP
+sort\-style
+windows
+.PD
+.RE
 .IP
 The configuration file has a lower priority than options specified on the command line, and can be disregarded completely with \-f.
 
@@ -160,9 +168,9 @@ The location of the default configuration file.
 .SH BUGS
 Sometimes the heading labels in the display enforce a minimum width (which I find annoying), sometimes they don't.  I haven't figured out why.
 .PP
-Resizing the terminal window after you've typed a multi-line command will often cause viewglob's command line to become temporarily out of sync with the true command line, though it tries really hard to keep up.  No big deal if this happens -- viewglob will catch up at the start of the next command.
+Resizing the terminal window after you've typed a multi\-line command will often cause viewglob's command line to become temporarily out of sync with the true command line, though it tries really hard to keep up.  No big deal if this happens \-\- viewglob will catch up at the start of the next command.
 .PP
-Ctrl-C may not work in terminals with FreeBSD.
+Ctrl\-C may not work in terminals with FreeBSD.
 .PP
 And there are certainly others.  If you spot any bugs (and they aren't explained by \fBNOTES\fP above), send me a message, okay?  Contributions are also very welcome.
 .SH AUTHORS

@@ -62,7 +62,13 @@ See the file \fBINSTALL\fP for generic instructions.  This program follows the .
 .
 .Sh PORTABILITY
 .LP
-Tested on FreeBSD 4.10 and various GNU/Linux distributions.  I don't have access to OS X or Solaris, so I can only hope for the best -- it would be awesome if someone could try it for me.
+Tested on:
+.Vs
+FreeBSD 4.10 with GTK+ 2.4.3
+GNU/Linux (various) with GTK+ 2.4+
+Mac OS X 10.3.5 with fink unstable providing GTK+ 2.4.9
+.Ve
+I don't have access to Solaris, so I can only hope for the best -- it would be awesome if someone could try it for me.
 .
 .Sh REQUIREMENTS
 .LP

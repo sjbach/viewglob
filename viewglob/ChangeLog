@@ -1,3 +1,9 @@
+2004-09-18 23:09  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* README, README.ms: viewglob has been run on OS X
+	* TODO: adding a few suggestions
+	* viewglob.1: fixing unescaped -'s and some formatting
+
 2004-09-17 19:16  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* wrap_box.c: fixed a size requisition bug
