@@ -63,6 +63,7 @@ struct display {
 void     child_init(struct child* c);
 gboolean child_fork(struct child* c);
 gboolean pty_child_fork(struct child* c, gint new_stdin_fd, gint new_stdout_fd, gint new_stderr_fd);
+gboolean child_running(struct child* c);
 gboolean child_terminate(struct child* c);
 
 gboolean display_init(struct display* d);

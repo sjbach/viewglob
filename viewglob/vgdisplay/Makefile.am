@@ -5,7 +5,7 @@ INCLUDES = -I$(COMMON)
 
 pkglib_PROGRAMS = vgclassic
 vgclassic_SOURCES = vgclassic.c exhibit.c dlisting.c wrap_box.c file_box.c \
-                    feedback.c lscolors.c
+                    lscolors.c $(COMMON)/param-io.c $(COMMON)/hardened-io.c
 
 BUILT_SOURCES = app_icons.h file_icons.h
 app_icons.h: Makefile
@@ -48,7 +48,7 @@ file_icons.h: Makefile
 
 CLEANFILES = app_icons.h app_icons.tmp file_icons.h file_icons.tmp
 noinst_HEADERS = vgclassic.h exhibit.h dlisting.h wrap_box.h file_box.h \
-                 feedback.h lscolors.h file_types.h common.h
+                 lscolors.h file_types.h
 EXTRA_DIST = icon_16x16.png icon_24x24.png icon_32x32.png icon_36x36.png \
              gnome-fs-regular.png gnome-fs-directory.png gnome-fs-fifo.png \
              gnome-dev-symlink.png gnome-fs-blockdev.png gnome-fs-chardev.png \

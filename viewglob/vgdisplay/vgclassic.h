@@ -1,19 +1,19 @@
 /*
 	Copyright (C) 2004, 2005 Stephen Bach
-	This file is part of the viewglob package.
+	This file is part of the Viewglob package.
 
-	viewglob is free software; you can redistribute it and/or modify
+	Viewglob is free software; you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
 	the Free Software Foundation; either version 2 of the License, or
 	(at your option) any later version.
 
-	viewglob is distributed in the hope that it will be useful,
+	Viewglob is distributed in the hope that it will be useful,
 	but WITHOUT ANY WARRANTY; without even the implied warranty of
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 	GNU General Public License for more details.
 
 	You should have received a copy of the GNU General Public License
-	along with viewglob; if not, write to the Free Software
+	along with Viewglob; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
@@ -29,14 +29,7 @@ G_BEGIN_DECLS
 struct viewable_preferences {
 	/* Options. */
 	gboolean show_icons;
-	gboolean show_hidden_files;
-	guint file_display_limit;
 	gint font_size_modifier;
-
-	/* Fifo paths. */
-	gchar* glob_fifo;
-	gchar* cmd_fifo;
-	gchar* feedback_fifo;
 };
 
 
@@ -45,6 +38,7 @@ struct holdover {
 	GString* string;
 	gboolean has_holdover;
 };
+
 
 enum glob_read_state {
 	GRS_DONE,
@@ -59,13 +53,7 @@ enum glob_read_state {
 	GRS_FILE_NAME,
 };
 
-enum cmd_read_state {
-	CRS_DONE,
-	CRS_CMD,
-	CRS_ORDER,
-};
-
-
 G_END_DECLS
 
 #endif /* !VGCLASSIC_H */
+

@@ -1,3 +1,17 @@
+2005-03-29 15:00  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* display.h, display.c, feedback.h, feedback.c: removed
+	* children.c, children.h: added child_running() function
+	* param-io.c, param-io.h: added P_WIN_ID
+	* Makefile.am: using children.c
+	* vgd.c: beginning integration with vgclassic
+	* vgdisplay/Makefile.am: use param-io instead of feedback
+	* dlisting.c, dlisting.h, exhibit.c, exhibit.h, file_box.c,
+	  file_box.h, vgclassic.c, vgclassic.h:
+	  - Began integration with vgd.
+	  - Removed file display limit option (use mask instead).
+	  - Removed hide hidden files option (use mask instead).
+
 2005-03-29 01:15  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* shrink_label.c, shrink_label.h: removed (wasn't used anyway)

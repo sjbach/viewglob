@@ -1,19 +1,19 @@
 /*
 	Copyright (C) 2004, 2005 Stephen Bach
-	This file is part of the viewglob package.
+	This file is part of the Viewglob package.
 
-	viewglob is free software; you can redistribute it and/or modify
+	Viewglob is free software; you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
 	the Free Software Foundation; either version 2 of the License, or
 	(at your option) any later version.
 
-	viewglob is distributed in the hope that it will be useful,
+	Viewglob is distributed in the hope that it will be useful,
 	but WITHOUT ANY WARRANTY; without even the implied warranty of
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 	GNU General Public License for more details.
 
 	You should have received a copy of the GNU General Public License
-	along with viewglob; if not, write to the Free Software
+	along with Viewglob; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
@@ -54,7 +54,6 @@ struct _DListing {
 	GtkWidget* heading_event_box;
 	GtkWidget* name_label;
 	GtkWidget* count_label;
-	GtkWidget* menu;
 	GtkWidget* file_box;
 };
 
@@ -75,10 +74,6 @@ gboolean    dlisting_is_new(const DListing* dl);
 void        dlisting_free(DListing* dl);
 
 void        dlisting_set_separator_color(GdkColor color);
-void        dlisting_set_show_hidden_pixbuf(GdkPixbuf* pixbuf);
-void        dlisting_set_show_all_pixbuf(GdkPixbuf* pixbuf);
-void        dlisting_set_show_hidden_files(gboolean show_hidden);
-void        dlisting_set_show_all_files(gboolean show_all);
 void        dlisting_set_sizing(gint modifier);
 
 G_END_DECLS

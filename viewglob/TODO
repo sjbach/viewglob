@@ -7,9 +7,15 @@
 - vgd: accept glob input from vgseer
 - vgclassic: convert to new vgexpand
 - vgclassic: mask and developing mask
+- vgclassic: no more file display limit
+- vgclassic: no more context menu (show hidden, show all)
+- vgclassic: filebox_set_ordering <<- remove
+- make: .PHONY build for the icons
 - make: option to build only vgseer/vgexpand (and thus no GTK requirement)
 - make: package getopt_long (or alternative)
 - vgd: request version from vgseer
+- vgd: vgseer_client into separate file
+- documentation: updates from 1.1.1
 - vgmini: create
 
 - record timestamp for each byte to help predicting whether user typing or not (problem if pasting text though)

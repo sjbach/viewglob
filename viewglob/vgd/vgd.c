@@ -29,19 +29,20 @@
 #include "common.h"
 #include "hardened-io.h"
 #include "param-io.h"
-#include "display.h"
+#include "children.h"
 #include "x11-stuff.h"
 #include "shell.h"
 
 
 struct state {
-	GList*         clients;
-	struct display d;
-	gboolean       persistent;
-	gint            listen_fd;
+	GList*                clients;
+	struct vgseer_client* active;
+	struct child          display;
+	Window                display_win;
 
-	Display*       Xdisplay;
-	Window         active_win;
+	Display*              Xdisplay;
+	gboolean              persistent;
+	gint                  listen_fd;
 };
 
 
@@ -70,6 +71,7 @@ static void new_client(struct state* s);
 static void new_ping_client(gint ping_fd);
 static void new_vgseer_client(struct state* s, gint client_fd);
 static void process_client(struct state* s, struct vgseer_client* v);
+static void process_display(struct state* s);
 static void drop_client(struct state* s, struct vgseer_client* v);
 static void context_switch(struct state* s, struct vgseer_client* v);
 static void check_active_window(struct state* s);
@@ -112,9 +114,11 @@ gint main(gint argc, gchar** argv) {
 		exit(EXIT_FAILURE);
 	}
 
+	s.display.exec_name = "/home/steve/vg/vgdisplay/vgclassic";
+
 	poll_loop(&s);
 
-	return 0;
+	return EXIT_SUCCESS;
 }
 
 
@@ -147,7 +151,10 @@ static void poll_loop(struct state* s) {
 				nready--;
 			}
 
-			// - Check display fd
+			if (FD_ISSET(s->display.fd_in, &rset)) {
+				process_display(s);
+				nready--;
+			}
 
 			if (nready) {
 
@@ -165,7 +172,8 @@ static void poll_loop(struct state* s) {
 
 		}
 		
-		check_active_window(s);
+		if (s->clients)
+			check_active_window(s);
 	}
 }
 
@@ -178,13 +186,13 @@ static void check_active_window(struct state* s) {
 	
 	/* If the currently active window has changed and is one of
 	   our vgseer client terminals, make a context switch. */
-	if (new_active_win != s->active_win) {
+	if (new_active_win != s->active->win) {
 		GList* iter;
 		struct vgseer_client* v;
 		for (iter = s->clients; iter; iter = g_list_next(iter)) {
 			v = iter->data;
 			if (new_active_win == v->win) {
-				s->active_win = new_active_win;
+				s->active = v;
 				context_switch(s, v);
 				break;
 			}
@@ -194,14 +202,73 @@ static void check_active_window(struct state* s) {
 
 
 static void context_switch(struct state* s, struct vgseer_client* v) {
+	g_return_if_fail(s != NULL);
+	g_return_if_fail(v != NULL);
 
-	g_message("Context switch to window %lu", v->win);
+	g_message("(disp) Context switch to client %d", v->fd);
 
+	gint fd = s->display.fd_out;
+
+	/* Send a bunch of data to the display. */
+	if (	!put_param(fd, P_STATUS, shell_status_to_string(v->status)) ||
+			!put_param(fd, P_CMD, v->cli->str) ||
+			!put_param(fd, P_PWD, v->pwd->str) ||
+			!put_param(fd, P_DEVELOPING_MASK, v->developing_mask->str) ||
+			!put_param(fd, P_MASK, v->mask->str) ||
+			!put_param(fd, P_VGEXPAND_DATA, v->expanded->str)) {
+		g_critical("(disp) Couldn't make context switch");
+		// FIXME restart display, try again
+	}
+}
+
+
+static void process_display(struct state* s) {
+	g_return_if_fail(s != NULL);
+
+	enum parameter param;
+	gchar* value;
+
+	/* Try to recover from display read errors instead of just dying. */
+	if (!get_param(s->display.fd_in, &param, &value)) {
+		(void) child_terminate(&s->display);
+		if (!child_fork(&s->display)) {
+			g_critical("The display had issues and I couldn't restart it");
+			die(s, EXIT_FAILURE);
+		}
+		else {
+			s->display_win = 0;
+			return;
+		}
+	}
+
+	switch (param) {
+
+		case P_FILE:
+			g_message("(disp) P_FILE: %s", value);
+			break;
+
+		case P_KEY:
+			g_message("(disp) P_KEY: %s", value);
+			break;
+
+		case P_WIN_ID:
+			g_message("(disp) P_WIN_ID: %s", value);
+			break;
+
+		case P_EOF:
+			g_message("(disp) EOF from display");
+			(void) child_terminate(&s->display);
+			break;
+
+		default:
+			g_warning("(disp) Unexpected parameter: %d = %s", param, value);
+			// TODO: restart display (wrap into function)
+			break;
+	}
 }
 
 
 static void process_client(struct state* s, struct vgseer_client* v) {
-
 	g_return_if_fail(s != NULL);
 	g_return_if_fail(v != NULL);
 
@@ -279,8 +346,7 @@ static void process_client(struct state* s, struct vgseer_client* v) {
 
 		case P_VGEXPAND_DATA:
 			v->expanded = g_string_assign(v->expanded, value);
-			g_message("(%d) Received vgexpand_data:\n%s", v->fd,
-					v->expanded->str);
+			g_message("(%d) Received vgexpand_data: (lots)", v->fd);
 			break;
 
 		case P_EOF:
@@ -313,6 +379,12 @@ static void drop_client(struct state* s, struct vgseer_client* v) {
 	g_string_free(v->mask, TRUE);
 	g_string_free(v->expanded, TRUE);
 	g_free(v);
+
+	/* Kill the display if all the clients are gone. */
+	if (!s->clients && child_running(&s->display)) {
+		(void) child_terminate(&s->display);
+		g_message("(disp) Killed display");
+	}
 }
 
 
@@ -419,7 +491,19 @@ static void new_vgseer_client(struct state* s, gint client_fd) {
 
 	/* We've got a new client. */
 	v->fd = client_fd;
+
+	/* This is our only client, so it's active by default. */
+	if (!s->clients)
+		s->active = v;
+
 	s->clients = g_list_prepend(s->clients, v);
+
+	/* Startup the display if it's not around. */
+	if (!child_running(&s->display) && !child_fork(&s->display)) {
+		g_critical("Couldn't fork the display");
+		die(s, EXIT_FAILURE);
+	}
+
 	return;
 
 out_of_sync:
@@ -456,9 +540,9 @@ static gint setup_polling(struct state* s, fd_set* set) {
 	}
 
 	/* And poll the display. */
-	if (display_running(&s->d)) {
-		FD_SET(s->d.fd, set);
-		max_fd = MAX(max_fd, s->d.fd);
+	if (child_running(&s->display)) {
+		FD_SET(s->display.fd_in, set);
+		max_fd = MAX(max_fd, s->display.fd_in);
 	}
 
 	return max_fd;
@@ -471,13 +555,16 @@ static void die(struct state* s, gint result) {
 	GList* iter;
 	struct vgseer_client* v;
 
+	/* Drop all the clients. */
 	for (iter = s->clients; iter; iter = s->clients) {
 		v = iter->data;
 		(void) put_param(v->fd, P_STATUS, "dead");
 		(void) drop_client(s, v);
 	}
 
-	// TODO - Kill display
+	/* Kill display. */
+	if (child_running(&s->display))
+		(void) child_terminate(&s->display);
 
 	exit(result);
 }
@@ -485,13 +572,14 @@ static void die(struct state* s, gint result) {
 
 void state_init(struct state* s) {
 	s->clients = NULL;
-	s->d.pid = -1;
-	s->d.fd = -1;
 	s->persistent = FALSE;
 	s->listen_fd = -1;
 
+	child_init(&s->display);
+	s->display_win = 0;
+
 	s->Xdisplay = NULL;
-	s->active_win = 0;
+	s->active = NULL;
 }
 
 

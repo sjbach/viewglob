@@ -1,25 +1,25 @@
 /*
 	Copyright (C) 2004, 2005 Stephen Bach
-	This file is part of the viewglob package.
+	This file is part of the Viewglob package.
 
-	viewglob is free software; you can redistribute it and/or modify
+	Viewglob is free software; you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
 	the Free Software Foundation; either version 2 of the License, or
 	(at your option) any later version.
 
-	viewglob is distributed in the hope that it will be useful,
+	Viewglob is distributed in the hope that it will be useful,
 	but WITHOUT ANY WARRANTY; without even the implied warranty of
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 	GNU General Public License for more details.
 
 	You should have received a copy of the GNU General Public License
-	along with viewglob; if not, write to the Free Software
+	along with Viewglob; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
 #include "common.h"
 #include "file_box.h"
-#include "feedback.h"
+#include "param-io.h"
 #include "dlisting.h"
 #include <gtk/gtk.h>
 #include <string.h>   /* For strcmp */
@@ -39,20 +39,12 @@ static void  dlisting_size_request(GtkWidget* widget, GtkRequisition* requisitio
 static void  dlisting_size_allocate(GtkWidget *widget, GtkAllocation *allocation);
 static void  dlisting_reset_file_count_label(DListing* dl);
 
-static gboolean is_zero(const gchar* string);
-
 static gboolean dlisting_button_press_event(GtkWidget *widget, GdkEventButton *event, DListing* dl);
-static void show_hidden_files_activate_handler(GtkMenuItem* menu_item, DListing* dl);
-static void show_all_files_activate_handler(GtkMenuItem* menu_item, DListing* dl);
 
 
 /* --- variables --- */
 static gpointer parent_class = NULL;
 static GdkColor separator_color = { 0, 0, 0, 0 };
-static GdkPixbuf* show_hidden_pixbuf = NULL;
-static GdkPixbuf* show_all_pixbuf = NULL;
-static gboolean show_hidden_files;
-static gboolean show_all_files;
 
 static gchar* directory_font_tags_open = NULL;
 static gchar* directory_font_tags_close = NULL;
@@ -103,9 +95,6 @@ static void dlisting_init(DListing* dl) {
 	GtkWidget* dir_heading_vbox;
 	GtkWidget* dir_heading_separator;
 	GtkWidget* left_spacer;
-
-	GtkWidget* menu_item_image;
-	GtkWidget* image_menu_item;
 
 	dl->name = NULL;
 	dl->old_rank = -1;
@@ -168,45 +157,9 @@ static void dlisting_init(DListing* dl) {
 	gtk_box_pack_start(box, dl->file_box, FALSE, FALSE, 0);
 	gtk_widget_show(dl->file_box);
 
-	/* Setup the context menu. */
-	dl->menu = gtk_menu_new();
-
-	/* Show Hidden. */
-	image_menu_item = gtk_image_menu_item_new_with_mnemonic("Show _hidden files");
-	if (show_hidden_pixbuf) {
-		menu_item_image = gtk_image_new_from_pixbuf(show_hidden_pixbuf);
-		gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(image_menu_item), menu_item_image);
-		gtk_widget_show(menu_item_image);
-	}
-	gtk_widget_show(image_menu_item);
-	if (show_hidden_files) {
-		/* Hidden files are always shown -- this item is redundant. */
-		gtk_widget_set_state(image_menu_item, GTK_STATE_INSENSITIVE);
-	}
-	else
-		g_signal_connect(image_menu_item, "activate", G_CALLBACK(show_hidden_files_activate_handler), dl);
-	gtk_menu_append(GTK_MENU_SHELL(dl->menu), image_menu_item);
-
-	/* Show All. */
-	image_menu_item = gtk_image_menu_item_new_with_mnemonic("Show _all files");
-	if (show_all_pixbuf) {
-		menu_item_image = gtk_image_new_from_pixbuf(show_all_pixbuf);
-		gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(image_menu_item), menu_item_image);
-		gtk_widget_show(menu_item_image);
-	}
-	gtk_widget_show(image_menu_item);
-	if (show_all_files) {
-		/* There's no file display limit -- this item is redundant. */
-		gtk_widget_set_state(image_menu_item, GTK_STATE_INSENSITIVE);
-	}
-	else
-		g_signal_connect(image_menu_item, "activate", G_CALLBACK(show_all_files_activate_handler), dl);
-	gtk_menu_append(GTK_MENU_SHELL(dl->menu), image_menu_item);
-
-	/* For right-click context menu and double left-click. */
-	g_signal_connect(dl->heading_event_box, "button-press-event", G_CALLBACK(dlisting_button_press_event), dl);
-
-	gtk_widget_show(dl->menu);
+	/* For double left-click. */
+	g_signal_connect(dl->heading_event_box, "button-press-event",
+			G_CALLBACK(dlisting_button_press_event), dl);
 
 	/* Initialize the labels. */
 	dlisting_set_name(dl, "<unset>");
@@ -229,7 +182,6 @@ static void dlisting_size_request(GtkWidget* widget, GtkRequisition* requisition
 	requisition->height = heading_req.height + file_box_req.height + GTK_CONTAINER(dl)->border_width * 2;
 
 	requisition->width = MIN(requisition->width, dl->optimal_width - WIDTH_BUFFER);
-	//g_printerr("(%d %d)", requisition->width, requisition->height);
 }
 
 
@@ -270,25 +222,6 @@ void dlisting_set_separator_color(GdkColor color) {
 	separator_color.blue = color.blue;
 }
 
-
-void dlisting_set_show_hidden_pixbuf(GdkPixbuf* pixbuf) {
-	show_hidden_pixbuf = pixbuf;
-}
-
-
-void dlisting_set_show_all_pixbuf(GdkPixbuf* pixbuf) {
-	show_all_pixbuf = pixbuf;
-}
-
-
-void dlisting_set_show_hidden_files(gboolean show_hidden) {
-	show_hidden_files = show_hidden;
-}
-
-
-void dlisting_set_show_all_files(gboolean show_all) {
-	show_all_files = show_all;
-}
 
 /* Set the sizes of the directory heading font and the file count font. */
 void dlisting_set_sizing(gint modifier) {
@@ -378,29 +311,13 @@ static void dlisting_reset_file_count_label(DListing* dl) {
 	gchar* temp_string;
 	gchar* markup;
 
-	glong n_displayed;
-	guint display_limit;
-
-	display_limit = file_box_get_file_display_limit( FILE_BOX(dl->file_box) );
-
-	if (file_box_get_show_hidden_files(FILE_BOX(dl->file_box)))
-		n_displayed = atol(dl->total_count->str);
-	else
-		n_displayed = atol(dl->total_count->str) - atol(dl->hidden_count->str);
-
-	if (is_zero(dl->total_count->str))
+	if (STREQ(dl->total_count->str, "0"))
 		temp_string = g_strdup("(Restricted)");
-	else if (display_limit == 0 || n_displayed <= display_limit) {
+	else {
 		temp_string = g_strconcat(
 				dl->selected_count->str, " selected, ",
 				dl->total_count->str, " total (",
 				dl->hidden_count->str, " hidden)", NULL);
-	}
-	else {
-		temp_string = g_strconcat(
-				dl->selected_count->str, " selected, <b>",
-				dl->total_count->str, "</b> total (",
-				dl->hidden_count->str, " hidden) [Results truncated]", NULL);
 	}
 
 	if (file_count_font_tags_open && file_count_font_tags_close) {
@@ -461,7 +378,7 @@ void dlisting_set_file_counts(DListing* dl, const gchar* selected, const gchar* 
 	g_return_if_fail(hidden != NULL);
 
 	/* Color the heading event box. */
-	if (is_zero(total))
+	if (STREQ(total, "0"))
 		gtk_widget_set_state(dl->heading_event_box, GTK_STATE_SELECTED);
 	else
 		gtk_widget_set_state(dl->heading_event_box, GTK_STATE_ACTIVE);
@@ -531,89 +448,41 @@ void dlisting_free(DListing* dl) {
 	widget = GTK_WIDGET(dl);
 	gtk_widget_hide(widget);
 
-	file_box_destroy(FILE_BOX(dl->file_box));   /* This also gets the FItems associated with the file box. */
-
-	gtk_widget_destroy(dl->menu);    /* Delete the menu.  This should get the menu items too. */
+	/* This also gets the FItems associated with the file box. */
+	file_box_destroy(FILE_BOX(dl->file_box));
 
 	g_string_free(dl->name, TRUE);
 	g_string_free(dl->selected_count, TRUE);
 	g_string_free(dl->total_count, TRUE);
 	g_string_free(dl->hidden_count, TRUE);
 
-	gtk_widget_destroy(widget);                 /* Should take care of everything else. */
-}
-
-
-static gboolean is_zero(const gchar* string) {
-	if (strcmp(string, "0") == 0)
-		return TRUE;
-	else
-		return FALSE;
+	/* Should take care of everything else. */
+	gtk_widget_destroy(widget);
 }
 
 
 static gboolean dlisting_button_press_event(GtkWidget *widget, GdkEventButton *event, DListing* dl) {
 
-	GString* string;
 
 	g_return_val_if_fail(dl != NULL, FALSE);
 	g_return_val_if_fail(event != NULL, FALSE);
 
-	if (event->type == GDK_BUTTON_PRESS && event->button == 3) {
-		/* Right-click -- popup the context menu. */
-		gtk_menu_popup (GTK_MENU(dl->menu), NULL, NULL, NULL, NULL, event->button, event->time);
-	}
-	else if (event->type == GDK_2BUTTON_PRESS && event->button == 1) {
+	if (event->type == GDK_2BUTTON_PRESS && event->button == 1) {
 		/* Double left-click -- write out the directory name. */
-		string = g_string_new("file:");
-		string = g_string_append(string, dl->name->str);
+
+		GString* string;
+		string = g_string_new(dl->name->str);
 
 		/* Append a trailing '/' if need be. */
 		if ( *(string->str + string->len - 1) != '/')
 			string = g_string_append(string, "/");
 
-		feedback_write_string(string->str, string->len + 1);
+		if (!put_param(STDOUT_FILENO, P_FILE, string->str))
+			g_warning("Could not write filename to stdout");
 
 		g_string_free(string, TRUE);
 	}
 
 	return FALSE;
 }
-
-
-static void show_hidden_files_activate_handler(GtkMenuItem* menu_item, DListing* dl) { 
-	GtkWidget* widget;
-
-	g_return_if_fail(GTK_IS_MENU_ITEM(menu_item));
-	g_return_if_fail(IS_DLISTING(dl));
-	widget = GTK_WIDGET(dl);
-
-	file_box_set_show_hidden_files(FILE_BOX(dl->file_box), TRUE);
-	dlisting_reset_file_count_label(dl);
-	gtk_widget_set_state(GTK_WIDGET(menu_item), GTK_STATE_INSENSITIVE);
-
-	if (widget->parent) {
-		/* Update scrollbar. */
-		gtk_widget_queue_resize(widget->parent);
-	}
-}
-
-
-static void show_all_files_activate_handler(GtkMenuItem* menu_item, DListing* dl) { 
-	GtkWidget* widget;
-
-	g_return_if_fail(GTK_IS_MENU_ITEM(menu_item));
-	g_return_if_fail(IS_DLISTING(dl));
-	widget = GTK_WIDGET(dl);
-
-	file_box_set_file_display_limit(FILE_BOX(dl->file_box), 0);
-	dlisting_reset_file_count_label(dl);
-	gtk_widget_set_state(GTK_WIDGET(menu_item), GTK_STATE_INSENSITIVE);
-
-	if (widget->parent) {
-		/* Update scrollbar. */
-		gtk_widget_queue_resize(widget->parent);
-	}
-}
-
 

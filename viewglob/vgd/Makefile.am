@@ -5,8 +5,9 @@ INCLUDES = -I$(COMMON)
 
 bin_PROGRAMS = vgd
 
-vgd_SOURCES = vgd.c display.c x11-stuff.c $(COMMON)/param-io.c \
-              $(COMMON)/ptytty.c $(COMMON)/hardened-io.c $(COMMON)/shell.c
+vgd_SOURCES = vgd.c x11-stuff.c $(COMMON)/param-io.c \
+              $(COMMON)/ptytty.c $(COMMON)/hardened-io.c $(COMMON)/shell.c \
+	      $(COMMON)/children.c
 
-noinst_HEADERS = display.h
+#noinst_HEADERS = display.h
 

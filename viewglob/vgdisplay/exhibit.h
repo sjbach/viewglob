@@ -29,7 +29,6 @@ G_BEGIN_DECLS
 typedef struct _Exhibit Exhibit;
 struct _Exhibit {
 	GtkWidget* window;
-	gboolean iconified;
 	GSList* dl_slist;           /* This is for DListing structs. */
 	GtkWidget* listings_box;    /* This is the vbox holding the dir/file listings. */
 	GtkAdjustment* vadjustment; /* Vertical scrollbar. */
@@ -43,7 +42,7 @@ DListing*  exhibit_add(Exhibit* e, GString* name, gint rank, GString* selected_c
 void       exhibit_unmark_all(Exhibit* e);
 void       exhibit_cull(Exhibit* e);
 void       exhibit_rearrange_and_show(Exhibit* e);
-void       exhibit_do_order(Exhibit* e, GString* order);
+void       exhibit_do_order(Exhibit* e, gchar* order);
 
 G_END_DECLS
 

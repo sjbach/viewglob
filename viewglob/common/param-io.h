@@ -38,7 +38,6 @@ enum parameter {
 	P_PURPOSE,
 
 	/* Used in vgseer initialization. */
-	P_SHELL,
 	P_PROC_ID,            /* P_PID conflicts with wait.h. */
 
 	/* Volatile vgseer properties. */
@@ -57,6 +56,9 @@ enum parameter {
 	/* From the display. */
 	P_KEY,
 	P_FILE,
+
+	/* From and to the display. */
+	P_WIN_ID,
 
 	/* Explanation for a previous parameter. */
 	P_REASON,

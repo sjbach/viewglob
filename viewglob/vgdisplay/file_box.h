@@ -37,17 +37,10 @@ G_BEGIN_DECLS
 /* --- typedefs --- */
 typedef struct _FileBox FileBox;
 typedef struct _FileBoxClass FileBoxClass;
-typedef enum _FileBoxOrdering FileBoxOrdering;
 typedef struct _FItem FItem;
 typedef enum _FileSelection FileSelection;
-typedef enum _FileDisplayCategory FileDisplayCategory;
 
 /* --- enumerations --- */
-enum _FileBoxOrdering {
-	FBO_LS,
-	FBO_WIN,
-};
-
 enum _FileSelection {
 	FS_YES = GTK_STATE_SELECTED,
 	FS_NO = GTK_STATE_NORMAL,
@@ -68,10 +61,6 @@ struct _FileBox {
 	gboolean  show_hidden_files;
 	guint     file_display_limit;
 
-	guint n_files;
-	guint n_displayed_files;
-	guint file_max;
-
 	gboolean eat_size_requests;
 	GSList*   fi_slist;
 };
@@ -86,8 +75,8 @@ struct _FItem {
 	FileType             type;
 	FileSelection        selection;
 
-	FileDisplayCategory  disp_cat;
-	gboolean             marked;      /* An FItem is "marked" if it's been seen after a begin_read. */
+	/* An FItem is "marked" if it's been seen after a begin_read. */
+	gboolean             marked;
 };
 
 
@@ -96,16 +85,12 @@ GType       file_box_get_type(void) G_GNUC_CONST;
 GtkWidget*  file_box_new(void);
 void        file_box_destroy(FileBox* fbox);
 void        file_box_set_optimal_width(FileBox* fbox, guint optimal_width);
-void        file_box_set_show_hidden_files(FileBox* fbox, gboolean show);
-void        file_box_set_file_display_limit(FileBox* fbox, guint limit);
 guint       file_box_get_optimal_width(FileBox* fbox);
-gboolean    file_box_get_show_hidden_files(FileBox* fbox);
-guint       file_box_get_file_display_limit(FileBox* fbox);
-void        file_box_add(FileBox* fbox, GString* name, FileType type, FileSelection selection);
+void        file_box_add(FileBox* fbox, GString* name, FileType type,
+		FileSelection selection);
 void        file_box_begin_read(FileBox* fbox);
 void        file_box_flush(FileBox* fbox);
 
-void        file_box_set_ordering(FileBoxOrdering fbo);
 void        file_box_set_icon(FileType type, GdkPixbuf* icon);
 void        file_box_set_sizing(gint modifier);
 

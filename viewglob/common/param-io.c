@@ -47,6 +47,7 @@ static gchar* params[P_COUNT] = {
 	"order",
 	"key",
 	"file",
+	"win-id",
 	"reason",
 	"eof",      /* This one shouldn't be received as a string. */
 };

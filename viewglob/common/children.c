@@ -386,6 +386,12 @@ gboolean child_fork(struct child* c) {
 }
 
 
+gboolean child_running(struct child* c) {
+	g_return_val_if_fail(c != NULL, FALSE);
+	return c->pid != -1 && c->fd_in != -1 && c->fd_out != -1;
+}
+
+
 /* Fork a new child with a pty. */
 gboolean pty_child_fork(struct child* c, gint new_stdin_fd,
 		gint new_stdout_fd, gint new_stderr_fd) {
