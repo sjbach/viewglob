@@ -22,3 +22,5 @@ gviewglob:
 		- then use "2, 10..." if it's really really small?
 	- Wrapbox resizing works (barely), but is achieved in an ugly way.
 
+glob-expand:
+	- fix //sys, //opt, //mnt, etc.
