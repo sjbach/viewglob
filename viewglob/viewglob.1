@@ -36,6 +36,9 @@ Output a transcript of the terminal's input to the given file.  This is the stuf
 .B \-s, \-\-sort\-style=<windows|ls>
 Sort files with dirs first (Windows) or purely by name (ls).  ls mode is the default.
 .TP
+.B \-r, \-\-dir\-order=<descending|ascending|ascending-pwd-first>
+List directories in descending order (the default), ascending (last referenced directory has the top listing), or ascending with the current directory always first.
+.TP
 .B \-n, \-\-show\-max=number
 Maximum number of files to show in the display for each directory.  A [Results Truncated] indicator will show if the max has been reached.  Note that you can always force show all files with the context menu.  If \-\-show\-max is passed 0, there is no limit.
 .TP

@@ -1,12 +1,12 @@
 Stephen Bach <sjbach@users.sourceforge.net>
 
-Kevin B. McCarty submitted a patch to fix a bunch of compiler warnings.
+- Kevin B. McCarty submitted a patch to fix a bunch of compiler warnings.
+- Pavel Tavoda had a great idea for a more intuitive way to list directories.
+- Andy Bastien thought of making the display toggleable.
+- Artis Rozentals suggested the option to display directories in reverse
+  order.
 
-Pavel Tavoda had a great idea for a more intuitive way to list directories.
-
-It was Andy Bastien's idea to make the display toggleable.
-
-This package uses code from the following people, but without their
+This package also uses code from the following people, but without their
 participation or endorsement:
 
 	Marc J. Rochkind

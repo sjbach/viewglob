@@ -41,15 +41,15 @@ Feedback is welcome!
 .
 .Sh NEW IN THIS RELEASE
 .LP
-The biggest change is the addition of file name insert functionality.  If you double click a file in the display (or the directory header), its name will be passed as text to the terminal.  Holding shift will send the full path to the file.
-.LP
-By default viewglob is in "smart insert" mode.  There's more info about that in the man page.
-.LP
-This release also allows you to type into the display and have the keystrokes passed to the terminal.  This works well in my testing, but let me know if you're finding that the display doesn't pass something along correctly.  Note that navigation keys are captured by the display instead of being passed on.
-.LP
-Two large issues with FreeBSD (and assumedly the other BSDs as well) are also fixed.  I've been unable to track down the problem with Ctrl-C and SIGINT, though; if you are a terminal I/O savvy BSD user willing to help, please get in touch with me.
-.LP
-See NEWS for the full list of important changes.
+It was sometimes inconvenient to be in directories with long listings because you wouldn't be able to see the listings of other directories without scrolling.  There is now an option to list directories in reverse order, i.e. the directory you reference last appears at the top of the display.  Actually, there are now three ordering modes (used with the flag --dir-order):
+.RS
+.IP ascending
+Directories appear in reverse order.
+.IP ascending-pwd-first
+Directories appear in reverse order, but the current directory is always at the top.
+.IP descending
+Classic ordering and the default mode: directories appear in the order you reference them (and with the current directory at the top).
+.RE
 .
 .Sh INSTALLATION
 .LP
@@ -68,4 +68,64 @@ I don't have access to Solaris, so I can only hope for the best -- it would be a
 .Sh REQUIREMENTS
 .LP
 viewglob requires a version of bash (any, as far as I know) and GTK+ 2.4.  A version of zsh is also obviously required if you wish to use zsh under viewglob.
+.
+.Sh NEW IN 1.0
+.LP
+The biggest change is the addition of file name insert functionality.  If you double click a file in the display (or the directory header), its name will be passed as text to the terminal.  Holding shift will send the full path to the file.
+.LP
+By default viewglob is in "smart insert" mode.  There's more info about that in the man page.
+.LP
+This release also allows you to type into the display and have the keystrokes passed to the terminal.  This works well in my testing, but let me know if you're finding that the display doesn't pass something along correctly.  Note that navigation keys are captured by the display instead of being passed on.
+.LP
+Two large issues with FreeBSD (and assumedly the other BSDs as well) are also fixed.  I've been unable to track down the problem with Ctrl-C and SIGINT, though; if you are a terminal I/O savvy BSD user willing to help, please get in touch with me.
+.
+.Sh NEW IN 0.9.1
+.LP
+First of all, if you've got a previous installation of viewglob that's not from a package manager (i.e. you just ran make && make install), you should remove it before installing this version.  I was incorrectly installing some binaries to .../share/viewglob instead of .../lib/viewglob, which goes against the Filesystem Hierarchy Standard.  If you've still got the sources to the old install, a make uninstall should do the job.  If not, the directory which you want to remove is, by default, /usr/local/share/viewglob.
+.LP
+The display can now be toggled on and off with the sequence Ctrl-G <SPACE> (or Ctrl-G Ctrl-<SPACE>).  If the display is closed manually, viewglob now interprets it as toggling off, and doesn't disable itself.  A toggled-off display still follows the state of the shell (i.e. when it's toggled on it'll be at the right place).
+.LP
+To disable viewglob (which you used to be able to do by closing the display), you can use the sequence Ctrl-G Q (but not Ctrl-G Ctrl-Q, because that's too easy to type accidentally).  Disabling a viewglob shell is non-recoverable.
+.LP
+When you might want to toggle off the display (C-g <SPACE>):
+.RS
+.IP - 3n
+You're dealing with a directory or a series of directories that have a lot of files, and the display's refresh time is slowing you down.
+.IP -
+You need the extra memory (the display's memory footprint is sometimes not as small as it probably should be); when the display is "toggled off", all of its memory is freed.
+.IP -
+It's just in the way.
+.RE
+.LP
+When you might want to disable viewglob (C-g q):
+.RS
+.IP - 3n
+You just want a regular shell, but you want to keep the current environment.
+.IP -
+Maybe you're compiling in the background, and your viewglob shell has begun to stutter.
+.RE
+.
+.Sh NEW IN 0.9
+.LP
+Preliminary support for zsh has been added.  From my testing viewglob works well with the advanced completion features of zsh, but there is a lot of ground to cover.  If you use zsh and find that viewglob isn't working well at all, please let me know - I'd be mostly interested in seeing your .zshrc file.
+.LP
+This release also adds the capability to navigate the display from the terminal.  This is done in a way similar to GNU screen's Ctrl-A commands - you type the control key followed by a direction character.
+.LP
+I've chosen Ctrl-G as viewglob's control key, because a. the letter makes sense, and b. Ctrl-G is by default just a beeping (i.e. more annoying) version of Ctrl-C in most shell configurations, and I don't think people use it.  But I could be wrong.
+.LP
+If you think this is a bad move, let me know.  Making the control key configurable would complicate things, but I'd be willing to go the distance if there's a reason to do so.
+.LP
+I've tried to accomodate both emacs and vi users for key bindings:
+.RS
+.IP Down: 12n
+j, n, <Down Arrow>
+.IP Up:
+k, p, <Up Arrow>
+.IP Page\ Down:
+f, d, <PgDown>
+.IP Page\ Up:
+b, u, <PgUp>
+.RE
+.LP
+The Ctrl counterparts also work.
 
