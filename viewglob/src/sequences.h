@@ -39,7 +39,6 @@ enum _MatchEffect {
 	ME_PWD_CHANGED,
 	ME_EAT_STARTED,
 	ME_RPROMPT_STARTED,
-	ME_DUMMY,
 };
 
 /* Status of a match attempt. */

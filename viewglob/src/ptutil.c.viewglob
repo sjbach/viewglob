@@ -19,6 +19,11 @@
 
 */
 
+/* Include POSIX and XPG declarations */
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
 #include "common.h"
 #include "ptutil.viewglob.h"
 #include <sys/stat.h>

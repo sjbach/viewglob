@@ -65,7 +65,6 @@ static MatchEffect seq_rprompt_separator_end(void);
 static MatchEffect seq_zsh_completion_done(void);
 static MatchEffect seq_eat_start(void);
 static MatchEffect seq_eat_end(void);
-static MatchEffect seq_dummy(void);
 static MatchEffect seq_term_cmd_wrapped(void);
 static MatchEffect seq_term_backspace(void);
 static MatchEffect seq_term_cursor_forward(void);
@@ -632,10 +631,6 @@ static void analyze_effect(MatchEffect effect) {
 			u.pl = PL_AT_RPROMPT;
 			break;
 
-		case ME_DUMMY:
-			DEBUG((df, "**DUMMY**\n"));
-			break;
-
 		default:
 			/* Error -- this shouldn't happen unless I've screwed up */
 			viewglob_fatal("Received unexpected match result");
@@ -779,13 +774,6 @@ static MatchEffect seq_term_cursor_backward(void) {
 
 	seqbuff_dequeue(u.seqbuff.pos, false);
 	return effect;
-}
-
-
-static MatchEffect seq_dummy(void) {
-	DEBUG((df, "in seq_dummy\n"));
-	seqbuff_dequeue(u.seqbuff.pos, false);
-	return ME_DUMMY;
 }
 
 

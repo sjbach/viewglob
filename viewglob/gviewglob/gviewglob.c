@@ -132,7 +132,7 @@ static gint cmp_dlisting_same_rank(gconstpointer a, gconstpointer b) {
    the completed string. */
 static GString* read_string(const gchar* buff, gsize* start, gsize n, gchar delim, struct holdover* ho, gboolean* finished) {
 
-	GString* string;
+	GString* string = NULL;
 	gsize i;
 	gboolean delim_reached = FALSE;
 
@@ -214,7 +214,7 @@ static gboolean receive_data(GIOChannel* source, gchar* buff, gsize size, gsize*
 
 	GError* error = NULL;
 	gboolean in_loop = TRUE;
-	gboolean data_read;
+	gboolean data_read = FALSE;
 
 	DEBUG((df, "=="));
 
@@ -325,7 +325,7 @@ static void process_glob_data(const gchar* buff, gsize bytes, Exhibit* e) {
 	gboolean completed = FALSE;
 
 	gsize pos = 0;
-	DEBUG((df, "&&"));
+	DEBUG((df, "&&(glob)"));
 
 	while (pos < bytes) {
 
@@ -740,7 +740,7 @@ static gboolean parse_args(int argc, char** argv) {
 			case 'n':
 				/* Maximum files to display. */
 				max = atoi(optarg);
-				DEBUG((df, "max: %ld\n", max));
+				DEBUG((df, "max: %d\n", max));
 				if (max < 0)
 					v.file_display_limit = DEFAULT_FILE_DISPLAY_LIMIT;
 				else

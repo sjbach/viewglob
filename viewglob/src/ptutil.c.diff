@@ -1,11 +1,16 @@
 --- ptutil.c	2004-08-10 00:55:14.000000000 -0400
-+++ ptutil.c.viewglob	2004-08-22 18:51:17.658407552 -0400
-@@ -18,8 +18,14 @@
++++ ptutil.c.viewglob	2004-09-04 20:46:57.466607456 -0400
+@@ -18,8 +18,19 @@
  	are to be used.
  
  */
 -#include "defs.h"
 -#include "ptutil.h"
++
++/* Include POSIX and XPG declarations */
++#ifndef _GNU_SOURCE
++#define _GNU_SOURCE
++#endif
 +
 +#include "common.h"
 +#include "ptutil.viewglob.h"
@@ -17,7 +22,7 @@
  /*[NONPORTABILITY_SYMBOLS]*/
  #if defined(SOLARIS) /* add to this as necessary */
  #define NEED_STREAM_SETUP
-@@ -67,7 +73,8 @@
+@@ -67,7 +78,8 @@
  	ec_neg1( p->pt_fd_m = posix_openpt(O_RDWR | O_NOCTTY) )
  #else
  	strcpy(p->pt_name_m, "/dev/ptmx"); /* clone device */
@@ -27,7 +32,7 @@
  #endif
  #elif defined(MASTER_NAME_SEARCH)
  	int i, j;
-@@ -83,7 +90,7 @@
+@@ -83,7 +95,7 @@
  		if (access(proto, F_OK) == -1) {
  			if (errno == ENOENT)
  				continue;
@@ -36,7 +41,7 @@
  		}
  		for (j = 0; j < sizeof(PTY_RANGE) - 1; j++) {
  			proto[PTY_Y] = PTY_RANGE[j];
-@@ -101,17 +108,16 @@
+@@ -101,17 +113,16 @@
  	}
  	if (p->pt_fd_m == -1) {
  		errno = EAGAIN;
@@ -57,7 +62,7 @@
  }
  /*[pt_open_master]*/
  PTINFO *pt_open_master(void)
-@@ -121,17 +127,22 @@
+@@ -121,17 +132,22 @@
  	char *s;
  #endif
  
@@ -86,7 +91,7 @@
  	}
  	strcpy(p->pt_name_s, s);
  #elif defined(MASTER_NAME_SEARCH)
-@@ -139,18 +150,17 @@
+@@ -139,18 +155,17 @@
  	p->pt_name_s[PTY_MS] = 't';
  #else
  	errno = ENOSYS;
@@ -107,7 +112,7 @@
  }
  /*[]*/
  /*
-@@ -160,28 +170,35 @@
+@@ -160,28 +175,35 @@
  /*[pt_open_slave]*/
  bool pt_open_slave(PTINFO *p)
  {
@@ -154,7 +159,7 @@
  }
  /*[pt_wait_master]*/
  bool pt_wait_master(PTINFO *p)
-@@ -190,24 +207,23 @@
+@@ -190,24 +212,23 @@
  
  	FD_ZERO(&fd_set_write);
  	FD_SET(PT_GET_MASTER_FD(p), &fd_set_write);
