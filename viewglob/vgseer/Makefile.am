@@ -6,8 +6,7 @@ INCLUDES = -I$(COMMON)
 pkglib_PROGRAMS = vgseer
 
 vgseer_SOURCES = vgseer.c children.c cmdline.c sequences.c \
-               tc_setraw.c connection.c   \
-               actions.c     \
+               tc_setraw.c connection.c actions.c     \
                $(COMMON)/ptytty.c $(COMMON)/hardened_io.c
 
 noinst_HEADERS = vgseer.h children.h cmdline.h sequences.h \

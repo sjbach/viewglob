@@ -74,7 +74,7 @@ void prepend_holdover(Connection* b) {
 void create_holdover(Connection* b, gboolean write_later) {
 
 	g_return_if_fail(b->n != 0);
-	g_return_if_fail(b->holdover != NULL);
+	g_return_if_fail(b->holdover == NULL);
 
 	/* Copy and null-terminate. */
 	b->holdover = g_new(char, b->n);

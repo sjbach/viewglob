@@ -35,8 +35,6 @@ gboolean hardened_write(gint, char*, size_t length);
 gboolean hardened_read(gint fd, void* buf, size_t count, ssize_t* nread);
 gboolean hardened_select(gint fd, fd_set* readfds, fd_set* writefds);
 
-gboolean send_term_size(gint shell_fd);
-
 G_END_DECLS
 
 #endif /* !HARDENED_IO_H */

@@ -25,20 +25,24 @@
 #endif
 
 #include "common.h"
-#include "sequences.h"
 #include "cmdline.h"
 #include "children.h"
 
 G_BEGIN_DECLS
 
+/* Supported shell types. */
+enum shell_type {
+	ST_BASH,
+	ST_ZSH,
+};
 
 /* Data structure for the user's shell. */
 struct user_shell {
 	gchar* pwd;
 	struct cmdline cmd;
-	struct pty_child s;
+	struct pty_child proc;
+	enum shell_type type;
 
-	gboolean term_size_changed;
 	gboolean expect_newline;
 };
 

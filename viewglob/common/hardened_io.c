@@ -25,18 +25,8 @@
 #include "vgseer.h"
 #include "hardened_io.h"
 
-#if HAVE_TERMIOS_H
-# include <termios.h>
-#endif
-
-#if GWINSZ_IN_SYS_IOCTL
-# include <sys/ioctl.h>
-#endif
-
 #include <sys/stat.h>
 #include <fcntl.h>
-
-extern struct user_shell u;
 
 
 /* Attempt to open the given file with the given flags and mode.
@@ -47,11 +37,12 @@ gint open_warning(gchar* file_name, gint flags, mode_t mode) {
 
 	gint fd;
 
-	if ( (fd = open(file_name, flags, mode)) == -1)
+	if ((fd = open(file_name, flags, mode)) == -1)
 		g_warning("Could not open file \"%s\": %s", file_name, g_strerror(errno));
 
 	return fd;
 }
+
 
 /* Attempt to close the given file.  Emit warning on failure. */
 void close_warning(gint fd, gchar* file_name) {
@@ -59,26 +50,16 @@ void close_warning(gint fd, gchar* file_name) {
 		g_warning("Could not close file \"%s\": %s", file_name, g_strerror(errno));
 }
 
-/* If read is interrupted by a signal, try again.  Emit error on failure. */
-gboolean hardened_read(gint fd, void* buf, size_t count, ssize_t* nread) {
+
+/* Retry read on EINTR. */
+gboolean hardened_read(int fd, void* buf, size_t count, ssize_t* nread) {
 	gboolean ok = TRUE;
 
 	while (TRUE) {
 		errno = 0;
-		if ( (*(nread) = read(fd, buf, count)) == -1 ) {
-			if (errno == EINTR) {
-				if (u.term_size_changed) { 
-					/* Received SIGWINCH. */
-					if (send_term_size(u.s.fd))
-						u.term_size_changed = FALSE;
-					else {
-						g_warning("Resizing term failed");
-						ok = FALSE;
-						break;
-					}
-				}
+		if ( (*nread = read(fd, buf, count)) == -1) {
+			if (errno == EINTR)
 				continue;
-			}
 			else {
 				ok = FALSE;
 				break;
@@ -93,7 +74,7 @@ gboolean hardened_read(gint fd, void* buf, size_t count, ssize_t* nread) {
 
 
 /* Write all length bytes of buff to fd, even if it requires several tries.
-   Retry after signal interrupts.  Emit error on failure. */
+   Retry after signal interrupts. */
 gboolean hardened_write(gint fd, gchar* buff, size_t length) {
 	ssize_t nwritten;
 	size_t offset = 0;
@@ -102,18 +83,8 @@ gboolean hardened_write(gint fd, gchar* buff, size_t length) {
 		while (TRUE) {
 			errno = 0;
 			if ( (nwritten = write(fd, buff + offset, length)) == -1 ) {
-				if (errno == EINTR) {
-					if (u.term_size_changed) { 
-						/* Received SIGWINCH. */
-						if (send_term_size(u.s.fd))
-							u.term_size_changed = FALSE;
-						else {
-							g_critical("Resizing term failed");
-							return FALSE;
-						}
-					}
+				if (errno == EINTR)
 					continue;
-				}
 				else
 					return FALSE;
 			}
@@ -131,43 +102,20 @@ gboolean hardened_write(gint fd, gchar* buff, size_t length) {
 /* If select is interrupted by a signal, try again. */
 gboolean hardened_select(gint n, fd_set* readfds, fd_set* writefds) {
 
+	gboolean ok = TRUE;
+
 	while (TRUE) {
 		if (select(n, readfds, writefds, NULL, NULL) == -1) {
-			if (errno == EINTR) {
-				if (u.term_size_changed) { 
-					/* Received SIGWINCH. */
-					if (send_term_size(u.s.fd))
-						u.term_size_changed = FALSE;
-					else {
-						g_critical("Resizing term failed");
-						return FALSE;
-					}
-				}
+			if (errno == EINTR)
 				continue;
-			}
 			else {
-				g_critical("Select failed in hardened_select: %s", g_strerror(errno));
-				return FALSE;
+				ok = FALSE;
+				break;
 			}
 		}
 		else
 			break;
 	}
-	return TRUE;
+	return ok;
 }
-
-
-/* Send the terminal size to the given terminal. */
-/* This really shouldn't be here, but it's convenient. */
-gboolean send_term_size(gint shell_fd) {
-	struct winsize size;
-	DEBUG((df, "in send_term_size\n"));
-	if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &size) == -1)
-		return FALSE;
-	else if (ioctl(shell_fd, TIOCSWINSZ, &size) == -1)
-		return FALSE;
-	else
-		return TRUE;
-}
-
 

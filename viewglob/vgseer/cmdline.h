@@ -40,25 +40,18 @@ struct cmdline {
 /* For cmd_wipe_in_line() -- maintain order of enumeration */
 enum direction { D_RIGHT = 0, D_LEFT = 1, D_ALL = 2 };
 
-gboolean  cmd_init(void);
-gboolean  cmd_alloc(void);
-gboolean  cmd_clear(void);
+gboolean cmd_init(struct cmdline* cmd);
+gboolean cmd_clear(struct cmdline* cmd);
 
-void      cmd_enqueue_overwrite(gchar c, gboolean preserve_cret);
-void      cmd_dequeue_overwrite(void);
-gboolean  cmd_has_queue(void);
-gboolean  cmd_write_queue(void);
-void      cmd_clear_queue(void);
+gboolean cmd_whitespace_to_left(struct cmdline* cmd, gchar* holdover);
+gboolean cmd_whitespace_to_right(struct cmdline* cmd);
 
-gboolean  cmd_whitespace_to_left(gchar* holdover);
-gboolean  cmd_whitespace_to_right(void);
-
-gboolean  cmd_overwrite_char(gchar c, gboolean preserve_cret);
-gboolean  cmd_insert_chars(gchar c, gint n);
-gboolean  cmd_del_chars(gint n);
-gboolean  cmd_wipe_in_line(enum direction dir);
-gboolean  cmd_backspace(gint n);
-void      cmd_del_trailing_crets(void);
+gboolean cmd_overwrite_char(struct cmdline* cmd, gchar c,
+		gboolean preserve_cret);
+gboolean cmd_insert_chars(struct cmdline* cmd, gchar c, gint n);
+gboolean cmd_del_chars(struct cmdline* cmd, gint n);
+gboolean cmd_wipe_in_line(struct cmdline* cmd, enum direction dir);
+void     cmd_del_trailing_crets(struct cmdline* cmd);
 
 G_END_DECLS
 

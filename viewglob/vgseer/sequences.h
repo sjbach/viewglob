@@ -26,6 +26,7 @@
 
 #include "common.h"
 #include "circular.h"
+#include "vgseer.h"
 #include "connection.h"
 
 G_BEGIN_DECLS
@@ -44,22 +45,15 @@ enum _MatchEffect {
 	ME_RPROMPT_STARTED,
 };
 
-/* Used in initialization of sequences. */
-enum shell_type {
-	ST_BASH,
-	ST_ZSH,
-};
-
-
 /* Sequence functions. */
 void  init_seqs(enum shell_type shell);
-void  check_seqs(Connection* b);
+void  check_seqs(Connection* b, struct user_shell* u);
 void  enable_all_seqs(enum process_level pl);
 void  clear_seqs(enum process_level pl);
 
 /* These are common to cmdline and sequences, but gotta put them somewhere. */
-gint find_prev_cret(gint);
-gint find_next_cret(gint);
+gint find_prev_cret(gchar* string, gint pos);
+gint find_next_cret(gchar* string, gint length, gint pos);
 
 G_END_DECLS
 

@@ -37,7 +37,7 @@ struct _Sequence {
 	gint length;
 	gint pos;
 	gboolean enabled;               /* Determines whether a match should be attempted. */
-	MatchEffect (*func)(Connection* b);  /* Function to run after successful match. */
+	MatchEffect (*func)(Connection* b, struct user_shell* u);  /* Function to run after successful match. */
 };
 
 /* Each process level (at prompt, executing, and eating) has a set of
@@ -56,36 +56,36 @@ static gchar*  parse_printables(const gchar* string, const gchar* sequence);
 static void init_bash_seqs(void);
 static void init_zsh_seqs(void);
 static MatchStatus check_seq(gchar c, Sequence* sq);
-static void analyze_effect(MatchEffect effect, Connection* b);
+static void analyze_effect(MatchEffect effect, Connection* b, struct user_shell* u);
 
 /* Pattern completion actions. */
-static MatchEffect seq_ps1_separator(Connection* b);
-static MatchEffect seq_rprompt_separator_start(Connection* b);
-static MatchEffect seq_rprompt_separator_end(Connection* b);
-static MatchEffect seq_zsh_completion_done(Connection* b);
-static MatchEffect seq_new_pwd(Connection* b);
+static MatchEffect seq_ps1_separator(Connection* b, struct user_shell* u);
+static MatchEffect seq_rprompt_separator_start(Connection* b, struct user_shell* u);
+static MatchEffect seq_rprompt_separator_end(Connection* b, struct user_shell* u);
+static MatchEffect seq_zsh_completion_done(Connection* b, struct user_shell* u);
+static MatchEffect seq_new_pwd(Connection* b, struct user_shell* u);
 
-static MatchEffect seq_nav_up(Connection* b);
-static MatchEffect seq_nav_down(Connection* b);
-static MatchEffect seq_nav_pgup(Connection* b);
-static MatchEffect seq_nav_pgdown(Connection* b);
-static MatchEffect seq_nav_ctrl_g(Connection* b);
-static MatchEffect seq_nav_toggle(Connection* b);
-static MatchEffect seq_nav_refocus(Connection* b);
-static MatchEffect seq_nav_disable(Connection* b);
-/*static MatchEffect seq_nav_catch_all(Connection* b);*/
+static MatchEffect seq_nav_up(Connection* b, struct user_shell* u);
+static MatchEffect seq_nav_down(Connection* b, struct user_shell* u);
+static MatchEffect seq_nav_pgup(Connection* b, struct user_shell* u);
+static MatchEffect seq_nav_pgdown(Connection* b, struct user_shell* u);
+static MatchEffect seq_nav_ctrl_g(Connection* b, struct user_shell* u);
+static MatchEffect seq_nav_toggle(Connection* b, struct user_shell* u);
+static MatchEffect seq_nav_refocus(Connection* b, struct user_shell* u);
+static MatchEffect seq_nav_disable(Connection* b, struct user_shell* u);
+/*static MatchEffect seq_nav_catch_all(Connection* b, struct user_shell* u);*/
 
-static MatchEffect seq_term_cmd_wrapped(Connection* b);
-static MatchEffect seq_term_backspace(Connection* b);
-static MatchEffect seq_term_cursor_forward(Connection* b);
-static MatchEffect seq_term_cursor_backward(Connection* b);
-static MatchEffect seq_term_cursor_up(Connection* b);
-static MatchEffect seq_term_erase_in_line(Connection* b);
-static MatchEffect seq_term_delete_chars(Connection* b);
-static MatchEffect seq_term_insert_blanks(Connection* b);
-static MatchEffect seq_term_bell(Connection* b);
-static MatchEffect seq_term_carriage_return(Connection* b);
-static MatchEffect seq_term_newline(Connection* b);
+static MatchEffect seq_term_cmd_wrapped(Connection* b, struct user_shell* u);
+static MatchEffect seq_term_backspace(Connection* b, struct user_shell* u);
+static MatchEffect seq_term_cursor_forward(Connection* b, struct user_shell* u);
+static MatchEffect seq_term_cursor_backward(Connection* b, struct user_shell* u);
+static MatchEffect seq_term_cursor_up(Connection* b, struct user_shell* u);
+static MatchEffect seq_term_erase_in_line(Connection* b, struct user_shell* u);
+static MatchEffect seq_term_delete_chars(Connection* b, struct user_shell* u);
+static MatchEffect seq_term_insert_blanks(Connection* b, struct user_shell* u);
+static MatchEffect seq_term_bell(Connection* b, struct user_shell* u);
+static MatchEffect seq_term_carriage_return(Connection* b, struct user_shell* u);
+static MatchEffect seq_term_newline(Connection* b, struct user_shell* u);
 
 /* The below characters don't appear in any of the sequences viewglob looks for, so we
    can use them as special characters. */
@@ -159,8 +159,6 @@ static gchar* const TERM_INSERT_BLANKS_SEQ = "\033[" DIGIT_S "@";
 static gchar* const TERM_BELL_SEQ = "\007";
 
 
-extern struct user_shell u;
-
 static SeqGroup* seq_groups;
 static enum shell_type shell;
 
@@ -212,13 +210,14 @@ static gchar* parse_printables(const gchar* string, const gchar* sequence) {
 
 //FIXME remove find_prev_cret() and find_next_cret() and replace with g_strstrblah() etc.?
 
-gint find_prev_cret(gint pos) {
+gint find_prev_cret(gchar* string, gint pos) {
+//gint find_prev_cret(gint pos) {
 	gint i;
 	gboolean found = FALSE;
 
 	/* Find the first ^M to the left of pos. */
 	for (i = pos - 1; i >= 0; i--)
-		if (u.cmd.command[i] == '\015') {
+		if (string[i] == '\015') {
 			found = TRUE;
 			break;
 		}
@@ -230,14 +229,14 @@ gint find_prev_cret(gint pos) {
 }
 
 
-gint find_next_cret(gint pos) {
+gint find_next_cret(gchar* string, gint length, gint pos) {
 	gchar* cr;
 
 	/* Find the first ^M to the right of pos. */
-	cr = memchr(u.cmd.command + pos, '\015', u.cmd.length - pos);
+	cr = memchr(string + pos, '\015', length - pos);
 
 	if (cr != NULL)
-		return cr - u.cmd.command;
+		return cr - string;
 	else
 		return -1;
 }
@@ -669,7 +668,7 @@ void enable_all_seqs(enum process_level pl) {
 
 
 
-void check_seqs(Connection* b) {
+void check_seqs(Connection* b, struct user_shell* u) {
 	gint i;
 	MatchEffect effect;
 
@@ -687,9 +686,9 @@ void check_seqs(Connection* b) {
 			DEBUG((df, "Matched seq \"%s\" (%d)\n", seq->name, i));
 
 			/* Execute the pattern match function and analyze. */
-			effect = (*(seq->func))(b);
+			effect = (*(seq->func))(b, u);
 			//FIXME return error value from analyze effect!
-			analyze_effect(effect, b);
+			analyze_effect(effect, b, u);
 
 			break;
 		}
@@ -788,7 +787,7 @@ static MatchStatus check_seq(gchar c, Sequence* sq) {
 
 /* React (or not) on the instance of a sequence match. */
 /* FIXME probably should return a gboolean for graceful crash. */
-static void analyze_effect(MatchEffect effect, Connection* b) {
+static void analyze_effect(MatchEffect effect, Connection* b, struct user_shell* u) {
 
 	switch (effect) {
 
@@ -796,7 +795,7 @@ static void analyze_effect(MatchEffect effect, Connection* b) {
 			DEBUG((df, "**ERROR**\n"));
 			/* Clear the command line to indicate we're out of sync,
 			   and wait for the next PS1. */
-			cmd_clear();
+			cmd_clear(&u->cmd);
 			b->pl = PL_EXECUTING;
 			action_queue(A_SEND_LOST);
 			break;
@@ -812,17 +811,17 @@ static void analyze_effect(MatchEffect effect, Connection* b) {
 
 		case ME_CMD_STARTED:
 			DEBUG((df, "**CMD_STARTED**\n"));
-			if (u.cmd.rebuilding)
-				u.cmd.rebuilding = FALSE;
+			if (u->cmd.rebuilding)
+				u->cmd.rebuilding = FALSE;
 			else
-				cmd_clear();
+				cmd_clear(&u->cmd);
 			b->pl = PL_AT_PROMPT;
 			action_queue(A_SEND_CMD);
 			break;
 
 		case ME_CMD_REBUILD:
 			DEBUG((df, "**CMD_REBUILD**\n"));
-			u.cmd.rebuilding = TRUE;
+			u->cmd.rebuilding = TRUE;
 			b->pl = PL_EXECUTING;
 			break;
 
@@ -834,7 +833,7 @@ static void analyze_effect(MatchEffect effect, Connection* b) {
 
 		case ME_RPROMPT_STARTED:
 			DEBUG((df, "**RPROMPT_STARTED**\n"));
-			u.cmd.rebuilding = TRUE;
+			u->cmd.rebuilding = TRUE;
 			b->pl = PL_AT_RPROMPT;
 			break;
 
@@ -855,38 +854,38 @@ void clear_seqs(enum process_level pl) {
 
 
 
-static MatchEffect seq_ps1_separator(Connection* b) {
+static MatchEffect seq_ps1_separator(Connection* b, struct user_shell* u) {
 	pass_segment(b);
 	return ME_CMD_STARTED;
 }
 
 
-static MatchEffect seq_rprompt_separator_start(Connection* b) {
+static MatchEffect seq_rprompt_separator_start(Connection* b, struct user_shell*  u) {
 	pass_segment(b);
 	return ME_RPROMPT_STARTED;
 }
 
 
-static MatchEffect seq_rprompt_separator_end(Connection* b) {
+static MatchEffect seq_rprompt_separator_end(Connection* b, struct user_shell*  u) {
 	pass_segment(b);
 	return ME_CMD_STARTED;
 }
 
 
-static MatchEffect seq_new_pwd(Connection* b) {
-	if (u.pwd != NULL)
-		g_free(u.pwd);
+static MatchEffect seq_new_pwd(Connection* b, struct user_shell*  u) {
+	if (u->pwd != NULL)
+		g_free(u->pwd);
 
-	u.pwd = parse_printables(b->buf + b->pos, NEW_PWD_SEQ);
-	DEBUG((df, "new pwd: %s\n", u.pwd));
+	u->pwd = parse_printables(b->buf + b->pos, NEW_PWD_SEQ);
+	DEBUG((df, "new pwd: %s\n", u->pwd));
 	eat_segment(b);
 	return ME_PWD_CHANGED;
 
 }
 
 
-static MatchEffect seq_zsh_completion_done(Connection* b) {
-	u.cmd.rebuilding = TRUE;
+static MatchEffect seq_zsh_completion_done(Connection* b, struct user_shell*  u) {
+	u->cmd.rebuilding = TRUE;
 	pass_segment(b);
 	return ME_NO_EFFECT;
 }
@@ -894,12 +893,12 @@ static MatchEffect seq_zsh_completion_done(Connection* b) {
 
 /* Add a carriage return to the present location in the command line,
    or if we're expecting a newline, command executed. */
-static MatchEffect seq_term_cmd_wrapped(Connection* b) {
+static MatchEffect seq_term_cmd_wrapped(Connection* b, struct user_shell*  u) {
 	MatchEffect effect;
 
-	if (u.expect_newline)
+	if (u->expect_newline)
 		effect = ME_CMD_EXECUTED;
-	else if (!cmd_overwrite_char('\015', FALSE))
+	else if (!cmd_overwrite_char(&u->cmd, '\015', FALSE))
 		effect = ME_ERROR;
 	else
 		effect = ME_NO_EFFECT;
@@ -912,11 +911,11 @@ static MatchEffect seq_term_cmd_wrapped(Connection* b) {
 
 
 /* Back up one character. */
-static MatchEffect seq_term_backspace(Connection* b) {
+static MatchEffect seq_term_backspace(Connection* b, struct user_shell*  u) {
 	MatchEffect effect;
 
-	if (u.cmd.pos > 0) {
-		u.cmd.pos--;
+	if (u->cmd.pos > 0) {
+		u->cmd.pos--;
 		effect = ME_NO_EFFECT;
 	}
 	else
@@ -928,7 +927,7 @@ static MatchEffect seq_term_backspace(Connection* b) {
 
 
 /* Move cursor forward from present location n times. */
-static MatchEffect seq_term_cursor_forward(Connection* b) {
+static MatchEffect seq_term_cursor_forward(Connection* b, struct user_shell* u) {
 	MatchEffect effect = ME_NO_EFFECT;
 	gint n;
 	
@@ -937,17 +936,17 @@ static MatchEffect seq_term_cursor_forward(Connection* b) {
 		/* Default is 1. */
 		n = 1;
 	}
-	if (u.cmd.pos + n <= u.cmd.length)
-		u.cmd.pos += n;
+	if (u->cmd.pos + n <= u->cmd.length)
+		u->cmd.pos += n;
 	else {
 		if (shell == ST_ZSH) {
-			if (u.cmd.pos + n == u.cmd.length + 1) {
+			if (u->cmd.pos + n == u->cmd.length + 1) {
 				/* This is more likely to just be a space causing a deletion of the RPROMPT in zsh. */
-				cmd_overwrite_char(' ', FALSE);
+				cmd_overwrite_char(&u->cmd, ' ', FALSE);
 			}
 			else {
 				/* It's writing the RPROMPT. */
-				u.cmd.rebuilding = TRUE;
+				u->cmd.rebuilding = TRUE;
 				effect = ME_RPROMPT_STARTED;
 			}
 		}
@@ -960,7 +959,7 @@ static MatchEffect seq_term_cursor_forward(Connection* b) {
 
 
 /* Move cursor backward from present location n times. */
-static MatchEffect seq_term_cursor_backward(Connection* b) {
+static MatchEffect seq_term_cursor_backward(Connection* b, struct user_shell*  u) {
 	MatchEffect effect = ME_NO_EFFECT;
 	gint n;
 	
@@ -969,8 +968,8 @@ static MatchEffect seq_term_cursor_backward(Connection* b) {
 		/* Default is 1. */
 		n = 1;
 	}
-	if (u.cmd.pos - n >= 0)
-		u.cmd.pos -= n;
+	if (u->cmd.pos - n >= 0)
+		u->cmd.pos -= n;
 	else
 		effect = ME_ERROR;
 
@@ -980,7 +979,7 @@ static MatchEffect seq_term_cursor_backward(Connection* b) {
 
 
 /* Delete n chars from the command line. */
-static MatchEffect seq_term_delete_chars(Connection* b) {
+static MatchEffect seq_term_delete_chars(Connection* b, struct user_shell*  u) {
 	MatchEffect effect = ME_NO_EFFECT;
 	gint n;
 	
@@ -989,7 +988,7 @@ static MatchEffect seq_term_delete_chars(Connection* b) {
 		/* Default is 1. */
 		n = 1;
 	}
-	if (!cmd_del_chars(n))
+	if (!cmd_del_chars(&u->cmd, n))
 		effect = ME_ERROR;
 
 	pass_segment(b);
@@ -997,7 +996,7 @@ static MatchEffect seq_term_delete_chars(Connection* b) {
 }
 
 /* Insert n blanks at the current location on command line. */
-static MatchEffect seq_term_insert_blanks(Connection* b) {
+static MatchEffect seq_term_insert_blanks(Connection* b, struct user_shell*  u) {
 	MatchEffect effect = ME_NO_EFFECT;
 	gint n;
 
@@ -1006,7 +1005,7 @@ static MatchEffect seq_term_insert_blanks(Connection* b) {
 		/* Default is 1. */
 		n = 1;
 	}
-	if (!cmd_insert_chars(' ', n))
+	if (!cmd_insert_chars(&u->cmd, ' ', n))
 		effect = ME_ERROR;
 
 	pass_segment(b);
@@ -1018,14 +1017,14 @@ static MatchEffect seq_term_insert_blanks(Connection* b) {
 	0 = Clear to right
 	1 = Clear to left
 	2 = Clear all */
-static MatchEffect seq_term_erase_in_line(Connection* b) {
+static MatchEffect seq_term_erase_in_line(Connection* b, struct user_shell*  u) {
 	MatchEffect effect = ME_NO_EFFECT;
 	gint n;
 	
 	/* Default is 0. */
 	n = parse_digits(b->buf + b->pos, b->n);
 
-	if (!cmd_wipe_in_line(n))
+	if (!cmd_wipe_in_line(&u->cmd, n))
 		effect = ME_ERROR;
 
 	pass_segment(b);
@@ -1034,14 +1033,14 @@ static MatchEffect seq_term_erase_in_line(Connection* b) {
 
 
 /* Just ignore the damn bell. */
-static MatchEffect seq_term_bell(Connection* b) {
+static MatchEffect seq_term_bell(Connection* b, struct user_shell*  u) {
 	pass_segment(b);
 	return ME_NO_EFFECT;
 }
 
 
 /* Move cursor up from present location n times. */
-static MatchEffect seq_term_cursor_up(Connection* b) {
+static MatchEffect seq_term_cursor_up(Connection* b, struct user_shell*  u) {
 	MatchEffect effect = ME_NO_EFFECT;
 	gint i, n;
 	gint last_cret, next_cret, offset;
@@ -1053,8 +1052,8 @@ static MatchEffect seq_term_cursor_up(Connection* b) {
 		n = 1;
 	}
 
-	last_cret = find_prev_cret(u.cmd.pos);
-	next_cret = find_next_cret(u.cmd.pos);
+	last_cret = find_prev_cret(u->cmd.command, u->cmd.pos);
+	next_cret = find_next_cret(u->cmd.command, u->cmd.length, u->cmd.pos);
 	if (last_cret == -1 && next_cret == -1) {
 		goto out_of_prompt;
 	}
@@ -1063,14 +1062,14 @@ static MatchEffect seq_term_cursor_up(Connection* b) {
 	if (last_cret != -1) {
 		DEBUG((df, "trying first\n"));
 
-		pos = u.cmd.pos;
+		pos = u->cmd.pos;
 		for (i = 0; i < n + 1 && pos != -1; i++)
-			pos = find_prev_cret(pos);
+			pos = find_prev_cret(u->cmd.command, pos);
 
 		if (pos != -1) {
-			offset = u.cmd.pos - last_cret;    /* Cursor is offset chars from the beginning of the line. */
-			u.cmd.pos = pos + offset;          /* Position cursor on new line at same position. */
-			if (u.cmd.pos >= 0) {
+			offset = u->cmd.pos - last_cret;    /* Cursor is offset chars from the beginning of the line. */
+			u->cmd.pos = pos + offset;          /* Position cursor on new line at same position. */
+			if (u->cmd.pos >= 0) {
 				effect = ME_NO_EFFECT;
 				goto done;
 			}
@@ -1083,14 +1082,14 @@ static MatchEffect seq_term_cursor_up(Connection* b) {
 	if (next_cret != -1) {
 		DEBUG((df, "trying second\n"));
 
-		pos = u.cmd.pos;
+		pos = u->cmd.pos;
 		for (i = 0; i < n && pos != -1; i++)
-			pos = find_prev_cret(pos);
+			pos = find_prev_cret(u->cmd.command, pos);
 
 		if (pos != -1) {
-			offset = next_cret - u.cmd.pos;
-			u.cmd.pos = pos - offset;
-			if (u.cmd.pos >= 0) {
+			offset = next_cret - u->cmd.pos;
+			u->cmd.pos = pos - offset;
+			if (u->cmd.pos >= 0) {
 				effect = ME_NO_EFFECT;
 				goto done;
 			}
@@ -1102,7 +1101,7 @@ static MatchEffect seq_term_cursor_up(Connection* b) {
 	/* No luck. */
 	out_of_prompt:
 	effect = ME_CMD_REBUILD;
-	u.cmd.pos = 0;
+	u->cmd.pos = 0;
 
 	done:
 	pass_segment(b);
@@ -1112,23 +1111,23 @@ static MatchEffect seq_term_cursor_up(Connection* b) {
 
 /* Return cursor to beginning of this line, or if expecting
    newline, command executed. */
-static MatchEffect seq_term_carriage_return(Connection* b) {
+static MatchEffect seq_term_carriage_return(Connection* b, struct user_shell*  u) {
 	MatchEffect effect;
 	gint p;
 
-	if (u.expect_newline) {
+	if (u->expect_newline) {
 		effect = ME_CMD_EXECUTED;
 		pass_segment(b);
 	}
 	else {
-		p = find_prev_cret(u.cmd.pos);
+		p = find_prev_cret(u->cmd.command, u->cmd.pos);
 		if (p == -1) {
-				u.cmd.pos = 0;
+				u->cmd.pos = 0;
 				effect = ME_CMD_REBUILD;
 		}
 		else {
 			/* Go to the character just after the ^M. */
-			u.cmd.pos = p + 1;
+			u->cmd.pos = p + 1;
 			effect = ME_NO_EFFECT;
 		}
 
@@ -1146,29 +1145,29 @@ static MatchEffect seq_term_carriage_return(Connection* b) {
    If so, then a newline that takes us out of the command line
    is interpreted as a command execution.  If not, then it is
    a command line wrap. */
-static MatchEffect seq_term_newline(Connection* b) {
+static MatchEffect seq_term_newline(Connection* b, struct user_shell*  u) {
 	gint p;
 	MatchEffect effect;
 
-	DEBUG((df, "expect_newline: %d", u.expect_newline));
+	DEBUG((df, "expect_newline: %d", u->expect_newline));
 
-	p = find_next_cret(u.cmd.pos);
+	p = find_next_cret(u->cmd.command, u->cmd.length, u->cmd.pos);
 	if (p == -1) {
-		if (u.expect_newline) {
+		if (u->expect_newline) {
 			/* Command must have been executed. */
 			effect = ME_CMD_EXECUTED;
 		}
 		else {
 			/* Newline must just be a wrap. */
-			u.cmd.pos = u.cmd.length;
-			if (cmd_overwrite_char('\015', FALSE))
+			u->cmd.pos = u->cmd.length;
+			if (cmd_overwrite_char(&u->cmd, '\015', FALSE))
 				effect = ME_NO_EFFECT;
 			else
 				effect = ME_ERROR;
 		}
 	}
 	else {
-		u.cmd.pos = p + 1;
+		u->cmd.pos = p + 1;
 		effect = ME_NO_EFFECT;
 	}
 	pass_segment(b);
@@ -1176,7 +1175,7 @@ static MatchEffect seq_term_newline(Connection* b) {
 }
 
 
-static MatchEffect seq_nav_up(Connection* b) {
+static MatchEffect seq_nav_up(Connection* b, struct user_shell*  u) {
 	DEBUG((df, "seq_nav_up!\n"));
 	eat_segment(b);
 	action_queue(A_SEND_UP);
@@ -1184,7 +1183,7 @@ static MatchEffect seq_nav_up(Connection* b) {
 }
 
 
-static MatchEffect seq_nav_down(Connection* b) {
+static MatchEffect seq_nav_down(Connection* b, struct user_shell*  u) {
 	DEBUG((df, "seq_nav_down!\n"));
 	eat_segment(b);
 	action_queue(A_SEND_DOWN);
@@ -1192,7 +1191,7 @@ static MatchEffect seq_nav_down(Connection* b) {
 }
 
 
-static MatchEffect seq_nav_pgup(Connection* b) {
+static MatchEffect seq_nav_pgup(Connection* b, struct user_shell*  u) {
 	DEBUG((df, "seq_nav_pgup!\n"));
 	eat_segment(b);
 	action_queue(A_SEND_PGUP);
@@ -1200,7 +1199,7 @@ static MatchEffect seq_nav_pgup(Connection* b) {
 }
 
 
-static MatchEffect seq_nav_pgdown(Connection* b) {
+static MatchEffect seq_nav_pgdown(Connection* b, struct user_shell*  u) {
 	DEBUG((df, "seq_nav_pgdown!\n"));
 	eat_segment(b);
 	action_queue(A_SEND_PGDOWN);
@@ -1208,7 +1207,7 @@ static MatchEffect seq_nav_pgdown(Connection* b) {
 }
 
 
-static MatchEffect seq_nav_ctrl_g(Connection* b) {
+static MatchEffect seq_nav_ctrl_g(Connection* b, struct user_shell*  u) {
 	DEBUG((df, "seq_nav_ctrlg!\n"));
 	b->n--;
 	b->pos++;
@@ -1217,7 +1216,7 @@ static MatchEffect seq_nav_ctrl_g(Connection* b) {
 }
 
 
-static MatchEffect seq_nav_toggle(Connection* b) {
+static MatchEffect seq_nav_toggle(Connection* b, struct user_shell*  u) {
 	DEBUG((df, "seq_nav_toggle!\n"));
 	eat_segment(b);
 	action_queue(A_TOGGLE);
@@ -1225,7 +1224,7 @@ static MatchEffect seq_nav_toggle(Connection* b) {
 }
 
 
-static MatchEffect seq_nav_refocus(Connection* b) {
+static MatchEffect seq_nav_refocus(Connection* b, struct user_shell*  u) {
 	DEBUG((df, "seq_nav_refocus!\n"));
 	eat_segment(b);
 	action_queue(A_REFOCUS);
@@ -1233,7 +1232,7 @@ static MatchEffect seq_nav_refocus(Connection* b) {
 }
 
 
-static MatchEffect seq_nav_disable(Connection* b) {
+static MatchEffect seq_nav_disable(Connection* b, struct user_shell*  u) {
 	DEBUG((df, "seq_nav_disable!\n"));
 	eat_segment(b);
 	action_queue(A_DISABLE);
@@ -1242,7 +1241,7 @@ static MatchEffect seq_nav_disable(Connection* b) {
 
 
 /*
-static MatchEffect seq_nav_catch_all(Connection* b) {
+static MatchEffect seq_nav_catch_all(Connection* b, struct user_shell*  u) {
 	DEBUG((df, "seq_nav_catch_all!\n"));
 	eat_segment(b);
 	return ME_NO_EFFECT;
