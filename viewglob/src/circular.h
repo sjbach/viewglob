@@ -17,8 +17,8 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#ifndef SEQBUF_H
-#define SEQBUF_H
+#ifndef CIRCULAR_H
+#define CIRCULAR_H
 
 /* This file only exists because of the circular dependencies between
    sequences.h and buffer.h. */
@@ -63,4 +63,4 @@ struct _Buffer {
 
 END_C_DECLS
 
-#endif /* !SEQBUF_H */
+#endif /* !CIRCULAR_H */
