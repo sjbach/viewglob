@@ -1,3 +1,7 @@
+2004-09-26 16:47  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* gviewglob.c: don't send navigation keys to terminal.
+
 2004-09-26 10:58  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* gviewglob.c, seer.c:

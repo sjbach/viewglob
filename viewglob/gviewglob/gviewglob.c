@@ -27,8 +27,7 @@
 #include "gviewglob.h"
 
 #include <gtk/gtk.h>
-#include <gdk/gdk.h>
-#include <glib.h>
+#include <gdk/gdkkeysyms.h>
 #include <string.h>       /* For strcmp. */
 #include <unistd.h>       /* For getopt. */
 #include <stdio.h>        /* For BUFSIZ. */
@@ -684,40 +683,61 @@ static gboolean window_state_event(GtkWidget *window, GdkEvent *event, Exhibit* 
 /* A key has been pressed -- write it to the terminal. */
 static gboolean window_key_press_event(GtkWidget* window, GdkEventKey* event, gpointer data) {
 
-	gsize bytes_written;
+	gsize  bytes_written;
 	gchar* temp1;
 	gchar* temp2;
 	gchar* temp3;
-	gboolean result = FALSE;
 
-	temp1 = g_malloc(2);
-	*temp1 = event->keyval;
-	*(temp1 + 1) = '\0';
+	gboolean result;
 
-	/* Convert out of utf8. */
-	temp2 = g_locale_from_utf8(temp1, -1, NULL, &bytes_written, NULL);
+	switch (event->keyval) {
+		case GDK_Home:
+		case GDK_Left:
+		case GDK_Up:
+		case GDK_Right:
+		case GDK_Down:
+		case GDK_Page_Up:
+		case GDK_Page_Down:
+		case GDK_End:
+			/* These keys we let the display interpret. */
+			result = FALSE;
+			break;
 
-	if (temp2) {
-		if (event->state & GDK_CONTROL_MASK) {
-			/* Control is being held.  Determine if it's a control key and
-			   convert. */
-			if (event->keyval >= 'a' && event->keyval <= 'z')
-				*temp2 -= 96;
-			else if (event->keyval >= '[' && event->keyval <= '_')
-				*temp2 -= 64;
-			else if (event->keyval == '@')
-				*temp2 = '\0';
-		}
+		default:
 
-		temp3 = g_strconcat("key:", temp2, NULL);
+			/* The rest are passed to the terminal. */
+			temp1 = g_malloc(2);
+			*temp1 = event->keyval;
+			*(temp1 + 1) = '\0';
 
-		result = feedback_write_string(temp3, strlen("key:."));
+			/* Convert out of utf8. */
+			temp2 = g_locale_from_utf8(temp1, -1, NULL, &bytes_written, NULL);
 
-		g_free(temp3);
-		g_free(temp2);
+			if (temp2) {
+				if (event->state & GDK_CONTROL_MASK) {
+					/* Control is being held.  Determine if it's a control key and
+					   convert. */
+					if (event->keyval >= 'a' && event->keyval <= 'z')
+						*temp2 -= 96;
+					else if (event->keyval >= '[' && event->keyval <= '_')
+						*temp2 -= 64;
+					else if (event->keyval == '@')
+						*temp2 = '\0';
+				}
+
+				temp3 = g_strconcat("key:", temp2, NULL);
+
+				result = feedback_write_string(temp3, strlen("key:."));
+
+				g_free(temp3);
+				g_free(temp2);
+			}
+			else
+				result = FALSE;
+
+			g_free(temp1);
+			break;
 	}
-
-	g_free(temp1);
 
 	return result;
 }
