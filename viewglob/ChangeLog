@@ -1,3 +1,10 @@
+2005-03-29 18:44  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* vgd.c, exhibit.c, dlisting.c, exhibit.h, file_box.c, file_box.h,
+	  vgclassic.c:
+	  Further integration.
+	* vgexpand.c: end data with double \n
+
 2005-03-29 15:00  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* display.h, display.c, feedback.h, feedback.c: removed

@@ -38,7 +38,8 @@ struct _Exhibit {
 };
 
 
-DListing*  exhibit_add(Exhibit* e, GString* name, gint rank, GString* selected_count, GString* total_count, GString* hidden_count);
+DListing*  exhibit_add(Exhibit* e, gchar* name, gint rank,
+		gchar* selected_count, gchar* total_count, gchar* hidden_count);
 void       exhibit_unmark_all(Exhibit* e);
 void       exhibit_cull(Exhibit* e);
 void       exhibit_rearrange_and_show(Exhibit* e);

@@ -101,7 +101,7 @@ static void dlisting_init(DListing* dl) {
 	dl->rank = -1;
 	dl->marked = FALSE;
 
-	dl->name = g_string_new("");
+	dl->name = g_string_new(NULL);
 	dl->rank = -1;
 	dl->old_rank = -1;
 

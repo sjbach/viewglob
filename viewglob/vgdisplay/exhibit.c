@@ -29,9 +29,9 @@ static gint cmp_dlisting_same_rank(gconstpointer a, gconstpointer b);
 
 static gint cmp_dlisting_same_name(gconstpointer a, gconstpointer b) {
 	const DListing* aa = a;
-	const GString* bb = b;
+	const gchar* bb = b;
 
-	return strcmp(aa->name->str, bb->str);
+	return strcmp(aa->name->str, bb);
 }
 
 
@@ -48,8 +48,8 @@ static gint cmp_dlisting_same_rank(gconstpointer a, gconstpointer b) {
 }
 
 
-DListing* exhibit_add(Exhibit* e, GString* name, gint rank,
-		GString* selected_count, GString* total_count, GString* hidden_count) {
+DListing* exhibit_add(Exhibit* e, gchar* name, gint rank,
+		gchar* selected_count, gchar* total_count, gchar* hidden_count) {
 
 	DListing* dl;
 	GSList* search_result;
@@ -61,8 +61,8 @@ DListing* exhibit_add(Exhibit* e, GString* name, gint rank,
 
 		/* It's a known DListing. */
 		dl = search_result->data;
-		dlisting_set_file_counts(dl, selected_count->str, total_count->str,
-				hidden_count->str);
+		dlisting_set_file_counts(dl, selected_count, total_count,
+				hidden_count);
 		dlisting_mark(dl, rank);
 
 		/* We'll be reading these next, at which point they'll be remarked. */
@@ -72,9 +72,9 @@ DListing* exhibit_add(Exhibit* e, GString* name, gint rank,
 
 		/* It's a new DListing. */
 		dl = DLISTING(dlisting_new());
-		dlisting_set_name(dl, name->str);
-		dlisting_set_file_counts(dl, selected_count->str, total_count->str,
-				hidden_count->str);
+		dlisting_set_name(dl, name);
+		dlisting_set_file_counts(dl, selected_count, total_count,
+				hidden_count);
 		/* Set optimal width as the width of the listings vbox. */
 		dlisting_set_optimal_width(dl, e->listings_box->allocation.width);
 		dlisting_mark(dl, rank);

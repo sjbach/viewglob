@@ -436,7 +436,7 @@ static GdkPixbuf* make_pixbuf_scaled(const guint8 icon_inline[],
 }
 
 
-void file_box_add(FileBox* fbox, GString* name, FileType type,
+void file_box_add(FileBox* fbox, gchar* name, FileType type,
 		FileSelection selection) {
 	g_return_if_fail(IS_FILE_BOX(fbox));
 
@@ -444,14 +444,13 @@ void file_box_add(FileBox* fbox, GString* name, FileType type,
 	FItem* fi;
 
 	/* Check if we've already got this FItem. */
-	search_result = g_slist_find_custom(fbox->fi_slist, name->str,
-			cmp_same_name);
+	search_result = g_slist_find_custom(fbox->fi_slist, name, cmp_same_name);
 	if (search_result) {
 		fi = search_result->data;
 		fitem_update_type_selection_and_order(fi, type, selection, fbox);
 	}
 	else {
-		fi = fitem_new(name->str, type, selection);
+		fi = fitem_new(name, type, selection);
 		fbox->fi_slist = g_slist_insert(fbox->fi_slist, fi, 0); //FIXME
 	}
 

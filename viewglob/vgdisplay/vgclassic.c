@@ -37,8 +37,6 @@
 /* Prototypes. */
 static gboolean receive_data(GIOChannel* source, GIOCondition condition,
 		gpointer data);
-static GString*  read_string(const gchar* buf, gsize* start, gsize n,
-		gchar delim, struct holdover* ho, gboolean* finished);
 static void      write_xwindow_id(GtkWidget* gtk_window);
 
 static void        set_icons(void);
@@ -46,10 +44,10 @@ static void        set_icons(void);
 static gboolean  parse_args(int argc, char** argv);
 static void      report_version(void);
 
-static void  process_glob_data(const gchar* buf, gsize bytes, Exhibit* e);
+static void  process_glob_data(gchar* buf, gsize bytes, Exhibit* e);
 
-static FileSelection  map_selection_state(const GString* string);
-static FileType       map_file_type(const GString* string);
+static FileSelection  map_selection_state(gchar c);
+static FileType       map_file_type(gchar c);
 
 static gboolean  window_delete_event(GtkWidget* widget, GdkEvent* event,
 		gpointer data);
@@ -65,8 +63,8 @@ struct viewable_preferences v;
 
 
 /* Chooses a selection state based on the string's first char. */
-static FileSelection map_selection_state(const GString* string) {
-	switch (*string->str) {
+static FileSelection map_selection_state(gchar c) {
+	switch (c) {
 		case '-':
 			return FS_NO;
 		case '~':
@@ -74,15 +72,15 @@ static FileSelection map_selection_state(const GString* string) {
 		case '*':
 			return FS_YES;
 		default:
-			g_warning("Unexpected selection state \"%c\".", *string->str);
+			g_warning("Unexpected selection state \"%c\".", c);
 			return FS_NO;
 	}
 }
 
 
 /* Chooses a file type based on the string's first char. */
-static FileType map_file_type(const GString* string) {
-	switch (*string->str) {
+static FileType map_file_type(gchar c) {
+	switch (c) {
 		case 'r':
 			return FT_REGULAR;
 		case 'e':
@@ -100,55 +98,9 @@ static FileType map_file_type(const GString* string) {
 		case 's':
 			return FT_SOCKET;
 		default:
-			g_warning("Unexpected file type \"%c\".", *string->str);
+			g_warning("Unexpected file type \"%c\".", c);
 			return FT_REGULAR;
 	}
-}
-
-
-/* Try to get a string from the given buffer.  If delim is not seen, save the
-   string for the next call (combining with whatever is already saved) in ho.
-   When delim is seen, return the completed string. */
-static GString* read_string(const gchar* buf, gsize* start, gsize n,
-		gchar delim, struct holdover* ho, gboolean* finished) {
-
-	GString* string = NULL;
-	gsize i;
-	gboolean delim_reached = FALSE;
-
-	for (i = *start; i < n; i++) {
-		if ( buf[i] == delim ) {
-			delim_reached = TRUE;
-			break;
-		}
-	}
-	*finished = delim_reached;
-
-	if (delim_reached) {
-		string = g_string_new_len(buf + *start, i - *start);
-		if (ho->has_holdover) {
-			g_string_prepend(string, ho->string->str);
-			ho->has_holdover = FALSE;
-		}
-	}
-	else {
-		if (ho->has_holdover)
-			g_string_append_len(ho->string, buf + *start, i - *start);
-		else {
-			//FIXME \/ shouldn't it be !ho->string?
-			if (!ho->has_holdover)   /* This will only be true once. */
-				ho->string = g_string_new_len(buf + *start, i - *start);
-			else {
-				g_string_truncate(ho->string, 0);
-				g_string_append_len(ho->string, buf + *start, i - *start);
-			}
-
-			ho->has_holdover = TRUE;
-		}
-	}
-
-	*start = i;
-	return string;
 }
 
 
@@ -208,8 +160,12 @@ static gboolean receive_data(GIOChannel* source, GIOCondition condition,
 				break;
 
 			case P_VGEXPAND_DATA:
-				g_warning("P_VGEXPAND_DATA: (lots)");
-				process_glob_data(value, strlen(value), e);
+				if (*value == '\0')
+					g_warning("P_VGEXPAND_DATA: (none)");
+				else {
+					process_glob_data(value, strlen(value), e);
+					g_warning("P_VGEXPAND_DATA: (lots)");
+				}
 				break;
 
 			case P_EOF:
@@ -233,41 +189,36 @@ static gboolean receive_data(GIOChannel* source, GIOCondition condition,
 }
 
 
+static gchar* up_to_delimiter(gchar** ptr, char c) {
+	gchar* start = *ptr;
+	while (**ptr != c)
+		(*ptr)++;
+
+	**ptr = '\0';
+	(*ptr)++;
+	return start;
+}
+
 /* Finite state machine to interpret glob data. */
-/* TODO: instead of freeing string after each read, try to use it correctly. */
-static void process_glob_data(const gchar* buf, gsize bytes, Exhibit* e) {
+static void process_glob_data(gchar* buf, gsize bytes, Exhibit* e) {
 
-	/* These variables are all static because they may need
-	   to be preserved between calls to this function (in
-	   the case that buf is not the whole input).  */
-	static enum glob_read_state rs = GRS_DONE;
-	static gboolean advance = FALSE;
+	enum glob_read_state rs = GRS_DONE;
 
-	static struct holdover ho = { NULL, FALSE };
-
-	static GString* selected_count;
-	static GString* total_count;
-	static GString* hidden_count;
+	gchar* string;
+	gchar* selected_count;
+	gchar* total_count;
+	gchar* hidden_count;
 
 	static FileType type;
 	static FileSelection selection;
 
-	static gint dir_rank = 0;
-	static DListing* dl;
+	gint dir_rank = 0;
+	DListing* dl;
 
-	GString* string = NULL;
-	gboolean completed = FALSE;
+	gchar* p;
 
-	gsize pos = 0;
-
-	while (pos < bytes) {
-
-		/* Skip the next character (the delimiter). */
-		if (advance) {
-			pos++;
-			advance = FALSE;
-			continue;
-		}
+	p = buf;
+	while (p < buf + bytes) {
 
 		switch (rs) {
 			case GRS_DONE:
@@ -277,104 +228,65 @@ static void process_glob_data(const gchar* buf, gsize bytes, Exhibit* e) {
 				break;
 
 			case GRS_SELECTED_COUNT:
-				selected_count = read_string(buf, &pos, bytes, ' ', &ho, &completed);
-				if (completed) {
-					dir_rank++;
-					rs = GRS_FILE_COUNT;
-					advance = TRUE;
-				}
+				selected_count = up_to_delimiter(&p, ' ');
+				dir_rank++;
+				rs = GRS_FILE_COUNT;
 				break;
 
 			case GRS_FILE_COUNT:
-				total_count = read_string(buf, &pos, bytes, ' ', &ho, &completed);
-				if (completed) {
-					rs = GRS_HIDDEN_COUNT;
-					advance = TRUE;
-				}
+				total_count = up_to_delimiter(&p, ' ');
+				rs = GRS_HIDDEN_COUNT;
 				break;
 
 			case GRS_HIDDEN_COUNT:
-				hidden_count = read_string(buf, &pos, bytes, ' ', &ho, &completed);
-				if (completed) {
-					rs = GRS_DIR_NAME;
-					advance = TRUE;
-				}
+				hidden_count = up_to_delimiter(&p, ' ');
+				rs = GRS_DIR_NAME;
 				break;
 
 			/* Get dl, the DListing we're currently working on, from here. */
 			case GRS_DIR_NAME:
-				string = read_string(buf, &pos, bytes, '\n', &ho, &completed);
-				if (completed) {
-
-					dl = exhibit_add(e, string, dir_rank, selected_count, total_count, hidden_count);
-
-					if (dir_rank == 1) {
-						/* Put pwd into the window title. */
-						char* title = g_strconcat("vg ", string->str, NULL);
-						gtk_window_set_title(GTK_WINDOW(e->window), title);
-						g_free(title);
-					}
-
-					g_string_free(selected_count, TRUE);
-					g_string_free(total_count, TRUE);
-					g_string_free(hidden_count, TRUE);
-
-					advance = TRUE;
-					rs = GRS_IN_LIMBO;
-				}
+				string = up_to_delimiter(&p, '\n');
+				dl = exhibit_add(e, string, dir_rank, selected_count,
+						total_count, hidden_count);
+				rs = GRS_IN_LIMBO;
 				break;
 
-			/* Either we'll read another FItem (or the first), a new DListing, or EOF (double \n). */
+			/* Either we'll read another FItem (or the first), a new DListing,
+			   or EOF (double \n). */
 			case GRS_IN_LIMBO:
-				completed = FALSE;
-				if ( *(buf + pos) == '\t' ) {        /* Another FItem. */
-					advance = TRUE;
-					rs = GRS_FILE_STATE;
+				switch (*p) {
+					case '\t':
+						rs = GRS_FILE_STATE;
+						p++;
+						break;
+					case '\n':
+						rs = GRS_DONE;
+						p++;
+						break;
+					default:
+						rs = GRS_SELECTED_COUNT;
+						break;
 				}
-				else if ( *(buf + pos) == '\n' ) {   /* End of glob-expand data. */
-					advance = TRUE;
-					rs = GRS_DONE;
-				}
-				else {                                /* Another DListing. */
-					/* (No need to advance) */
-					rs = GRS_SELECTED_COUNT;
-				}
-
 				break;
 
 
-			/* Have to save file_state and file_type until we get file_name */
+			/* Have to save selection and type until we get the name */
 			case GRS_FILE_STATE:
-				string = read_string(buf, &pos, bytes, ' ', &ho, &completed);
-				if (completed) {
-					selection = map_selection_state(string);
-					g_string_free(string, TRUE);
-
-					advance = TRUE;
-					rs = GRS_FILE_TYPE;
-				}
+				string = up_to_delimiter(&p, ' ');
+				selection = map_selection_state(*string);
+				rs = GRS_FILE_TYPE;
 				break;
 
 			case GRS_FILE_TYPE:
-				string = read_string(buf, &pos, bytes, ' ', &ho, &completed);
-				if (completed) {
-					type = map_file_type(string);
-					g_string_free(string, TRUE);
-
-					advance = TRUE;
-					rs = GRS_FILE_NAME;
-				}
+				string = up_to_delimiter(&p, ' ');
+				type = map_file_type(*string);
+				rs = GRS_FILE_NAME;
 				break;
 
 			case GRS_FILE_NAME:
-				string = read_string(buf, &pos, bytes, '\n', &ho, &completed);
-				if (completed) {
-					file_box_add(FILE_BOX(dl->file_box), string, type, selection);
-					g_string_free(string, TRUE);
-
-					advance = TRUE;
-					rs = GRS_IN_LIMBO;
-				}
+				string = up_to_delimiter(&p, '\n');
+				file_box_add(FILE_BOX(dl->file_box), string, type, selection);
+				rs = GRS_IN_LIMBO;
 				break;
 
 			default:
@@ -383,14 +295,8 @@ static void process_glob_data(const gchar* buf, gsize bytes, Exhibit* e) {
 		}
 	}
 
-	/* We only display the glob data if we've read a set AND it's at the end
-	   of the buffer.  Otherwise, the stuff we'd display would immediately be
-	   overwritten by the stuff we're going to read in the next iteration
-	   (which should happen immediately). */
-	if (rs == GRS_DONE) {
-		exhibit_cull(e);
-		exhibit_rearrange_and_show(e);
-	}
+	exhibit_cull(e);
+	exhibit_rearrange_and_show(e);
 }
 
 

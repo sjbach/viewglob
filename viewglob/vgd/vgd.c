@@ -75,6 +75,9 @@ static void process_display(struct state* s);
 static void drop_client(struct state* s, struct vgseer_client* v);
 static void context_switch(struct state* s, struct vgseer_client* v);
 static void check_active_window(struct state* s);
+static void update_display(struct state* s, struct vgseer_client* v,
+		enum parameter param, gchar* value);
+
 
 gint main(gint argc, gchar** argv) {
 
@@ -294,22 +297,20 @@ static void process_client(struct state* s, struct vgseer_client* v) {
 			if (new_status != v->status) {
 				v->status = new_status;
 				g_message("(%d) New status: %s", v->fd, value);
-				//FIXME update display (no reglob) if active
+				update_display(s, v, param, value);
 			}
 			break;
 
 		case P_PWD:
 			v->pwd = g_string_assign(v->pwd, value);
 			g_message("(%d) New pwd: %s", v->fd, v->pwd->str);
-			//FIXME update display (no reglob) if active
-			//put_param(v->fd, P_FILE, "/blah/blah/so/and/so");
-			//put_param(v->fd, P_KEY, "a");
+			update_display(s, v, param, value);
 			break;
 
 		case P_CMD:
 			v->cli = g_string_assign(v->cli, value);
 			g_message("(%d) New cli: %s", v->fd, v->cli->str);
-			//FIXME update display (with reglob) if active
+			update_display(s, v, param, value);
 			break;
 
 		case P_MASK:
@@ -317,36 +318,34 @@ static void process_client(struct state* s, struct vgseer_client* v) {
 			v->developing_mask = g_string_truncate(v->developing_mask, 0);
 			v->mask = g_string_assign(v->mask, value);
 
-			if (v->mask->len == 0) {
+			if (v->mask->len == 0)
 				g_message("(%d) Mask cleared", v->fd);
-				// FIXME update display with reglob if active
-			}
-			else {
+			else
 				g_message("(%d) New mask: %s", v->fd, v->mask->str);
-				// FIXME update display with reglob if active
-			}
+			update_display(s, v, P_MASK, value);
+			update_display(s, v, P_DEVELOPING_MASK, "");
 			break;
 
 		case P_DEVELOPING_MASK:
 			v->developing_mask = g_string_assign(v->developing_mask, value);
-			if (v->developing_mask->len == 0) {
+			if (v->developing_mask->len == 0)
 				g_message("(%d) Developing mask cleared", v->fd);
-				// FIXME update display (with no reglob)
-			}
 			else {
 				g_message("(%d) New developing mask: %s", v->fd,
 						v->developing_mask->str);
-				// FIXME update display (with no reglob)
 			}
+			update_display(s, v, param, value);
 			break;
 
 		case P_ORDER:
 			g_message("(%d) Received P_ORDER: %s", v->fd, value);
+			update_display(s, v, param, value);
 			break;
 
 		case P_VGEXPAND_DATA:
 			v->expanded = g_string_assign(v->expanded, value);
 			g_message("(%d) Received vgexpand_data: (lots)", v->fd);
+			update_display(s, v, param, value);
 			break;
 
 		case P_EOF:
@@ -359,6 +358,18 @@ static void process_client(struct state* s, struct vgseer_client* v) {
 					value);
 			drop_client(s, v);
 			break;
+	}
+}
+
+
+static void update_display(struct state* s, struct vgseer_client* v,
+		enum parameter param, gchar* value) {
+
+	if (	s->active == v &&
+			child_running(&s->display) &&
+			!put_param(s->display.fd_out, param, value)) {
+		g_critical("Couldn't send parameter to display");
+		//FIXME restart display
 	}
 }
 
@@ -381,9 +392,20 @@ static void drop_client(struct state* s, struct vgseer_client* v) {
 	g_free(v);
 
 	/* Kill the display if all the clients are gone. */
-	if (!s->clients && child_running(&s->display)) {
+	if (child_running(&s->display) && !s->clients) {
 		(void) child_terminate(&s->display);
 		g_message("(disp) Killed display");
+	}
+
+	/* If this was the active client, switch to another one. */
+	if (s->active == v) {
+		if (s->clients) {
+			s->active = s->clients->data;
+			if (child_running(&s->display))
+				context_switch(s, s->active);
+		}
+		else
+			s->active = NULL;
 	}
 }
 

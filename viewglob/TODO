@@ -9,12 +9,13 @@
 - vgclassic: mask and developing mask
 - vgclassic: no more file display limit
 - vgclassic: no more context menu (show hidden, show all)
-- vgclassic: filebox_set_ordering <<- remove
+- vgclassic: pwd into title
 - make: .PHONY build for the icons
 - make: option to build only vgseer/vgexpand (and thus no GTK requirement)
 - make: package getopt_long (or alternative)
 - vgd: request version from vgseer
 - vgd: vgseer_client into separate file
+- vgd: pass display messages back to terminal
 - documentation: updates from 1.1.1
 - vgmini: create
 

@@ -336,7 +336,7 @@ static void report(void) {
 		print_dir(dir_iter);
 
 	/* Semaphore at end. */
-	printf("\003");
+	printf("\n\003");
 }
 
 
