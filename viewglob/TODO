@@ -1,8 +1,3 @@
-Andy Bastien:
-- rerunning viewglob after closing the display pops in a new display
-- double clicking file name pastes it into terminal
-	- user-defined formatting
-
 seer:
 	- screen compatibility
 	- integration with bash-completion, if viable
