@@ -660,6 +660,8 @@ static bool user_activity(void) {
 		if (!hardened_read(x.s.fd, sandbox_b.buf, sandbox_b.size, &sandbox_b.filled)) {
 			viewglob_error("Read problem from sandbox");
 			viewglob_error(strerror(errno));
+			ok = false;
+			goto done;
 		}
 		/* We just read this data to clear the pipe -- we don't actually use it. */
 	}
