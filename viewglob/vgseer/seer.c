@@ -22,7 +22,7 @@
 #include "common.h"
 #include "viewglob-error.h"
 
-#include "tc_setraw.viewglob.h"
+#include "tc_setraw.h"
 #include "hardened_io.h"
 #include "sanitize.h"
 #include "actions.h"

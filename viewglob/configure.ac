@@ -36,6 +36,7 @@ AC_PATH_XTRA
 
 dnl The display requires GTK+ 2.4.0.
 AM_PATH_GTK_2_0(2.4.0)
+AM_PATH_GLIB_2_0
 
 dnl Test for bash.
 AC_PATH_PROG(BASH_FULL_PATH, bash, nope)
@@ -149,6 +150,7 @@ dnl End of pty stuff.
 dnl =====================================================================
 
 
-AC_CONFIG_FILES([Makefile src/Makefile gviewglob/Makefile])
+#AC_CONFIG_FILES([Makefile src/Makefile gviewglob/Makefile])
+AC_CONFIG_FILES([Makefile glob-expand/Makefile vgdisplay/Makefile shell/Makefile vgseer/Makefile common/Makefile])
 AC_OUTPUT
 
