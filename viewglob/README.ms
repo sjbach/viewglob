@@ -46,6 +46,8 @@ My biggest issue with Viewglob has always been the awkwardness of dealing with s
 In my first attempt at combatting this problem I've added a key sequence, Cg-<TAB> or Cg-<ENTER> (Cg = Ctrl-G), which will ask the window manager to refocus the terminal and the display, bringing them both to the top layer.  So when you've got one but not the other, type this sequence and both will be visible.
 .LP
 This has necessitated a new reliance on Xlib (previously only implied with GTK), which may cause compatibility issues.  If so, please let me know.  Also, whether this feature works or not depends on your window manager.  If it has implemented a good portion of the EWMH specification you'll probably be okay.
+.LP
+The dircolors stuff will be in the next release (I needed a break from Pango).
 .
 .Sh INSTALLATION
 .LP
