@@ -54,7 +54,15 @@ DListing* exhibit_add(Exhibit* e, gchar* name, gint rank,
 	DListing* dl;
 	GSList* search_result;
 
-	search_result = g_slist_find_custom(e->dl_slist, name,
+	/* If this directory is PWD, set it as the title of the window. */
+	if (*name == PWD_CHAR) {
+		name++;
+		gchar* new_title = g_strconcat("vg ", name, NULL);
+		gtk_window_set_title(GTK_WINDOW(e->window), new_title);
+		g_free(new_title);
+	}
+
+	search_result = g_slist_find_custom(e->dls, name,
 			cmp_dlisting_same_name);
 
 	if (search_result) {
@@ -78,7 +86,7 @@ DListing* exhibit_add(Exhibit* e, gchar* name, gint rank,
 		/* Set optimal width as the width of the listings vbox. */
 		dlisting_set_optimal_width(dl, e->listings_box->allocation.width);
 		dlisting_mark(dl, rank);
-		e->dl_slist = g_slist_append(e->dl_slist, dl);
+		e->dls = g_slist_append(e->dls, dl);
 	}
 
 	return dl;
@@ -86,11 +94,11 @@ DListing* exhibit_add(Exhibit* e, gchar* name, gint rank,
 
 
 void exhibit_rearrange_and_show(Exhibit* e) {
-	gint next_rank = 1;
+	gint next_rank = 0;
 	DListing* dl;
 	GSList* search_result;
 
-	while ( (search_result = g_slist_find_custom(e->dl_slist, &next_rank,
+	while ( (search_result = g_slist_find_custom(e->dls, &next_rank,
 					cmp_dlisting_same_rank)) ) {
 		dl = search_result->data;
 
@@ -102,12 +110,12 @@ void exhibit_rearrange_and_show(Exhibit* e) {
 			gtk_box_pack_start(GTK_BOX(e->listings_box), GTK_WIDGET(dl),
 					FALSE, FALSE, 0);
 			gtk_box_reorder_child(GTK_BOX(e->listings_box), GTK_WIDGET(dl),
-					next_rank - 1);
+					next_rank);
 			gtk_widget_show(GTK_WIDGET(dl));
 		}
 		else if (dl->rank != dl->old_rank) {
 			gtk_box_reorder_child(GTK_BOX(e->listings_box), GTK_WIDGET(dl),
-					next_rank - 1);
+					next_rank);
 		}
 
 		next_rank++;
@@ -125,7 +133,7 @@ void exhibit_cull(Exhibit* e) {
 	GSList* iter;
 	DListing* dl;
 
-	iter = e->dl_slist;
+	iter = e->dls;
 	while (iter) {
 		dl = iter->data;
 
@@ -136,7 +144,7 @@ void exhibit_cull(Exhibit* e) {
 			GSList* tmp;
 			tmp = iter;
 			iter = g_slist_next(iter);
-			e->dl_slist = g_slist_delete_link(e->dl_slist, tmp);
+			e->dls = g_slist_delete_link(e->dls, tmp);
 			dlisting_free(dl);
 		}
 	}
@@ -147,10 +155,19 @@ void exhibit_unmark_all(Exhibit* e) {
 	GSList* iter;
 	DListing* dl;
 
-	for (iter = e->dl_slist; iter; iter = g_slist_next(iter)) {
+	for (iter = e->dls; iter; iter = g_slist_next(iter)) {
 		dl = iter->data;
 		dl->marked = FALSE;
 	}
+}
+
+
+/* Convert the string to UTF-8 and set it as the command line. */
+void exhibit_set_cmd(Exhibit* e, gchar* string) {
+	gchar* cmdline_utf8 = g_filename_to_utf8(string, strlen(string),
+			NULL, NULL, NULL);
+	gtk_entry_set_text(GTK_ENTRY(e->cmdline), cmdline_utf8);
+	g_free(cmdline_utf8);
 }
 
 

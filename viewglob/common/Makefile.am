@@ -1,4 +1,5 @@
 
 
-noinst_HEADERS = common.h hardened-io.h param-io.h shell.h ptytty.h children.h
+noinst_HEADERS = common.h hardened-io.h param-io.h shell.h ptytty.h \
+                 children.h file-types.h
 

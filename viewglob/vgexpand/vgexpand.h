@@ -25,31 +25,10 @@
 #endif
 
 #include "common.h"
+#include "file-types.h"
 
 G_BEGIN_DECLS
 
-
-/* A file has two stages of being selected:
-     YES:   the file has been explicitly named or expanded from a file glob.
-	 MAYBE: the beginning of the file has been named (or expanded). */
-enum selection {
-	S_YES,
-	S_NO,
-	S_MAYBE,
-	S_COUNT,
-};
-
-enum file_type {
-	FT_REGULAR,
-	FT_EXECUTABLE,
-	FT_DIRECTORY,
-	FT_BLOCKDEV,
-	FT_CHARDEV,
-	FT_FIFO,
-	FT_SOCKET,
-	FT_SYMLINK,
-	FT_COUNT,
-};
 
 /* Order in which to list the directories:
 	SO_DESCENDING: listed in order of appearance on the command line.
@@ -64,8 +43,8 @@ enum sort_order {
 typedef struct _File File;
 struct _File {
 	gchar* name;
-	enum selection selected;
-	enum file_type type;
+	FileSelection selected;
+	FileType type;
 	gboolean shown;
 };
 
@@ -78,6 +57,7 @@ struct _Directory {
 	gint file_count;
 	gint hidden_count;
 	GTree* files;
+	gboolean is_pwd;
 	Directory* next_dir;
 	gchar* lookup;       /* Piggyback filename for mark_traverse. */
 	gsize  lookup_len;

@@ -47,14 +47,14 @@ static void  file_box_init(FileBox* fbox);
 static void   file_box_size_request(GtkWidget* widget,
 		GtkRequisition* requisition);
 static guint  file_box_get_display_pos(FileBox* fbox, FItem* fitem);
-static void   file_box_allow_size_requests(FileBox* fbox, gboolean allow);
+static void   allow_size_requests(FileBox* fbox, gboolean allow);
 
 static FItem*    fitem_new(const gchar* name, FileType type,
 		FileSelection selection);
 static void      fitem_build_widgets(FItem* fi);
 static void      fitem_free(FItem* fi, gboolean destroy_widgets);
 static void      fitem_update_type_selection_and_order(FItem* fi, FileType t,
-		FileSelection s, FileBox* fbox);
+		FileSelection s, FileBox* fbox, gint rank);
 static void      fitem_display(FItem* fi, FileBox* fbox);
 
 static gboolean size_request_kludge(GtkWidget* widget,
@@ -62,6 +62,7 @@ static gboolean size_request_kludge(GtkWidget* widget,
 static gboolean fitem_button_press_event(GtkWidget* widget,
 		GdkEventButton* event, FItem* fi);
 
+static GtkStateType selection_to_state(FileSelection s);
 static gint cmp_same_name(gconstpointer a, gconstpointer b);
 
 static void initialize_icons(gchar* test_string);
@@ -72,8 +73,7 @@ static GdkPixbuf*  make_pixbuf_scaled(const guint8 icon_inline[],
 /* --- variables --- */
 static gpointer parent_class = NULL;
 
-#define FILE_TYPE_ICONS_COUNT  8
-static GdkPixbuf* file_type_icons[FILE_TYPE_ICONS_COUNT] =
+static GdkPixbuf* file_type_icons[FT_COUNT] =
 	{ NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
 
 /* --- functions --- */
@@ -136,7 +136,7 @@ static gboolean size_request_kludge(GtkWidget* widget,
 }
 
 
-static void file_box_allow_size_requests(FileBox* fbox, gboolean allow) {
+static void allow_size_requests(FileBox* fbox, gboolean allow) {
 
 	if (fbox->eat_size_requests != allow)
 		return;
@@ -155,7 +155,7 @@ static void file_box_init(FileBox *fbox) {
 	GTK_WIDGET_SET_FLAGS (fbox, GTK_NO_WINDOW);
 
 	fbox->optimal_width = 0;
-	fbox->fi_slist = NULL;
+	fbox->fis = NULL;
 	fbox->eat_size_requests = FALSE;
 
 	g_signal_connect(fbox, "size-request", G_CALLBACK(size_request_kludge),
@@ -170,8 +170,8 @@ GtkWidget* file_box_new (void) {
 
 void file_box_destroy(FileBox* fbox) {
 
-	g_slist_foreach(fbox->fi_slist, (GFunc) fitem_free, (gpointer) TRUE);
-	g_slist_free(fbox->fi_slist);
+	g_slist_foreach(fbox->fis, (GFunc) fitem_free, (gpointer) TRUE);
+	g_slist_free(fbox->fis);
 	gtk_widget_destroy(GTK_WIDGET(fbox));
 }
 
@@ -285,7 +285,7 @@ static void initialize_icons(gchar* test_string) {
 	int i;
 
 	/* Free the old icons, if present. */
-	for (i = 0; i < FILE_TYPE_ICONS_COUNT; i++) {
+	for (i = 0; i < FT_COUNT; i++) {
 		if (file_type_icons[i]) {
 			g_object_unref(file_type_icons[i]);
 			file_type_icons[i] = NULL;
@@ -437,21 +437,21 @@ static GdkPixbuf* make_pixbuf_scaled(const guint8 icon_inline[],
 
 
 void file_box_add(FileBox* fbox, gchar* name, FileType type,
-		FileSelection selection) {
+		FileSelection selection, gint rank) {
 	g_return_if_fail(IS_FILE_BOX(fbox));
 
 	GSList* search_result;
 	FItem* fi;
 
 	/* Check if we've already got this FItem. */
-	search_result = g_slist_find_custom(fbox->fi_slist, name, cmp_same_name);
+	search_result = g_slist_find_custom(fbox->fis, name, cmp_same_name);
 	if (search_result) {
 		fi = search_result->data;
-		fitem_update_type_selection_and_order(fi, type, selection, fbox);
+		fitem_update_type_selection_and_order(fi, type, selection, fbox, rank);
 	}
 	else {
 		fi = fitem_new(name, type, selection);
-		fbox->fi_slist = g_slist_insert(fbox->fi_slist, fi, 0); //FIXME
+		fbox->fis = g_slist_insert(fbox->fis, fi, rank);
 	}
 
 	fi->marked = TRUE;
@@ -478,7 +478,7 @@ static guint file_box_get_display_pos(FileBox* fbox, FItem* fitem) {
 	FItem* fi;
 	guint pos = 0;
 
-	for (fi_iter = fbox->fi_slist; fi_iter; fi_iter = g_slist_next(fi_iter)) {
+	for (fi_iter = fbox->fis; fi_iter; fi_iter = g_slist_next(fi_iter)) {
 		fi = fi_iter->data;
 		if (fi == fitem)
 			break;
@@ -498,14 +498,14 @@ void file_box_begin_read(FileBox* fbox) {
 	GSList* fi_iter;
 	FItem* fi;
 
-	for (fi_iter = fbox->fi_slist; fi_iter; fi_iter = g_slist_next(fi_iter)) {
+	for (fi_iter = fbox->fis; fi_iter; fi_iter = g_slist_next(fi_iter)) {
 		fi = fi_iter->data;
 		fi->marked = FALSE;
 	}
 
 	/* There will be no size requests of the file box until
 	   file_box_flush(). */
-	file_box_allow_size_requests(fbox, FALSE);
+	allow_size_requests(fbox, FALSE);
 }
 
 
@@ -517,14 +517,14 @@ void file_box_flush(FileBox* fbox) {
 	GSList* tmp;
 	FItem* fi;
 
-	fi_iter = fbox->fi_slist;
+	fi_iter = fbox->fis;
 	while (fi_iter) {
 		fi = fi_iter->data;
 		if (!fi->marked ) {
 			/* Not marked -- no holds barred. */
 			tmp = fi_iter;
 			fi_iter = g_slist_next(fi_iter);
-			fbox->fi_slist = g_slist_delete_link(fbox->fi_slist, tmp);
+			fbox->fis = g_slist_delete_link(fbox->fis, tmp);
 			fitem_free(fi, TRUE);
 			continue;
 		}
@@ -535,7 +535,7 @@ void file_box_flush(FileBox* fbox) {
 	}
 
 	/* Now we do a size request. */
-	file_box_allow_size_requests(fbox, TRUE);
+	allow_size_requests(fbox, TRUE);
 }
 
 
@@ -563,6 +563,22 @@ static FItem* fitem_new(const gchar* name, FileType type,
 }
 
 
+static GtkStateType selection_to_state(FileSelection s) {
+	switch (s) {
+		case FS_YES:
+			return GTK_STATE_SELECTED;
+			break;
+		case FS_MAYBE:
+			return GTK_STATE_ACTIVE;
+			break;
+		case FS_NO:
+		default:
+			return GTK_STATE_NORMAL;
+			break;
+	}
+}
+
+
 static void fitem_build_widgets(FItem* fi) {
 
 	GtkWidget* label;
@@ -574,7 +590,7 @@ static void fitem_build_widgets(FItem* fi) {
 
 	/* Event Box (to show selection) */
 	eventbox = gtk_event_box_new();
-	gtk_widget_set_state(eventbox, fi->selection);
+	gtk_widget_set_state(eventbox, selection_to_state(fi->selection));
 
 	/* HBox */
 	hbox = gtk_hbox_new(FALSE, 0);
@@ -668,7 +684,7 @@ static void fitem_free(FItem* fi, gboolean destroy_widgets) {
 
 
 static void fitem_update_type_selection_and_order(FItem* fi, FileType t,
-		FileSelection s, FileBox* fbox) {
+		FileSelection s, FileBox* fbox, gint rank) {
 
 	/* File type. */
 	if (fi->type != t) {
@@ -682,15 +698,17 @@ static void fitem_update_type_selection_and_order(FItem* fi, FileType t,
 		}
 
 		/* Reposition this FItem. */
-		fbox->fi_slist = g_slist_remove(fbox->fi_slist, fi);
-		fbox->fi_slist = g_slist_insert(fbox->fi_slist, fi, 0); //FIXME
+		fbox->fis = g_slist_remove(fbox->fis, fi);
+		fbox->fis = g_slist_insert(fbox->fis, fi, rank);
 	}
 
 	/* File selection state. */
 	if (fi->selection != s) {
 		fi->selection = s;
-		if (fi->widget)
-			gtk_widget_set_state(fi->widget, fi->selection);
+		if (fi->widget) {
+			gtk_widget_set_state(fi->widget,
+					selection_to_state(fi->selection));
+		}
 	}
 }
 

@@ -65,8 +65,8 @@ static gchar*   normalize_path(const gchar* path, gboolean remove_trailing);
 static gboolean has_trailing_slash(const gchar* path);
 static gint     find_prev(const gchar* string, gint pos, gchar c);
 
-static enum file_type  determine_type(const struct stat* file_stat);
-static File*           make_new_file(gchar* name, enum file_type type);
+static FileType  determine_type(const struct stat* file_stat);
+static File*           make_new_file(gchar* name, FileType type);
 static Directory*      make_new_dir(gchar* dir_name, dev_t dev_id,
 		ino_t inode);
 static gboolean        have_dir(gchar* name, dev_t dev_id, ino_t inode,
@@ -342,11 +342,13 @@ static void report(void) {
 
 static void print_dir(Directory* dir) {
 	if (dir) {
-		printf("%d %d %d %s\n",
+		printf("%d %d %d ",
 				dir->selected_count,
 				dir->file_count,
-				dir->hidden_count,
-				dir->name);
+				dir->hidden_count);
+		if (dir->is_pwd)
+			printf("%c", PWD_CHAR);  /* Differentiate PWD. */
+		printf("%s\n", dir->name);
 
 		if (dir->files)
 			g_tree_foreach(dir->files, print_traverse, NULL);
@@ -388,10 +390,10 @@ gboolean print_traverse(gpointer key, gpointer value, gpointer data) {
 		/*FT_SYMLINK*/    'y',
 	};
 
-	static const gchar selections[S_COUNT] = {
-		/*S_YES*/    '*',
-		/*S_NO*/     '-',
-		/*S_MAYBE*/  '~',
+	static const gchar selections[FS_COUNT] = {
+		/*FS_YES*/    '*',
+		/*FS_NO*/     '-',
+		/*FS_MAYBE*/  '~',
 	};
 
 	File* file = key;
@@ -409,6 +411,7 @@ gboolean print_traverse(gpointer key, gpointer value, gpointer data) {
 /* Scan through pwd. */
 static void initiate(dev_t pwd_dev_id, ino_t pwd_inode) {
 	dirs = make_new_dir(pwd, pwd_dev_id, pwd_inode);
+	dirs->is_pwd = TRUE;
 }
 
 
@@ -470,7 +473,7 @@ gboolean mask_traverse(gpointer key, gpointer value, gpointer data) {
 	File* file = key;
 	Directory* dir = data;
 
-	if (file->selected != S_YES) {
+	if (file->selected != FS_YES) {
 		struct mask** mask_iter = masks;
 		while (*mask_iter) {
 			if ( (!(*mask_iter)->dirs_only || file->type == FT_DIRECTORY) &&
@@ -493,21 +496,21 @@ gboolean mark_traverse(gpointer key, gpointer value, gpointer data) {
 	Directory* dir = data;
 
 	/* Don't bother with the file if it's already selected. */
-	if (file->selected == S_YES)
+	if (file->selected == FS_YES)
 		return FALSE;
 
 	/* Try to match only up to the length of file_name. */
 	if (STRNEQ(dir->lookup, file->name, dir->lookup_len)) {
 		if (dir->lookup_len == strlen(file->name)) {
 			/* Explicit match. */
-			file->selected = S_YES;
+			file->selected = FS_YES;
 			file->shown = TRUE;
 			dir->selected_count++;
 			dir->hidden_count--;
 		}
 		else {
 			/* Only a partial match. */
-			file->selected = S_MAYBE;
+			file->selected = FS_MAYBE;
 		}
 	}
 
@@ -515,12 +518,12 @@ gboolean mark_traverse(gpointer key, gpointer value, gpointer data) {
 }
 
 
-static File* make_new_file(gchar* name, enum file_type type) {
+static File* make_new_file(gchar* name, FileType type) {
 	File* new_file;
 
 	new_file = g_new(File, 1);
 	new_file->name = name;
-	new_file->selected = S_NO;
+	new_file->selected = FS_NO;
 	new_file->type = type;
 	new_file->shown = FALSE;
 	return new_file;
@@ -537,13 +540,14 @@ static Directory* make_new_dir(gchar* dir_name, dev_t dev_id, ino_t inode) {
 	gchar* file_name;
 	gchar* full_path;
 	struct stat file_stat;
-	enum file_type type;
+	FileType type;
 
 	new_dir = g_new(Directory, 1);
 	new_dir->name = dir_name;
 	new_dir->dev_id = dev_id;
 	new_dir->inode = inode;
 	new_dir->selected_count = 0;
+	new_dir->is_pwd = FALSE;
 	new_dir->next_dir = NULL;
 	new_dir->files = NULL;
 
@@ -595,7 +599,7 @@ static Directory* make_new_dir(gchar* dir_name, dev_t dev_id, ino_t inode) {
 }
 
 
-static enum file_type determine_type(const struct stat* file_stat) {
+static FileType determine_type(const struct stat* file_stat) {
 	if (S_ISREG(file_stat->st_mode)) {
 		if ( (file_stat->st_mode & S_IXUSR) == S_IXUSR ||
 		     (file_stat->st_mode & S_IXGRP) == S_IXGRP ||

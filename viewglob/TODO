@@ -1,23 +1,22 @@
 - vgseer: sanitize mask
 - vgexpand: fix $HOME to ~
-- vgexpand: distinguish $PWD
+- vgexpand: distinguish $PWD (maybe should be done in display - maybe not)
 - vgseer: sandbox vgexpand command options
 - vgseer: only send mask when changed (not every time cli changes)
 - vgseer: EIO when zsh exit
-- vgd: accept glob input from vgseer
-- vgclassic: convert to new vgexpand
 - vgclassic: mask and developing mask
-- vgclassic: no more file display limit
-- vgclassic: no more context menu (show hidden, show all)
 - vgclassic: pwd into title
 - make: .PHONY build for the icons
 - make: option to build only vgseer/vgexpand (and thus no GTK requirement)
 - make: package getopt_long (or alternative)
 - vgd: request version from vgseer
 - vgd: vgseer_client into separate file
-- vgd: pass display messages back to terminal
 - documentation: updates from 1.1.1
 - vgmini: create
+- vgseer, vgclassic: statuses
+- vgclassic: make icon disable work
+- vgd: syslog
+- vgseer: close stderr in user shell
 
 - record timestamp for each byte to help predicting whether user typing or not (problem if pasting text though)
 - dlisting of current directory in display different colour?

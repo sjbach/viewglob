@@ -216,7 +216,6 @@ static void context_switch(struct state* s, struct vgseer_client* v) {
 	/* Send a bunch of data to the display. */
 	if (	!put_param(fd, P_STATUS, shell_status_to_string(v->status)) ||
 			!put_param(fd, P_CMD, v->cli->str) ||
-			!put_param(fd, P_PWD, v->pwd->str) ||
 			!put_param(fd, P_DEVELOPING_MASK, v->developing_mask->str) ||
 			!put_param(fd, P_MASK, v->mask->str) ||
 			!put_param(fd, P_VGEXPAND_DATA, v->expanded->str)) {
@@ -323,7 +322,6 @@ static void process_client(struct state* s, struct vgseer_client* v) {
 		case P_PWD:
 			v->pwd = g_string_assign(v->pwd, value);
 			g_message("(%d) New pwd: %s", v->fd, v->pwd->str);
-			update_display(s, v, param, value);
 			break;
 
 		case P_CMD:

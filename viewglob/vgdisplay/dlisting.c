@@ -431,7 +431,7 @@ void dlisting_mark(DListing* dl, gint new_rank) {
 gboolean dlisting_is_new(const DListing* dl) {
 	g_return_val_if_fail(IS_DLISTING(dl), TRUE);
 
-	if (dl->old_rank > 0)
+	if (dl->old_rank >= 0)
 		return FALSE;
 	else
 		return TRUE;

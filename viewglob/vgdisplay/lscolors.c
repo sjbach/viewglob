@@ -24,11 +24,10 @@
    Flaherty <dennisf@denix.elk.miles.com> based on original patches by
    Greg Lee <lee@uhunix.uhcc.hawaii.edu>.  */
 
+
 #include "common.h"
-#include "file_types.h"
 #include "lscolors.h"
 #include <string.h>
-#include <glib.h>
 #include <pango/pango.h>
 #include <gdk/gdk.h>
 #include <math.h>
@@ -97,15 +96,15 @@ static struct color_mapping {
 /* Buffer for color sequences */
 static char *color_buf;
 
-static TermTextAttr type_ttas[FILE_TYPES_NUM];
+static TermTextAttr type_ttas[FT_COUNT];
 
-/* Reorganized these to correspond with FileType in file_types.h. */
+/* Reorganized these to correspond with FileType in file-types.h. */
 static const char *const indicator_name[]= {
 	"fi", "ex", "di", "bd", "cd", "pi", "so", "ln", "lc",
     "rc", "ec", "no", "mi", "or", "do", NULL
 };
 
-/* Reorganized to correspond with FileType in file_types.h. */
+/* Reorganized to correspond with FileType in file-types.h. */
 #define LEN_STR_PAIR(s) sizeof (s) - 1, s, NULL
 #define COLOR_INDICATOR_SIZE 15
 static struct bin_str color_indicator[] = {
@@ -483,7 +482,7 @@ static void create_termtextattrs(void) {
 	parse_codes(&color_indicator[11], &normal);  /* "no" */
 
 	/* All file types inherit from "no". */
-	for (i = 0; i < FILE_TYPES_NUM; i++) {
+	for (i = 0; i < FT_COUNT; i++) {
 		termtextattr_copy(&type_ttas[i], &normal);
 		parse_codes(&color_indicator[i], &type_ttas[i]);
 	}
@@ -498,7 +497,7 @@ static void create_termtextattrs(void) {
 	}
 
 	/* It's safe to reverse the file types now (if necessary). */
-	for (i = 0; i < FILE_TYPES_NUM; i++)
+	for (i = 0; i < FT_COUNT; i++)
 		termtextattr_check_reverse(&type_ttas[i]);
 }
 
@@ -509,7 +508,7 @@ static void create_pangoattrlists(gint size_modifier) {
 	struct color_ext_type* iter;
 	int i;
 
-	for (i = 0; i < FILE_TYPES_NUM; i++) {
+	for (i = 0; i < FT_COUNT; i++) {
 		/* It's safe to reverse the file types now (if necessary). */
 		termtextattr_check_reverse(&type_ttas[i]);
 		match = scan_types_for_equivalency(&type_ttas[i]);
@@ -657,7 +656,7 @@ static TermTextAttr* scan_types_for_equivalency(TermTextAttr* tta) {
 	int i;
 	TermTextAttr* retval = NULL;
 
-	for (i = 0; i < FILE_TYPES_NUM; i++) {
+	for (i = 0; i < FT_COUNT; i++) {
 		if (tta == &type_ttas[i]) {
 			/* We've reached ourselves, so we're done. */
 			break;

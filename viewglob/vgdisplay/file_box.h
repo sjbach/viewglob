@@ -22,7 +22,7 @@
 
 #include <gtk/gtk.h>
 #include "wrap_box.h"
-#include "file_types.h"
+#include "file-types.h"
 
 G_BEGIN_DECLS
 
@@ -38,20 +38,6 @@ G_BEGIN_DECLS
 typedef struct _FileBox FileBox;
 typedef struct _FileBoxClass FileBoxClass;
 typedef struct _FItem FItem;
-typedef enum _FileSelection FileSelection;
-
-/* --- enumerations --- */
-enum _FileSelection {
-	FS_YES = GTK_STATE_SELECTED,
-	FS_NO = GTK_STATE_NORMAL,
-	FS_MAYBE = GTK_STATE_ACTIVE,
-};
-
-enum _FileDisplayCategory {
-	FDC_INDETERMINATE,
-	FDC_REVEAL,        /* Display regularly. */
-	FDC_MASK,          /* Display only if selected (peek). */
-};
 
 /* --- FileBox --- */
 struct _FileBox {
@@ -62,7 +48,7 @@ struct _FileBox {
 	guint     file_display_limit;
 
 	gboolean eat_size_requests;
-	GSList*   fi_slist;
+	GSList*   fis;
 };
 
 struct _FileBoxClass {
@@ -87,7 +73,7 @@ void        file_box_destroy(FileBox* fbox);
 void        file_box_set_optimal_width(FileBox* fbox, guint optimal_width);
 guint       file_box_get_optimal_width(FileBox* fbox);
 void        file_box_add(FileBox* fbox, gchar* name, FileType type,
-		FileSelection selection);
+		FileSelection selection, gint rank);
 void        file_box_begin_read(FileBox* fbox);
 void        file_box_flush(FileBox* fbox);
 

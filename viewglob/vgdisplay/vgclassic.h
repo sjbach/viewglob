@@ -26,7 +26,7 @@
 G_BEGIN_DECLS
 
 
-struct viewable_preferences {
+struct prefs {
 	/* Options. */
 	gboolean show_icons;
 	gint font_size_modifier;

@@ -25,6 +25,7 @@
 #include "exhibit.h"
 #include "param-io.h"
 #include "vgclassic.h"
+#include "file-types.h"
 
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
@@ -41,7 +42,7 @@ static void      write_xwindow_id(GtkWidget* gtk_window);
 
 static void        set_icons(void);
 
-static gboolean  parse_args(int argc, char** argv);
+static gboolean  parse_args(int argc, char** argv, struct prefs* v);
 static void      report_version(void);
 
 static void  process_glob_data(gchar* buf, gsize bytes, Exhibit* e);
@@ -57,9 +58,6 @@ static void      window_allocate_event(GtkWidget* window,
 		GtkAllocation* allocation, Exhibit* e);
 static gboolean  window_key_press_event(GtkWidget* window,
 		GdkEventKey* event, gpointer data);
-
-/* Globals. */
-struct viewable_preferences v;
 
 
 /* Chooses a selection state based on the string's first char. */
@@ -125,51 +123,31 @@ static gboolean receive_data(GIOChannel* source, GIOCondition condition,
 		switch (param) {
 
 			case P_ORDER:
-				g_warning("P_ORDER: %s", value);
 				exhibit_do_order(e, value);
 				break;
 
-			case P_WIN_ID:
-				g_warning("P_WIN_ID: %s", value);
-				break;
-
 			case P_CMD:
-				g_warning("P_CMD: %s", value);
-				// TODO wrap into exhibit_blah() function */
-				gchar* cmdline_utf8 = g_filename_to_utf8(value,
-						strlen(value), NULL, NULL, NULL);
-				gtk_entry_set_text(GTK_ENTRY(e->cmdline), cmdline_utf8);
-				g_free(cmdline_utf8);
+				exhibit_set_cmd(e, value);
 				break;
 
 			case P_MASK:
-				g_warning("P_MASK: %s", value);
+				//FIXME
 				break;
 
 			case P_DEVELOPING_MASK:
-				g_warning("P_DEVELOPING_MASK: %s", value);
+				//FIXME
 				break;
 
 			case P_STATUS:
-				g_warning("P_STATUS: %s", value);
-				break;
-
-			case P_PWD:
-				//FIXME don't need to know pwd, do we?
-				g_warning("P_PWD: %s", value);
+				//FIXME
 				break;
 
 			case P_VGEXPAND_DATA:
-				if (*value == '\0')
-					g_warning("P_VGEXPAND_DATA: (none)");
-				else {
+				if (*value != '\0')
 					process_glob_data(value, strlen(value), e);
-					g_warning("P_VGEXPAND_DATA: (lots)");
-				}
 				break;
 
 			case P_EOF:
-				g_warning("EOF");
 				exit(EXIT_SUCCESS);
 				/*break;*/
 
@@ -202,7 +180,7 @@ static gchar* up_to_delimiter(gchar** ptr, char c) {
 /* Finite state machine to interpret glob data. */
 static void process_glob_data(gchar* buf, gsize bytes, Exhibit* e) {
 
-	enum glob_read_state rs = GRS_DONE;
+	enum glob_read_state rs;
 
 	gchar* string;
 	gchar* selected_count;
@@ -212,17 +190,19 @@ static void process_glob_data(gchar* buf, gsize bytes, Exhibit* e) {
 	static FileType type;
 	static FileSelection selection;
 
-	gint dir_rank = 0;
+	gint dir_rank;
+	gint file_rank;
 	DListing* dl;
 
 	gchar* p;
 
 	p = buf;
+	rs = GRS_DONE;
 	while (p < buf + bytes) {
 
 		switch (rs) {
 			case GRS_DONE:
-				dir_rank = 0;
+				dir_rank = -1;
 				exhibit_unmark_all(e);
 				rs = GRS_SELECTED_COUNT;
 				break;
@@ -248,6 +228,7 @@ static void process_glob_data(gchar* buf, gsize bytes, Exhibit* e) {
 				string = up_to_delimiter(&p, '\n');
 				dl = exhibit_add(e, string, dir_rank, selected_count,
 						total_count, hidden_count);
+				file_rank = -1;
 				rs = GRS_IN_LIMBO;
 				break;
 
@@ -269,11 +250,11 @@ static void process_glob_data(gchar* buf, gsize bytes, Exhibit* e) {
 				}
 				break;
 
-
 			/* Have to save selection and type until we get the name */
 			case GRS_FILE_STATE:
 				string = up_to_delimiter(&p, ' ');
 				selection = map_selection_state(*string);
+				file_rank++;
 				rs = GRS_FILE_TYPE;
 				break;
 
@@ -285,7 +266,8 @@ static void process_glob_data(gchar* buf, gsize bytes, Exhibit* e) {
 
 			case GRS_FILE_NAME:
 				string = up_to_delimiter(&p, '\n');
-				file_box_add(FILE_BOX(dl->file_box), string, type, selection);
+				file_box_add(FILE_BOX(dl->file_box), string, type, selection,
+						file_rank);
 				rs = GRS_IN_LIMBO;
 				break;
 
@@ -322,14 +304,14 @@ static void set_icons(void) {
 /* Resize the DListings if necessary. */
 static void window_allocate_event(GtkWidget* window,
 		GtkAllocation* allocation, Exhibit* e) {
-	GSList* dl_iter;
+	GSList* iter;
 	DListing* dl;
 
 	if (e->width_change) {
 		/* Cycle through the DListings and set the new optimal width.  This
 		   will make them optimize themselves to the window's width. */
-		for (dl_iter = e->dl_slist; dl_iter; dl_iter = g_slist_next(dl_iter)) {
-			dl = dl_iter->data;
+		for (iter = e->dls; iter; iter = g_slist_next(iter)) {
+			dl = iter->data;
 			dlisting_set_optimal_width(dl,
 					((gint)dl->optimal_width) + e->width_change);
 		}
@@ -354,7 +336,7 @@ static gboolean window_key_press_event(GtkWidget* window, GdkEventKey* event,
 	gchar* temp1;
 	gchar* temp2;
 
-	gboolean result;   //FIXME default value?
+	gboolean result = TRUE;
 
 	switch (event->keyval) {
 		case GDK_Home:
@@ -433,7 +415,7 @@ static void write_xwindow_id(GtkWidget* gtk_window) {
 }
 
 
-static gboolean parse_args(int argc, char** argv) {
+static gboolean parse_args(int argc, char** argv, struct prefs* v) {
 	gboolean in_loop = TRUE;
 
 	opterr = 0;
@@ -447,7 +429,7 @@ static gboolean parse_args(int argc, char** argv) {
 				break;
 			case 'b':
 				/* No icons. */
-				v.show_icons = FALSE;
+				v->show_icons = FALSE;
 				break;
 			case 'v':
 			case 'V':
@@ -455,7 +437,7 @@ static gboolean parse_args(int argc, char** argv) {
 				return FALSE;
 				break;
 			case 'z':
-				v.font_size_modifier = CLAMP(atoi(optarg), -10, 10);
+				v->font_size_modifier = CLAMP(atoi(optarg), -10, 10);
 				break;
 		}
 	}
@@ -475,18 +457,18 @@ int main(int argc, char *argv[]) {
 	GtkWidget* vbox;
 	GtkWidget* scrolled_window;
 
-	GtkStyle* style;
+	struct prefs v;
 
 	/* This is pretty central -- it gets passed around a lot. */
 	Exhibit	e;
-	e.dl_slist = NULL;
+	e.dls = NULL;
 	
 	gtk_init(&argc, &argv);
 
 	/* Option defaults. */
 	v.show_icons = TRUE;
 	v.font_size_modifier = 0;
-	if (! parse_args(argc, argv) )
+	if (!parse_args(argc, argv, &v))
 		return 0;
 
 	/* Set the label font sizes. */
@@ -524,7 +506,7 @@ int main(int argc, char *argv[]) {
 
 	/* The DListing separator looks better if it's filled instead of sunken,
 	   so use the text color.  This probably isn't the best way to do this. */
-    style = gtk_widget_get_default_style();
+	GtkStyle* style = gtk_widget_get_default_style();
 	dlisting_set_separator_color(style->fg[GTK_STATE_NORMAL]);
 
 	/* Setup the listings display. */
@@ -545,9 +527,8 @@ int main(int argc, char *argv[]) {
 
 	set_icons();
 
-	GIOChannel* stdin_ioc;
-
 	/* Setup a watch for glob input. */
+	GIOChannel* stdin_ioc;
 	if ( (stdin_ioc = g_io_channel_unix_new(STDIN_FILENO)) == NULL) {
 		g_critical("Couldn't create IOChannel from stdin");
 		exit(EXIT_FAILURE);

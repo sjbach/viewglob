@@ -20,7 +20,7 @@
 #ifndef LSCOLORS_H
 #define LSCOLORS_H
 
-#include "file_types.h"
+#include "file-types.h"
 #include <gtk/gtklabel.h>
 #include <pango/pango.h>
 
