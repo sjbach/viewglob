@@ -55,9 +55,8 @@ static FileType       map_file_type(const GString* string);
 static gint cmp_dlisting_same_name(gconstpointer a, gconstpointer b);
 static gint cmp_dlisting_same_rank(gconstpointer a, gconstpointer b);
 
-static void      listing_resize_event(GtkWidget* widget, GtkAllocation* allocation, Exhibit* e);
 static gboolean  win_delete_event(GtkWidget*, GdkEvent*, gpointer);
-
+static gboolean configure_event(GtkWidget* window, GdkEventConfigure* event, Exhibit* e);
 
 struct viewable_preferences v;
 
@@ -388,7 +387,7 @@ static void process_glob_data(const gchar* buff, gsize bytes, Exhibit* e) {
 					else {
 						/* It's a new DListing. */
 						/* DEBUG((df, "<new_dir>")); */
-						dl = dlisting_new(string, dir_rank, selected_count, total_count, hidden_count, e->optimal_width);
+						dl = dlisting_new(string, dir_rank, selected_count, total_count, hidden_count, e->listings_box->allocation.width);
 						e->dl_slist = g_slist_append(e->dl_slist, dl);
 					}
 					g_string_free(selected_count, TRUE);
@@ -691,39 +690,19 @@ static GdkPixbuf* make_pixbuf_scaled(const guint8 icon_inline[], gint scale_size
 }
 
 
-/* The main listings widget has been resized; remember the new size so the WrapBoxes can grow/shrink gracefully. */
-static void listing_resize_event(GtkWidget* display_vbox, GtkAllocation* allocation, Exhibit* e) {
-	GSList* dl_iter;
-	DListing* dl;
-
-	DEBUG((df, "size-allocate-event (%d,%d)\n", allocation->width, allocation->height));
-	e->optimal_width = allocation->width;
-	for (dl_iter = e->dl_slist; dl_iter; dl_iter = g_slist_next(dl_iter)) {
-		dl = dl_iter->data;
-		if (dl->file_box)
-			file_box_set_optimal_width(FILE_BOX(dl->file_box), allocation->width - 4);
-	}
-
-}
-
-
 static gboolean configure_event(GtkWidget* window, GdkEventConfigure* event, Exhibit* e) {
-	static gint last_width = -1;
 	GSList* dl_iter;
 	DListing* dl;
 
-	if (last_width == -1)
-		last_width = event->width;
-
-	DEBUG((df, "configure-event (%d,%d) (%d)\n", event->width, event->height, event->width - last_width));
-	e->optimal_width = event->width - 34;
-	if (event->width != last_width) {
+	/*g_print("<configure-event (%d --> %d)>", window->allocation.width, event->width);*/
+	if (event->width != window->allocation.width) {
 		for (dl_iter = e->dl_slist; dl_iter; dl_iter = g_slist_next(dl_iter)) {
 			dl = dl_iter->data;
-			if (dl->file_box)
-				file_box_set_optimal_width(FILE_BOX(dl->file_box), event->width - 34);
+			if (dl->file_box) {
+				file_box_set_optimal_width(FILE_BOX(dl->file_box), 
+						file_box_get_optimal_width(FILE_BOX(dl->file_box)) + event->width - window->allocation.width);
+			}
 		}
-		last_width = event->width;
 	}
 
 	return FALSE;
@@ -806,7 +785,6 @@ int main(int argc, char *argv[]) {
 
 	Exhibit	e;        /* This is pretty central -- it gets passed around a lot. */
 	e.dl_slist = NULL;
-	e.optimal_width = 340 - 34;
 	
 	GIOChannel* glob_channel;
 	GIOChannel* cmd_channel;

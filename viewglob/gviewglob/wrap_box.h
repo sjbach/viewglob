@@ -51,10 +51,6 @@ typedef struct _WrapBoxChild WrapBoxChild;
 struct _WrapBox {
 	GtkContainer   container;
 
-	guint          max_child_width;
-	guint          max_child_height;
-	//guint          optimal_width;
-
 	guint          justify : 4;
 	guint          line_justify : 4;
 	guint8         hspacing;

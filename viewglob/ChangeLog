@@ -1,3 +1,9 @@
+2004-08-30 21:03  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* file_box.c, file_box.h, gviewglob.c, gviewglob.h, wrap_box.c, wrap_box.h:
+	  - No more reliance on a constant 34 width for the scrollbar.
+	  - Fixed huge bug with wrap box size requisitions.
+
 2004-08-26 11:35  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* NEWS, README, README.ms, configure.ac, viewglob.1, gviewglob.h,

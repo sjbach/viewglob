@@ -314,6 +314,12 @@ void file_box_set_ordering(FileBoxOrdering fbo) {
 }
 
 
+guint file_box_get_optimal_width(FileBox* fbox) {
+	g_return_val_if_fail(IS_FILE_BOX(fbox), 0);
+	return fbox->optimal_width;
+}
+
+
 
 void file_box_set_icon(FileType type, GdkPixbuf* icon) {
 	file_type_icons[type] = icon;
@@ -476,6 +482,7 @@ void file_box_flush(FileBox* fbox) {
 		}
 		else if (fi->widget)
 			gtk_widget_show(fi->widget);
+
 		fi_iter = g_slist_next(fi_iter);
 	}
 
@@ -514,6 +521,9 @@ static void fitem_build_widgets(FItem* fi) {
 	GtkWidget* hbox;
 	GtkWidget* eventbox;
 
+	//PangoAttrList* list;
+
+
 	gchar* temp;
 
 	/* Event Box (to show selection) */
@@ -536,9 +546,12 @@ static void fitem_build_widgets(FItem* fi) {
 	}
 
 	/* Label -- must convert the text to utf8. */
-	label = gtk_label_new(NULL);
+	//label = gtk_label_new(NULL);
 	temp = g_filename_to_utf8(fi->name->str, fi->name->len, NULL, NULL, NULL);
-	gtk_label_set_text(GTK_LABEL(label), temp);
+	//temp = g_strconcat("<span foreground=\"black\">", temp, "</span>", NULL);
+	//gtk_label_set_text(GTK_LABEL(label), temp);
+	label = gtk_label_new(temp);
+	//gtk_label_set_markup(GTK_LABEL(label), temp);
 	g_free(temp);
 	gtk_misc_set_padding(GTK_MISC(label), 1, 0);
 	gtk_widget_show(label);

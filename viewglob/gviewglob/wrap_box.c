@@ -207,9 +207,6 @@ static void wrap_box_init(WrapBox *wbox) {
 	wbox->n_children = 0;
 	wbox->children = NULL;
 	wbox->child_limit = 32767;
-	wbox->max_child_width = 0;
-	wbox->max_child_height = 0;
-	//wbox->optimal_width = 0;
 }
 
 
@@ -616,6 +613,8 @@ static guint get_n_visible_children(WrapBox* this) {
 	WrapBoxChild* child;
 	guint16 n_visible_children = 0;
 
+	
+
 	for (child = this->children; child; child = child->next) {
 		if (GTK_WIDGET_VISIBLE(child->widget))
 			n_visible_children++;
@@ -636,6 +635,10 @@ void wrap_box_size_request_optimal(GtkWidget* widget, GtkRequisition* requisitio
 	guint child_width;
 	guint total_width;
 
+	guint col_height;
+	guint max_col_height;
+	guint max_child_height = 0;
+
 	guint col, cols;
 	guint16 n_visible_children;
 
@@ -645,32 +648,31 @@ void wrap_box_size_request_optimal(GtkWidget* widget, GtkRequisition* requisitio
 	cols = get_upper_bound_cols(this, optimal_width);
 	n_visible_children = get_n_visible_children(this);
 
-	/* Get "max" child height. */
-	child = this->children;
-	if (child) {
-		gtk_widget_size_request(child->widget, &child_req);
-		this->max_child_height = child_req.height;
-	}
-
 	start:
 	if (cols && n_visible_children) {
 
 		total_width = 0;
 		col_width = 0;
+		col_height = 0;
+		max_col_height = 0;
 		rows = n_visible_children / cols + CLAMP(n_visible_children % cols, 0, 1);
 		row = 1;
 		col = 1;
 
 		/*g_printerr("__");*/
-		for (child = this->children; child; child = child->next) {
+		child = this->children;
+		while (child) {
 			if (GTK_WIDGET_VISIBLE(child->widget)) {
 				gtk_widget_size_request(child->widget, &child_req);
-
 				child_width = child_req.width;
 				/*g_printerr("{%d}", child_width);*/
 
-				if (col > 1)
+				if (col > 1) {
 					child_width += this->hspacing;
+					col_height += this->vspacing;
+				}
+
+				max_child_height = MAX(max_child_height, child_req.height);
 
 				col_width = MAX(col_width, child_width);
 				if (total_width + col_width > optimal_width) {
@@ -678,36 +680,42 @@ void wrap_box_size_request_optimal(GtkWidget* widget, GtkRequisition* requisitio
 					cols--;
 					goto start;
 				}
-				else if (row < rows)
+				else if (row < rows) {
+					col_height += child_req.height;
 					row++;
+					child = child->next;
+				}
 				else {
-					/*g_printerr("<%d>", col_width);*/
+					/*g_printerr("<%d>", col_height);*/
 
 					/* Add the column. */
 					total_width += col_width;
+					max_col_height = MAX(max_col_height, col_height);
+					/*g_print("(col_height: %d)", col_height);*/
 
 					row = 1;
 					col++;
 					col_width = 0;
+					col_height = 0;
 				}
 			}
 		}
 		if (col_width) {
-			/*g_printerr("<%d>", col_width);*/
+			/*g_printerr("<%d>", col_height);*/
 			/* This column wasn't completed. */
 			total_width += col_width;
+			max_col_height = MAX(max_col_height, col_height);
 		}
-		/* Remember to take into account the border. */
 		requisition->width = total_width + GTK_CONTAINER(this)->border_width * 2;
-		requisition->height = (rows - 1) * this->vspacing + rows * this->max_child_height + GTK_CONTAINER(this)->border_width * 2;
+		requisition->height = max_col_height + GTK_CONTAINER(this)->border_width * 2;
 	}
 	else {
 		/* Make the best of the situation. */
 		requisition->width = optimal_width + GTK_CONTAINER(this)->border_width * 2;
-		requisition->height = n_visible_children * this->vspacing + n_visible_children * this->max_child_height + GTK_CONTAINER(this)->border_width * 2;
+		requisition->height = n_visible_children * this->vspacing + n_visible_children * max_child_height + GTK_CONTAINER(this)->border_width * 2;
 	}
 
-	/*g_printerr("(cols: %d, rows: %d)", cols, rows);*/
+	/*g_printerr("(cols: %u, rows: %u, max_height: %u, max_col: %u)", cols, rows, max_child_height, max_col_height);*/
 	/*g_printerr("(req: width: %d, height: %d)", requisition->width, requisition->height);*/
 }
 
@@ -731,6 +739,7 @@ static void wrap_box_size_request(GtkWidget* widget, GtkRequisition* requisition
 
 	requisition->width = width + GTK_CONTAINER(this)->border_width * 2;
 	requisition->height = height + GTK_CONTAINER(this)->border_width * 2;
+	/*g_printerr("(bad req: width: %d, height: %d)", requisition->width, requisition->height);*/
 }
 
 
@@ -761,8 +770,10 @@ static GSList* reverse_list_col_children (WrapBox *wbox, WrapBoxChild **child_p,
 		while (child && n < wbox->child_limit) {
 			if (GTK_WIDGET_VISIBLE (child->widget)) {
 				get_child_requisition (wbox, child->widget, &child_requisition);
-				if (height + wbox->vspacing + child_requisition.height > col_height)
+				if (height + wbox->vspacing + child_requisition.height > col_height) {
+					/*g_print("[[stop at: %d]]", height + wbox->vspacing + child_requisition.height);*/
 					break;
+				}
 				height += wbox->vspacing + child_requisition.height;
 				*max_child_width = MAX (*max_child_width, child_requisition.width);
 				slist = g_slist_prepend (slist, child);
@@ -772,6 +783,8 @@ static GSList* reverse_list_col_children (WrapBox *wbox, WrapBoxChild **child_p,
 			child = *child_p;
 		}
 	}
+
+	/*g_print("[[mcw: %u, limit: %d, height: %d ]]", *max_child_width, col_height, height);*/
 
 	slist = g_slist_reverse (slist);
 	return slist;
@@ -900,7 +913,6 @@ static void layout_cols (WrapBox *wbox, GtkAllocation *area) {
 	next_child = wbox->children;
 
 	slist = reverse_list_col_children(wbox, &next_child, area, &min_width);
-	/*slist = g_slist_reverse (slist);*/
 
 	children_per_line = g_slist_length (slist);
 	while (slist) {
@@ -915,7 +927,6 @@ static void layout_cols (WrapBox *wbox, GtkAllocation *area) {
 		n_lines++;
 
 		slist = reverse_list_col_children(wbox, &next_child, area, &min_width);
-		/*slist = g_slist_reverse (slist);*/
 	}
 
 	if (total_width > area->width) {
@@ -986,7 +997,7 @@ static void layout_cols (WrapBox *wbox, GtkAllocation *area) {
 static void wrap_box_size_allocate(GtkWidget *widget, GtkAllocation *allocation) {
 	WrapBox *wbox = WRAP_BOX (widget);
 	GtkAllocation area;
-	gint border = GTK_CONTAINER (wbox)->border_width; /*<h2v-skip>*/
+	gint border = GTK_CONTAINER (wbox)->border_width;
 
 	widget->allocation = *allocation;
 	area.y = allocation->y + border;
@@ -994,9 +1005,7 @@ static void wrap_box_size_allocate(GtkWidget *widget, GtkAllocation *allocation)
 	area.height = MAX (1, (gint) allocation->height - border * 2);
 	area.width = MAX (1, (gint) allocation->width - border * 2);
 
-	/*<h2v-off>*/
 	/*g_printerr ("(got: width %d, height %d)", allocation->width, allocation->height);*/
-	/*<h2v-on>*/
 
 	layout_cols (wbox, &area);
 }
