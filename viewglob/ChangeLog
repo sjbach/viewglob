@@ -1,3 +1,7 @@
+2004-09-09 19:45  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* HACKING, NEWS, ChangeLog: format to regular terminal width
+
 2004-09-09 13:03  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* configure.ac:

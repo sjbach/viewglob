@@ -4,37 +4,38 @@ New in 0.9, released 2004-09-09:
 	* Changed the appearance of restriced directories in the display.
 	* Fixed bug involving transcript naming.
 	* Fixed bug involving directories with special characters.
-	* Removed "name" mode directory comparison (there's no good reason to use
-	  it).
+	* Removed "name" mode directory comparison (there's no good reason to
+	  use it).
 	* Disallowed executing viewglob from a viewglob-controlled shell.
 	* Fixed several build issues.
 	* Other small bugs fixed.
 	* Large code reorganization.
 
 New in 0.8.4, released 2004-08-31:
-	* Fixed a big bug where the file boxes in the display would misbehave in
-	  many themes.
+	* Fixed a big bug where the file boxes in the display would misbehave
+	  in many themes.
 	* Slight improvement to memory usage.
 
 New in 0.8.3, released 2004-08-26:
-	* The contents of a directory are listed upon typing/tab-completing its
-	  trailing slash, rather than just upon referencing a file in the directory.
-	  This is more intuitive and makes viewglob immediately more useful (you
-	  need to try it to see the difference).  Idea contributed by Pavel Tavoda.
-	* Decreased the time required to refresh a directory listing.  It is now
-	  almost an order of magnitude faster in a worst-case scenario (thousands
-	  of files, all selected).
-	* No more calls to init-viewglob.sh on startup, which would clutter up the
-	  user's .bash_history and sometimes cause a beep.
-	* Fixed an annoying bug where viewglob would confuse the output of a multi-
-	  hit tab-completion with the command line.
+	* The contents of a directory are listed upon typing/tab-completing
+	  its trailing slash, rather than just upon referencing a file in the
+	  directory.  This is more intuitive and makes viewglob immediately
+	  more useful (you need to try it to see the difference).  Idea
+	  contributed by Pavel Tavoda.
+	* Decreased the time required to refresh a directory listing.  It is
+	  now almost an order of magnitude faster in a worst-case scenario
+	  (thousands of files, all selected).
+	* No more calls to init-viewglob.sh on startup, which would clutter up
+	  the user's .bash_history and sometimes cause a beep.
+	* Fixed an annoying bug where viewglob would confuse the output of a
+	  multi- hit tab-completion with the command line.
 
 New in 0.8.2, released 2004-08-23:
 	* Added recognition functionality for all basic Unix file types (and
 	  executable regular files).
 	* File icons will now scale to the font size.
-	* Selected files are always shown, even if the display limit is exceeded
-	  or if they are hidden files.
+	* Selected files are always shown, even if the display limit is
+	  exceeded or if they are hidden files.
 	* Errors in config file parsing will be reported.
 	* Made slight changes to the display layout.
 	* Fixed double-slash bug when directories at / referenced.
@@ -44,8 +45,8 @@ New in 0.8.2, released 2004-08-23:
 	* Code reorganization.
 
 New in 0.8.1, released 2004-08-11:
-	* The display will no longer confuse command-line data with glob data if
-	  you type really fast.
+	* The display will no longer confuse command-line data with glob data
+	  if you type really fast.
 	* Command-line text box in the display will no longer grow the window.
 	* File layout of directories in the display is now easier on the eyes.
 	* Fixed small command-line processing error.
