@@ -1,3 +1,13 @@
+2005-03-06 17:36  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* Makefile.am: adding lscolors.{c,h} and file_types.h
+	* file_types.h: added
+	* common.h, dlisting.c, dlisting.h, exhibit.c, exhibit.h, feedback.c,
+	  feedback.h, gviewglob.h, wrap_box.c, wrap_box.h:
+	  Updating copyright.
+	* file_box.c, file_box.h, lscolors.c, lscolors.h:
+	  Working dircolors (LS_COLORS) integration.
+
 2005-03-05 17:20  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* viewglob.in, seer.c, x11-stuff.c, x11-stuff.h, src/Makefile.am:

@@ -1,4 +1,4 @@
-/* 
+/*
 	Copyright (C) 2004, 2005 Stephen Bach
 	This file is part of the viewglob package.
 
@@ -17,36 +17,29 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#ifndef COMMON_H
-#define COMMON_H
+#ifndef FILE_TYPES_H
+#define FILE_TYPES_H
 
-#if HAVE_CONFIG_H
-#  include "config.h"
-#endif
+#include <glib.h>
 
-#define DEFAULT_FILE_DISPLAY_LIMIT 500
+G_BEGIN_DECLS
 
-#define DEBUG_ON 0
 
-#if DEBUG_ON
-#  include <stdio.h>
-#endif
+#define FILE_TYPES_NUM 8
+typedef enum _FileType FileType;
+enum _FileType {
+	FT_REGULAR,
+	FT_EXECUTABLE,
+	FT_DIRECTORY,
+	FT_BLOCKDEV,
+	FT_CHARDEV,
+	FT_FIFO,
+	FT_SOCKET,
+	FT_SYMLINK,
+};
 
-#include <stdlib.h>        /* For atol */
 
-#ifndef EXIT_SUCCESS
-#  define EXIT_SUCCESS  0
-#  define EXIT_FAILURE  1
-#endif
+G_END_DECLS
 
-#if DEBUG_ON
-#define DEBUG(blah)	do {					\
-						fprintf blah;	\
-						fflush(df);			\
-					} while (0)
-#else
-#define DEBUG(blah)	do { } while(0)
-#endif
-
-#endif /* !COMMON_H */
+#endif  /* !FILE_TYPES_H */
 

@@ -25,64 +25,76 @@
    Greg Lee <lee@uhunix.uhcc.hawaii.edu>.  */
 
 #include "common.h"
+#include "file_types.h"
 #include "lscolors.h"
 #include <string.h>     /* For strcpy(). */
 #include <glib.h>
+#include <pango/pango.h>
 
 #define STREQ(a, b) (strcmp ((a), (b)) == 0)
-#define LEN_STR_PAIR(s) sizeof (s) - 1, s
 
+TermTextAttr type_ttas[FILE_TYPES_NUM];
+//TermTextAttr* ext_ttas = NULL;
 
 /* Null is a valid character in a color indicator (think about Epson
    printers, for example) so we have to use a length/buffer string
    type.  */
-struct bin_str
-  {
-    size_t len;			/* Number of bytes */
-    const char *string;		/* Pointer to the same */
-  };
+struct bin_str {
+	size_t len;				/* Number of bytes */
+	const char *string;		/* Pointer to the same */
+	GString* gstr;			/* Progress. */
+};
 
-enum indicator_no
-  {
-    C_LEFT, C_RIGHT, C_END, C_NORM, C_FILE, C_DIR, C_LINK, C_FIFO, C_SOCK,
-    C_BLK, C_CHR, C_MISSING, C_ORPHAN, C_EXEC, C_DOOR
-  };
-
-static const char *const indicator_name[]=
-  {
-    "lc", "rc", "ec", "no", "fi", "di", "ln", "pi", "so",
-    "bd", "cd", "mi", "or", "ex", "do", NULL
-  };
+/* Reorganized these to correspond with FileType in file_types.h. */
+static const char *const indicator_name[]= {
+	"fi", "ex", "di", "bd", "cd", "pi", "so", "ln", "lc",
+    "rc", "ec", "no", "mi", "or", "do", NULL
+};
 
 struct color_ext_type
   {
-    struct bin_str ext;		/* The extension we're looking for */
-    struct bin_str seq;		/* The sequence to output when we do */
+    struct bin_str ext;		/* The extension we're looking for. */
+    struct bin_str seq;		/* The sequence to output when we do. */
+	TermTextAttr tta;       /* The sequence in TermTextAttr form. */
     struct color_ext_type *next;	/* Next in list */
   };
+
+
+static void create_termtextattrs(void);
+static void create_pangoattrlists(void);
+static void termtextattr_init(TermTextAttr* tta);
+static void termtextattr_copy(TermTextAttr* dest, TermTextAttr* src);
+static void termtextattr_check_reverse(TermTextAttr* tta);
+static gboolean are_equal(TermTextAttr* a, TermTextAttr* b);
+static TermTextAttr* scan_types_for_equivalency(TermTextAttr* tta);
+static TermTextAttr* scan_exts_for_equivalency(TermTextAttr* tta);
+static void parse_codes(struct bin_str* s, TermTextAttr* attr);
+static PangoAttrList* create_pango_list(TermTextAttr* tta);
 
 
 /* Buffer for color sequences */
 static char *color_buf;
 
-static struct bin_str color_indicator[] =
-  {
-    { LEN_STR_PAIR ("\033[") },		/* lc: Left of color sequence */
-    { LEN_STR_PAIR ("m") },		/* rc: Right of color sequence */
-    { 0, NULL },			/* ec: End color (replaces lc+no+rc) */
-    { LEN_STR_PAIR ("0") },		/* no: Normal */
-    { LEN_STR_PAIR ("0") },		/* fi: File: default */
-    { LEN_STR_PAIR ("01;34") },		/* di: Directory: bright blue */
-    { LEN_STR_PAIR ("01;36") },		/* ln: Symlink: bright cyan */
-    { LEN_STR_PAIR ("33") },		/* pi: Pipe: yellow/brown */
-    { LEN_STR_PAIR ("01;35") },		/* so: Socket: bright magenta */
-    { LEN_STR_PAIR ("01;33") },		/* bd: Block device: bright yellow */
-    { LEN_STR_PAIR ("01;33") },		/* cd: Char device: bright yellow */
-    { 0, NULL },			/* mi: Missing file: undefined */
-    { 0, NULL },			/* or: Orphanned symlink: undefined */
-    { LEN_STR_PAIR ("01;32") },		/* ex: Executable: bright green */
-    { LEN_STR_PAIR ("01;35") }		/* do: Door: bright magenta */
-  };
+/* Reorganized to correspond with FileType in file_types.h. */
+#define LEN_STR_PAIR(s) sizeof (s) - 1, s, NULL
+#define COLOR_INDICATOR_SIZE 15
+static struct bin_str color_indicator[] = {
+	{ LEN_STR_PAIR ("0") },         /* fi: File: default */
+	{ LEN_STR_PAIR ("01;32") },     /* ex: Executable: bright green */
+	{ LEN_STR_PAIR ("01;34") },     /* di: Directory: bright blue */
+	{ LEN_STR_PAIR ("01;33") },     /* bd: Block device: bright yellow */
+	{ LEN_STR_PAIR ("01;33") },     /* cd: Char device: bright yellow */
+	{ LEN_STR_PAIR ("33") },        /* pi: Pipe: yellow/brown */
+	{ LEN_STR_PAIR ("01;35") },     /* so: Socket: bright magenta */
+	{ LEN_STR_PAIR ("01;36") },     /* ln: Symlink: bright cyan */
+	{ LEN_STR_PAIR ("\033[") },     /* lc: Left of color sequence */
+	{ LEN_STR_PAIR ("m") },         /* rc: Right of color sequence */
+	{ 0, NULL },                    /* ec: End color (replaces lc+no+rc) */
+	{ LEN_STR_PAIR ("0") },         /* no: Normal */
+	{ 0, NULL },                    /* mi: Missing file: undefined */
+	{ 0, NULL },                    /* or: Orphanned symlink: undefined */
+	{ LEN_STR_PAIR ("01;35") }      /* do: Door: bright magenta */
+};
 
 
 /* FIXME: comment  */
@@ -289,7 +301,7 @@ get_funky_string (char **dest, const char **src, gboolean equals_end,
 }
 
 void
-parse_ls_color (void)
+parse_ls_colors (void)
 {
   const char *p;		/* Pointer to character being parsed */
   char *buf;			/* color_buf buffer pointer */
@@ -300,7 +312,7 @@ parse_ls_color (void)
 
   if ((p = getenv ("LS_COLORS")) == NULL || *p == '\0')
     return;
-
+  
   ext = NULL;
   strcpy (label, "??");
 
@@ -337,7 +349,6 @@ parse_ls_color (void)
 
 	      state = (get_funky_string (&buf, &p, TRUE, &ext->ext.len)
 		       ? 4 : -1);
-	      g_printerr("$");
 	      break;
 
 	    case '\0':
@@ -345,7 +356,6 @@ parse_ls_color (void)
 	      break;
 
 	    default:	/* Assume it is file type label */
-		g_printerr("!");
 	      label[0] = *(p++);
 	      state = 2;
 	      break;
@@ -378,8 +388,7 @@ parse_ls_color (void)
 		    }
 		}
 	      if (state == -1)
-		g_printerr("gviewglob: Unrecognized prefix: \"%s\".\n", label);
-		//error (0, 0, _("unrecognized prefix: %s"), quotearg (label));
+		g_printerr("gviewglob: Unrecognized LS_COLORS prefix: \"%s\".\n", label);
 	    }
 	 break;
 
@@ -402,8 +411,6 @@ parse_ls_color (void)
       struct color_ext_type *e2;
 
       g_printerr("gviewglob: Unparsable value for LS_COLORS environment variable.\n");
-      //error (0, 0,
-//	     _("unparsable value for LS_COLORS environment variable"));
       g_free (color_buf);
       for (e = color_ext_list; e != NULL; /* empty */)
 	{
@@ -414,11 +421,350 @@ parse_ls_color (void)
       print_with_color = 0;
     }
 
-  /*
-  if (color_indicator[C_LINK].len == 6
-      && !strncmp (color_indicator[C_LINK].string, "target", 6))
-    color_symlink_as_referent = 1;
-  */
+  /* Dealing with bin_str is very tiresome.  Convert
+	 to useable GStrings. */
+  int i;
+  struct color_ext_type* iter;
+  for (i = 0; i < COLOR_INDICATOR_SIZE; i++) {
+	  color_indicator[i].gstr = g_string_new_len(
+			  color_indicator[i].string,
+			  color_indicator[i].len);
+  }
+  for (iter = color_ext_list; iter; iter = iter->next) {
+	  iter->ext.gstr = g_string_new_len(iter->ext.string, iter->ext.len);
+	  iter->seq.gstr = g_string_new_len(iter->seq.string, iter->seq.len);
+  }
+
+  create_termtextattrs();
+  create_pangoattrlists();
 }
 
+
+/* Create TermTextAttrs from the terminal colouring sequences. */
+static void create_termtextattrs(void) {
+
+	TermTextAttr normal;
+	int i;
+
+	/* Initialize "no", just in case it's not included
+	   in LS_COLORS. */
+	termtextattr_init(&normal);
+
+	parse_codes(&color_indicator[11], &normal);  /* "no" */
+
+	/* All file types inherit from "no". */
+	for (i = 0; i < FILE_TYPES_NUM; i++) {
+		termtextattr_copy(&type_ttas[i], &normal);
+		parse_codes(&color_indicator[i], &type_ttas[i]);
+	}
+
+	/* Now do the extensions. */
+	struct color_ext_type* iter;
+	for (iter = color_ext_list; iter; iter = iter->next) {
+		/* Extensions only apply to regular files, apparently. */
+		termtextattr_copy(&iter->tta, &type_ttas[FT_REGULAR]);
+		parse_codes(&iter->seq, &iter->tta);
+		termtextattr_check_reverse(&iter->tta);
+	}
+
+	/* It's safe to reverse the file types now (if necessary). */
+	for (i = 0; i < FILE_TYPES_NUM; i++)
+		termtextattr_check_reverse(&type_ttas[i]);
+}
+
+
+/* Create PangoAttrLists from the TermTextAttrs. */
+static void create_pangoattrlists(void) {
+	TermTextAttr* match;
+	int i;
+
+	for (i = 0; i < FILE_TYPES_NUM; i++) {
+		/* It's safe to reverse the file types now (if necessary). */
+		termtextattr_check_reverse(&type_ttas[i]);
+		match = scan_types_for_equivalency(&type_ttas[i]);
+		if (match)
+			type_ttas[i].p_list = match->p_list;
+		else
+			type_ttas[i].p_list = create_pango_list(&type_ttas[i]);
+	}
+	for (iter = color_ext_list; iter; iter = iter->next) {
+		match = scan_exts_for_equivalency(&iter->tta);
+		if (match)
+			iter->tta.p_list = match->p_list;
+		else
+			iter->tta.p_list = create_pango_list(&iter->tta);
+	}
+}
+
+/* If the given TermTextAttr has TAC_REVERSE, reverse its colors. */
+static void termtextattr_check_reverse(TermTextAttr* tta) {
+
+	if (tta->attr & TAC_REVERSE) {
+		/* Switch foreground with background. */
+		enum term_color_code temp;
+		temp = tta->fg;
+		tta->fg = tta->bg;
+		tta->bg = temp;
+
+		/* Remove TAC_REVERSE now that it's been applied. */
+		tta->attr &= (~TAC_REVERSE);
+	}
+}
+
+
+/* Parse the code sequences in s and convert to a TermTextAttr. */
+static void parse_codes(struct bin_str* s, TermTextAttr* tta) {
+
+	ptrdiff_t pos = 0;
+	char* endptr = NULL;
+	long code;
+
+	while (pos < s->len) {
+		code = strtol(s->gstr->str + pos, &endptr, 10);
+		if (s->gstr->str + pos == endptr) {
+			/* Did not convert any characters. */
+			if (pos + 1 == s->len) {
+				/* We're at the end of the string. */
+				break;
+			}
+			else {
+				/* It's just a separator or something.  Skip it. */
+				pos++;
+			}
+		}
+		else {
+			/* Got a code -- let's see what it is. */
+			pos = endptr - s->gstr->str;
+			switch (code) {
+				case 0:
+					tta->attr = 0;
+					break;
+				case 1:
+					tta->attr |= TAC_BOLD;
+					break;
+				case 4:
+					tta->attr |= TAC_UNDERSCORE;
+					break;
+				case 7:
+					tta->attr |= TAC_REVERSE;
+					break;
+				case 30:
+					tta->fg = TCC_BLACK;
+					break;
+				case 31:
+					tta->fg = TCC_RED;
+					break;
+				case 32:
+					tta->fg = TCC_GREEN;
+					break;
+				case 33:
+					tta->fg = TCC_YELLOW;
+					break;
+				case 34:
+					tta->fg = TCC_BLUE;
+					break;
+				case 35:
+					tta->fg = TCC_MAGENTA;
+					break;
+				case 36:
+					tta->fg = TCC_CYAN;
+					break;
+				case 37:
+					tta->fg = TCC_WHITE;
+					break;
+				case 40:
+					tta->bg = TCC_BLACK;
+					break;
+				case 41:
+					tta->bg = TCC_RED;
+					break;
+				case 42:
+					tta->bg = TCC_GREEN;
+					break;
+				case 43:
+					tta->bg = TCC_YELLOW;
+					break;
+				case 44:
+					tta->bg = TCC_BLUE;
+					break;
+				case 45:
+					tta->bg = TCC_MAGENTA;
+					break;
+				case 46:
+					tta->bg = TCC_CYAN;
+					break;
+				case 47:
+					tta->bg = TCC_WHITE;
+					break;
+			}
+		}
+	}
+}
+
+
+/* Initialize the given TermTextAttr. */
+static void termtextattr_init(TermTextAttr* tta) {
+	tta->fg = TCC_NONE;
+	tta->bg = TCC_NONE;
+	tta->attr = 0;
+	tta->p_list = NULL;
+}
+
+
+/* Copy the attribute fields in src to the fields in dest. */
+static void termtextattr_copy(TermTextAttr* dest, TermTextAttr* src) {
+	dest->fg = src->fg;
+	dest->bg = src->bg;
+	dest->attr = src->attr;
+	dest->p_list = NULL;     /* Don't copy this one. */
+}
+
+
+/* Scan through the type_ttas array for a matching tta. */
+static TermTextAttr* scan_types_for_equivalency(TermTextAttr* tta) {
+	int i;
+	TermTextAttr* retval = NULL;
+
+	for (i = 0; i < FILE_TYPES_NUM; i++) {
+		if (tta == &type_ttas[i]) {
+			/* We've reached ourselves, so we're done. */
+			break;
+		}
+		if (are_equal(tta, &type_ttas[i])) {
+			retval = &type_ttas[i];
+			break;
+		}
+	}
+	return retval;
+}
+
+
+/* Scan throught the color_ext_list list for a matching tta. */
+static TermTextAttr* scan_exts_for_equivalency(TermTextAttr* tta) {
+	struct color_ext_type* iter;
+	TermTextAttr* retval = NULL;
+
+	for (iter = color_ext_list; iter; iter = iter->next) {
+		if (&iter->tta == tta) {
+			/* We've reached ourselves, so we're done. */
+			break;
+		}
+		else if (are_equal(tta, &iter->tta)) {
+			retval = &iter->tta;
+			break;
+		}
+	}
+	return retval;
+}
+
+
+/* Compares the given TermTextAttrs for equivalency. */
+static gboolean are_equal(TermTextAttr* a, TermTextAttr* b) {
+	gboolean is_same = TRUE;
+	is_same &= a->fg == b->fg;
+	is_same &= a->bg == b->bg;
+	is_same &= a->attr == b->attr;
+
+	return is_same;
+}
+
+
+/* Convert the given TermTextAttr into a PangoAttrList. */
+static PangoAttrList* create_pango_list(TermTextAttr* tta) {
+
+	PangoAttribute* p_attr;
+	PangoAttrList* p_list = pango_attr_list_new();
+	gboolean list_set = FALSE;
+
+	static struct color_mapping {
+		guint16 r;
+		guint16 g;
+		guint16 b;
+	} map[] = {
+		{ 0x0000, 0x0000, 0x0000 },	/* TCC_NONE (not used) */
+		{ 0x0000, 0x0000, 0x0000 },	/* TCC_BLACK */
+		{ 0x9e88, 0x1888, 0x2888 },	/* TCC_RED */
+		{ 0xae88, 0xce88, 0x9188 }, /* TCC_GREEN */
+		{ 0xff88, 0xf788, 0x9688 }, /* TCC_YELLOW */
+		{ 0x4188, 0x8688, 0xbe88 }, /* TCC_BLUE */
+		{ 0x9688, 0x3c88, 0x5988 }, /* TCC_MAGENTA */
+		{ 0x7188, 0xbe88, 0xbe88 }, /* TCC_CYAN */
+		{ 0xffff, 0xffff, 0xffff }, /* TCC_WHITE */
+	};
+
+	/* Foreground colour */
+	if (tta->fg > TCC_NONE && tta->fg <= TCC_WHITE) {
+		p_attr = pango_attr_foreground_new(
+				map[tta->fg].r,
+				map[tta->fg].g,
+				map[tta->fg].b);
+		p_attr->start_index = 0;
+		p_attr->end_index = G_MAXINT;
+		pango_attr_list_insert(p_list, p_attr);
+		list_set = TRUE;
+	}
+
+	/* Background colour */
+	if (tta->bg > TCC_NONE && tta->bg <= TCC_WHITE) {
+		p_attr = pango_attr_background_new(
+				map[tta->bg].r,
+				map[tta->bg].g,
+				map[tta->bg].b);
+		p_attr->start_index = 0;
+		p_attr->end_index = G_MAXINT;
+		pango_attr_list_insert(p_list, p_attr);
+		list_set = TRUE;
+	}
+
+
+	/* Bold */
+	if (tta->attr & TAC_BOLD) {
+		p_attr = pango_attr_weight_new(PANGO_WEIGHT_HEAVY);
+		p_attr->start_index = 0;
+		p_attr->end_index = G_MAXINT;
+		pango_attr_list_insert(p_list, p_attr);
+		list_set = TRUE;
+	}
+
+	/* Underscore */
+	if (tta->attr & TAC_UNDERSCORE) {
+		p_attr = pango_attr_underline_new(PANGO_UNDERLINE_SINGLE);
+		p_attr->start_index = 0;
+		p_attr->end_index = G_MAXINT;
+		pango_attr_list_insert(p_list, p_attr);
+		list_set = TRUE;
+	}
+
+	if (list_set) {
+		/* Probably don't need to do this, but it doesn't hurt since
+		   the attribute lists are valid through the life of the program. */
+		pango_attr_list_ref(p_list);
+	}
+	else {
+		pango_attr_list_unref(p_list);
+		p_list = NULL;
+	}
+
+	return p_list;
+}
+
+
+/* Get a PangoAttrList for this label, based on its name and type.  */
+void label_set_attributes(gchar* name, FileType type, GtkLabel* label) {
+
+	PangoAttrList* p_list = type_ttas[type].p_list;
+	if (type == FT_REGULAR) {
+		struct color_ext_type* iter;
+		for (iter = color_ext_list; iter; iter = iter->next) {
+			if (g_str_has_suffix(name, iter->ext.gstr->str)) {
+				p_list = iter->tta.p_list;
+				break;
+		}
+	}
+
+
+	}
+	if (p_list)
+		gtk_label_set_attributes(label, p_list);
+}
 

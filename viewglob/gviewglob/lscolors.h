@@ -1,5 +1,5 @@
 /*
-	Copyright (C) 2004 Stephen Bach
+	Copyright (C) 2004, 2005 Stephen Bach
 	This file is part of the viewglob package.
 
 	viewglob is free software; you can redistribute it and/or modify
@@ -20,7 +20,40 @@
 #ifndef LSCOLORS_H
 #define LSCOLORS_H
 
-void parse_ls_color(void);
+#include "file_types.h"
+#include <gtk/gtklabel.h>
+#include <pango/pango.h>
+
+/* Note: code depends on this specific ordering. */
+enum term_color_code {
+	TCC_NONE,
+	TCC_BLACK,
+	TCC_RED,
+	TCC_GREEN,
+	TCC_YELLOW,
+	TCC_BLUE,
+	TCC_MAGENTA,
+	TCC_CYAN,
+	TCC_WHITE,
+};
+
+/* Skipped attributes: blink, concealed. */
+enum term_attribute_code {
+	TAC_BOLD		= 1 << 0,
+	TAC_UNDERSCORE	= 1 << 1,
+	TAC_REVERSE		= 1 << 2,
+};
+
+typedef struct _TermTextAttr TermTextAttr;
+struct _TermTextAttr {
+	enum term_color_code fg;
+	enum term_color_code bg;
+	enum term_attribute_code attr;
+	PangoAttrList* p_list;
+};
+
+void parse_ls_colors(void);
+void label_set_attributes(gchar* name, FileType type, GtkLabel* label);
 
 #endif /* !LSCOLORS_H */
 

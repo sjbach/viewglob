@@ -1,5 +1,5 @@
 /*
-	Copyright (C) 2004 Stephen Bach
+	Copyright (C) 2004, 2005 Stephen Bach
 	This file is part of the viewglob package.
 
 	viewglob is free software; you can redistribute it and/or modify
@@ -22,6 +22,7 @@
 
 #include <gtk/gtk.h>
 #include "wrap_box.h"
+#include "file_types.h"
 
 G_BEGIN_DECLS
 
@@ -38,7 +39,6 @@ typedef struct _FileBox FileBox;
 typedef struct _FileBoxClass FileBoxClass;
 typedef enum _FileBoxOrdering FileBoxOrdering;
 typedef struct _FItem FItem;
-typedef enum _FileType FileType;
 typedef enum _FileSelection FileSelection;
 typedef enum _FileDisplayCategory FileDisplayCategory;
 
@@ -46,17 +46,6 @@ typedef enum _FileDisplayCategory FileDisplayCategory;
 enum _FileBoxOrdering {
 	FBO_LS,
 	FBO_WIN,
-};
-
-enum _FileType {
-	FT_REGULAR,
-	FT_EXECUTABLE,
-	FT_DIRECTORY,
-	FT_BLOCKDEV,
-	FT_CHARDEV,
-	FT_FIFO,
-	FT_SOCKET,
-	FT_SYMLINK,
 };
 
 enum _FileSelection {

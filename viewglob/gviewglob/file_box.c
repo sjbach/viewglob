@@ -1,5 +1,5 @@
 /*
-	Copyright (C) 2004 Stephen Bach
+	Copyright (C) 2004, 2005 Stephen Bach
 	This file is part of the viewglob package.
 
 	viewglob is free software; you can redistribute it and/or modify
@@ -22,6 +22,7 @@
 #include "feedback.h"
 #include "file_box.h"
 #include "wrap_box.h"
+#include "lscolors.h"
 #include <gtk/gtk.h>
 #include <string.h>      /* For strcmp */
 
@@ -145,6 +146,7 @@ static void file_box_class_init(FileBoxClass* class) {
 			300,
 			G_PARAM_READWRITE));
 			*/
+	parse_ls_colors();
 }
 
 
@@ -771,8 +773,80 @@ static void fitem_build_widgets(FItem* fi) {
 		label_markup = temp;
 
 	label = gtk_label_new(NULL);
-	gtk_label_set_markup(GTK_LABEL(label), label_markup);
+	//gtk_label_set_markup(GTK_LABEL(label), label_markup);
+	gtk_label_set_text(GTK_LABEL(label), label_markup);
 	g_free(label_markup);
+
+
+#if 0
+	//FIXME
+	PangoAttribute* p_attr;
+	PangoAttrList* p_list = NULL;
+	p_list = pango_attr_list_new();
+	switch (fi->type) {
+		case FT_REGULAR:
+			break;
+		case FT_EXECUTABLE:
+			p_attr = pango_attr_foreground_new(0x00ff, 0xffff, 0x00ff);
+			p_attr->start_index = 0;
+			p_attr->end_index = G_MAXINT;
+			pango_attr_list_insert(p_list, p_attr);
+			break;
+		case FT_DIRECTORY:
+			p_attr = pango_attr_weight_new(PANGO_WEIGHT_HEAVY);
+			p_attr->start_index = 0;
+			p_attr->end_index = G_MAXINT;
+			pango_attr_list_insert(p_list, p_attr);
+			p_attr = pango_attr_foreground_new(0x0000, 0x0000, 0xffff);
+			p_attr->start_index = 0;
+			p_attr->end_index = G_MAXINT;
+			pango_attr_list_insert(p_list, p_attr);
+			break;
+		default:
+			break;
+	}
+	/*
+	p_attr = pango_attr_scale_new(PANGO_SCALE_LARGE);
+	p_attr->start_index = 0;
+	p_attr->end_index = G_MAXINT;
+	pango_attr_list_insert(p_list, p_attr);
+	*/
+			/*
+	p_attr = pango_attr_weight_new(PANGO_WEIGHT_HEAVY);
+	p_attr->start_index = 0;
+	p_attr->end_index = G_MAXINT;
+	pango_attr_list_insert(p_list, p_attr);
+	*/
+
+	/*
+	p_attr = pango_attr_foreground_new(0xffff, 0xffff, 0xffff);
+	p_attr->start_index = 0;
+	p_attr->end_index = G_MAXINT;
+	pango_attr_list_insert(p_list, p_attr);
+	*/
+
+	/*
+	p_attr = pango_attr_underline_new(PANGO_UNDERLINE_ERROR);
+	p_attr->start_index = 0;
+	p_attr->end_index = G_MAXINT;
+	pango_attr_list_insert(p_list, p_attr);
+	*/
+	/*
+	p_attr = pango_attr_background_new(0xff88, 0xf788, 0x9688);
+	p_attr->start_index = 0;
+	p_attr->end_index = G_MAXINT;
+	pango_attr_list_insert(p_list, p_attr);
+	*/
+
+	//g_printerr("!");
+	//if (rand() < RAND_MAX/2)
+		gtk_label_set_attributes(GTK_LABEL(label), p_list);
+	//g_printerr("?");
+	//FIXME
+#endif
+
+	label_set_attributes(fi->name, fi->type, GTK_LABEL(label));
+
 
 	gtk_misc_set_padding(GTK_MISC(label), 1, 0);
 	gtk_widget_show(label);
