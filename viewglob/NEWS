@@ -1,3 +1,16 @@
+New in 0.8.3, released 2004-08-26:
+	* The contents of a directory are listed upon typing/tab-completing its
+	  trailing slash, rather than just upon referencing a file in the directory.
+	  This is more intuitive and makes viewglob immediately more useful (you
+	  need to try it to see the difference).  Idea contributed by Pavel Tavoda.
+	* Decreased the time required to refresh a directory listing.  It is now
+	  almost an order of magnitude faster in a worst-case scenario (thousands
+	  of files, all selected).
+	* No more calls to init-viewglob.sh on startup, which would clutter up the
+	  user's .bash_history and sometimes cause a beep.
+	* Fixed an annoying bug where viewglob would confuse the output of a multi-
+	  hit tab-completion with the command line.
+
 New in 0.8.2, released 2004-08-23:
 	* Added recognition functionality for all basic Unix file types (and
 	  executable regular files).

@@ -1,3 +1,9 @@
+2004-08-26 11:35  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* NEWS, README, README.ms, configure.ac, viewglob.1, gviewglob.h,
+	  glob-expand.h, seer.h, viewglob.in:
+	  Updates for release 0.8.3.
+
 2004-08-25 22:06  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* dlisting.c, file_box.c, gviewglob.c, wrap_box.c: tweaked the layout.

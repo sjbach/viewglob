@@ -1,5 +1,6 @@
 
-                           viewglob 0.8.2 README
+                           viewglob 0.8.3 README
+                              August 26, 2004
 
                 Stephen Bach <sjbach@users.sourceforge.net>
 
@@ -20,8 +21,8 @@ The display also shows the results of file globs and expansions as they are
 typed (hence the name), highlighting selected files and potential name com­
 pletions.
 
-This is the third release. See NEWS and ChangeLog for more information. See
-the manpage (man viewglob) for notes and usage information.
+This is the fourth release. See NEWS and ChangeLog  for  more  information.
+See the manpage (man viewglob) for notes and usage information.
 
 The website is here:
 

@@ -4,7 +4,9 @@
 .so giftcurs.tmac
 .
 .TL
-viewglob 0.8.2 README
+viewglob 0.8.3 README
+.br
+August 26, 2004
 .AU
 Stephen Bach <sjbach@users.sourceforge.net>
 .
@@ -20,7 +22,7 @@ A graphical display which shows the layouts of directories referenced on the com
 .LP
 The display also shows the results of file globs and expansions as they are typed (hence the name), highlighting selected files and potential name completions.
 .LP
-This is the third release.  See NEWS and ChangeLog for more information.  See the manpage (man viewglob) for notes and usage information.
+This is the fourth release.  See NEWS and ChangeLog for more information.  See the manpage (man viewglob) for notes and usage information.
 .LP
 The website is here:
 .IP
