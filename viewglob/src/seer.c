@@ -189,7 +189,7 @@ static void parse_args(int argc, char** argv) {
 
 	opterr = 0;
 	while (in_loop) {
-		switch (getopt(argc, argv, "bd:e:f:i:n:o:O:s:x:w")) {
+		switch (getopt(argc, argv, "bd:e:f:i:n:o:O:s:vVx:w")) {
 			case -1:
 				in_loop = false;
 				break;
@@ -248,6 +248,11 @@ static void parse_args(int argc, char** argv) {
 				display_add_arg(&disp, "-s");
 				display_add_arg(&disp, optarg);
 				break;
+			case 'v':
+			case 'V':
+				report_version();
+				exit(EXIT_SUCCESS);
+				break;
 			case 'w':
 				/* Show hidden files by default in display. */
 				display_add_arg(&disp, "-w");
@@ -270,6 +275,13 @@ static void parse_args(int argc, char** argv) {
 	else if (!opts.expand_command)
 		viewglob_fatal("No shell expansion command specified");
 
+	return;
+}
+
+
+static void report_version(void) {
+	printf("seer %s\n", SEER_VERSION);
+	printf("Released %s\n", SEER_RELEASE_DATE);
 	return;
 }
 

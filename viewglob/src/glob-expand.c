@@ -45,6 +45,7 @@
 #include "glob-expand.h"
 
 static int parse_args(int argc, char** argv);
+static void report_version(void);
 static void compile_data(int, char**);
 static void report(void);
 static void initiate(dev_t pwd_dev_id, ino_t pwd_inode);
@@ -125,8 +126,11 @@ static int parse_args(int argc, char** argv) {
 
 	if (has_double_dash) {
 		for (j = 1; j < i; j++) {
-			if ( strcmp("-n",*(argv + j)) == 0)
+			if ( strcmp("-n", *(argv + j)) == 0)
 				compare_func = compare_by_name;
+			else if ( (strcmp("-v", *(argv + j)) == 0) ||
+			          (strcmp("-V", *(argv + j)) == 0))
+				report_version();
 		}
 		i++;
 	}
@@ -134,6 +138,13 @@ static int parse_args(int argc, char** argv) {
 		i = 1;
 
 	return i;
+}
+
+
+static void report_version(void) {
+	printf("glob-expand %s\n", GLOB_EXPAND_VERSION);
+	printf("Released %s\n", GLOB_EXPAND_RELEASE_DATE);
+	exit(EXIT_SUCCESS);
 }
 
 

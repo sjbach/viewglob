@@ -1,3 +1,8 @@
+2004-08-11 14:11  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* glob-expand.c, glob-expand.h, seer.c, seer.h, gviewglob.c, gviewglob.h:
+	  Now report versions with -V flag.
+
 2004-08-11 13:00  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* dlisting.c: more hspacing between FItems in WrapBoxes.

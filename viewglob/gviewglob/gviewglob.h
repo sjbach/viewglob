@@ -25,6 +25,9 @@
 #include "fitem.h"
 #include "dlisting.h"
 
+#define GVIEWGLOB_VERSION "0.8.1"
+#define GVIEWGLOB_RELEASE_DATE "August 11, 2004"
+
 G_BEGIN_DECLS
 
 struct viewable_preferences {
@@ -86,7 +89,9 @@ static GString* read_string(const gchar* buff, gsize* start, gsize n, gchar deli
 static void        set_icons(Exhibit* e);
 static GdkPixbuf*  make_pixbuf_scaled(const guint8 icon_inline[]);
 
-static void parse_args(int argc, char** argv);
+static gboolean parse_args(int argc, char** argv);
+static void report_version(void);
+
 static void process_cmd_data(const gchar* buff, gsize bytes, Exhibit* e);
 static void process_glob_data(const gchar* buff, gsize bytes, Exhibit* e);
 static void rearrange_and_show(Exhibit* e);

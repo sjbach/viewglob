@@ -29,6 +29,9 @@
 #include "cmdline.h"
 #include "children.h"
 
+#define SEER_VERSION "0.8.1"
+#define SEER_RELEASE_DATE "August 11, 2004"
+
 BEGIN_C_DECLS
 
 struct options {
@@ -84,6 +87,7 @@ static void analyze_effect(MatchEffect effect);
 static void send_sane_cmd(struct display* d);
 
 static void parse_args(int argc, char** argv);
+static void report_version(void);
 
 enum action action_queue(enum action);
 

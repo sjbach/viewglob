@@ -686,13 +686,13 @@ static gboolean configure_event(GtkWidget* window, GdkEventConfigure* event, Exh
 }
 
 
-static void parse_args(int argc, char** argv) {
+static gboolean parse_args(int argc, char** argv) {
 	gboolean in_loop = TRUE;
 	glong d_temp;
 
 	opterr = 0;
 	while (in_loop) {
-		switch (getopt(argc, argv, "bc:g:n:s:w")) {
+		switch (getopt(argc, argv, "bc:g:n:s:vVw")) {
 			case -1:
 				DEBUG((df, "done\n"));
 				in_loop = FALSE;
@@ -730,12 +730,24 @@ static void parse_args(int argc, char** argv) {
 				else if (strcmp(optarg, "win") == 0 || strcmp(optarg, "windows") == 0)
 					v.sort_function = cmp_fitem_ordering_type_alphabetical;
 				break;
+			case 'v':
+			case 'V':
+				report_version();
+				return FALSE;
+				break;
 			case 'w':
 				/* Show hidden files by default. */
 				v.show_hidden_files = TRUE;
 				break;
 		}
 	}
+	return TRUE;
+}
+
+
+static void report_version(void) {
+	g_print("gviewglob %s\n", GVIEWGLOB_VERSION);
+	g_print("Released %s\n", GVIEWGLOB_RELEASE_DATE);
 	return;
 }
 
@@ -754,7 +766,6 @@ int main(int argc, char *argv[]) {
 	
 	GIOChannel* glob_channel;
 	GIOChannel* cmd_channel;
-	//int glob_fd, cmd_fd;
 
 	gtk_init (&argc, &argv);
 
@@ -768,7 +779,8 @@ int main(int argc, char *argv[]) {
 	v.file_display_limit = 300;
 	v.sort_function = cmp_fitem_ordering_alphabetical;
 	v.glob_fifo = v.cmd_fifo = NULL;
-	parse_args(argc, argv);
+	if (! parse_args(argc, argv) )
+		return 0;
 
 	/* Create gviewglob window. */
 	window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
