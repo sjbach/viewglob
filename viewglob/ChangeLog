@@ -1,3 +1,7 @@
+2004-08-22 21:30  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* gviewglob.c, gviewglob.h: scale file icons to text size.
+
 2004-08-22 19:03  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* children.c, cmdline.c, glob-expand.c, glob-expand.h, hardened_io.c,

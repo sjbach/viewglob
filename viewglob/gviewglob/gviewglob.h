@@ -83,7 +83,7 @@ static gboolean receive_data(GIOChannel* source, gchar* buff, gsize size, gsize*
 static GString* read_string(const gchar* buff, gsize* start, gsize n, gchar delim, struct holdover* ho, gboolean* finished);
 
 static void        set_icons(Exhibit* e);
-static GdkPixbuf*  make_pixbuf_scaled(const guint8 icon_inline[]);
+static GdkPixbuf*  make_pixbuf_scaled(const guint8 icon_inline[], gint scale_height);
 
 static gboolean  parse_args(int argc, char** argv);
 static void      report_version(void);
