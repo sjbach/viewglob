@@ -54,7 +54,7 @@ struct _Exhibit {
 	GSList* dl_slist;    /* This is for DListing structs. */
 	GtkWidget* listings_box;  /* This is the vbox holding the dir/file listings. */
 
-	GtkWidget* cmdline;  /* The textview holding the cmdline. */
+	GtkWidget* cmdline;           /* The entry holding the cmdline. */
 
 	gint optimal_width;  /* Expected width of the listings vbox. */
 };

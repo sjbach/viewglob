@@ -803,7 +803,7 @@ int main(int argc, char *argv[]) {
 	gtk_window_set_default_size(GTK_WINDOW(window), 340, 420);
 	g_signal_connect(G_OBJECT (window), "delete_event", G_CALLBACK(win_delete_event), NULL);
 
-	/* VBox for the scrolled window and the command line text widget. */
+	/* VBox for the scrolled window and the command-line widget. */
 	vbox = gtk_vbox_new(FALSE, 2);
 	gtk_box_set_homogeneous(GTK_BOX(vbox), FALSE);
 	gtk_container_add(GTK_CONTAINER(window), vbox);
