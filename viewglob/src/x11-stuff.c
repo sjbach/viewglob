@@ -30,6 +30,7 @@
 #endif
 
 #include "common.h"
+#include "viewglob-error.h"
 #include "x11-stuff.h"
 #define MAX_PROPERTY_VALUE_LEN 4096
 
@@ -185,7 +186,7 @@ static Window* get_client_list (Display* disp, unsigned long* size) {
 						XA_CARDINAL, "_WIN_CLIENT_LIST", size)) == NULL) {
 			viewglob_warning("Cannot get client list properties. \n"
 				  "(_NET_CLIENT_LIST or _WIN_CLIENT_LIST)"
-				  "\n", stderr);
+				  "\n");
 			return NULL;
 		}
 	}
