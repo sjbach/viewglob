@@ -43,8 +43,8 @@ void viewglob_warning (const char *message);
 void viewglob_error   (const char *message);
 void viewglob_fatal   (const char *message);
 
-int find_prev(const char*, int, char);
-char* basename(const char*);
+int find_prev(const char* string, int pos, char c);
+char* basename(const char* path);
 
 END_C_DECLS
 

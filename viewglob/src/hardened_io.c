@@ -102,7 +102,7 @@ bool hardened_read(int fd, void* buf, size_t count, ssize_t* nread) {
 /* Write all length bytes of buff to fd, even if it requires several tries.
    Retry after signal interrupts.  Emit error on failure. */
 bool hardened_write(int fd, char* buff, size_t length) {
-	ssize_t nwritten
+	ssize_t nwritten;
 	size_t offset = 0;
 
 	while (length > 0) {

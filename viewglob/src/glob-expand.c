@@ -92,15 +92,13 @@ int main(int argc, char* argv[]) {
 
 	/* Get max path length. */
 	max_path = get_max_path(".");
-	if (max_path == -1) {
+	if (max_path == -1)
 		viewglob_fatal("Could not determine maximum path length");
-	}
 
 	pwd = XMALLOC(char, max_path);
 	pwd = getcwd(pwd, max_path);
-	if (pwd == NULL) {
+	if (pwd == NULL)
 		viewglob_fatal("Could not determine working directory");
-	}
 
 	/* strlen(pwd) is used frequently, so might as well just do it once. */
 	pwd_length = strlen(pwd);
@@ -257,7 +255,7 @@ static void report(void) {
 
 
 static Directory* reverse_list(Directory* head) {
-	Directory* p1;
+	Directory* p1 = NULL;
 	Directory* p2;
 
 	if (head) {

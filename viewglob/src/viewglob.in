@@ -19,6 +19,17 @@
 SCRIPT_NAME="${0##*/}"
 export VG_DIR="@datadir@"
 
+# Option defaults.
+VG_CONFIG_FILE="$HOME/.viewglobrc"
+VG_SHELL_MODE_DEFAULT=bash
+VG_EXECUTABLE_DEFAULT="$VG_SHELL_MODE_DEFAULT"
+VG_DISPLAY_DEFAULT="$VG_DIR/gviewglob"
+VG_SHOW_MAX_DEFAULT=500
+VG_SORT_STYLE_DEFAULT=ls
+VG_DIR_ORDER_DEFAULT=descending
+VG_FONT_SIZE_MODIFIER_DEFAULT=0
+
+# We need extended globbing.
 shopt -s extglob
 
 vg_usage() {
@@ -93,7 +104,7 @@ vg_test_display() {
 
 vg_test_config_file() {
 	if [ ! "$1" ]
-		then vg_error "No file specified" 1
+		then vg_error "No config file specified" 1
 	elif [ ! -e "$1" ]
 		then vg_error "$1 does not exist" 1
 	fi
@@ -114,7 +125,7 @@ vg_test_sort_style() {
 vg_test_dir_order() {
 	if [ "$1" != descending ] && \
 	   [ "$1" != ascending ] && \
-	   [ "$1" != ascending-pwd-first ];
+	   [ "$1" != ascending-pwd-first ]
 		then vg_error "Invalid directory ordering \"$1\"" 1
 	fi
 }
@@ -137,8 +148,6 @@ if [[ -z "$DISPLAY" ]]
 elif [[ "$VG_VIEWGLOB_ACTIVE" = yep ]]
 	then vg_error "This shell is already being monitored" 2
 fi
-
-VG_CONFIG_FILE="$HOME/.viewglobrc"
 
 # The viewglob initialization script will pick up this variable from the
 # environment.
@@ -229,6 +238,7 @@ while getoptex "b; c: e: d: f: m; n: o: O: r: s: t; w; h; v; V; z: shell-mode: e
 	esac
 done
 shift $((OPTIND - 1))
+
 if [ "$OPTOPT" = \? ]
 	# getopt.sh already emitted an error message.
 	then exit 5
@@ -300,17 +310,13 @@ fi
 
 # Set default values for unused variables.
 # (VG_SHELL_OUTPUT and VG_TERM_OUTPUT have no defaults).
-
-if [[ -z "$VG_SHELL_MODE" ]]; then
-	VG_SHELL_MODE=bash
-fi
-
-[[ -z "$VG_EXECUTABLE" ]] && VG_EXECUTABLE="$VG_SHELL_MODE"
-[[ -z "$VG_DISPLAY" ]] && VG_DISPLAY="$VG_DIR/gviewglob"
-[[ -z "$VG_SHOW_MAX" ]] && VG_SHOW_MAX=500
-[[ -z "$VG_SORT_STYLE" ]] && VG_SORT_STYLE=ls
-[[ -z "$VG_DIR_ORDER" ]] && VG_DIR_ORDER=descending
-[[ -z "$VG_FONT_SIZE_MODIFIER" ]] && VG_FONT_SIZE_MODIFIER=0
+[[ -z "$VG_SHELL_MODE" ]] && VG_SHELL_MODE="$VG_SHELL_MODE_DEFAULT"
+[[ -z "$VG_EXECUTABLE" ]] && VG_EXECUTABLE="$VG_EXECUTABLE_DEFAULT"
+[[ -z "$VG_DISPLAY" ]] && VG_DISPLAY="$VG_DISPLAY_DEFAULT"
+[[ -z "$VG_SHOW_MAX" ]] && VG_SHOW_MAX="$VG_SHOW_MAX_DEFAULT"
+[[ -z "$VG_SORT_STYLE" ]] && VG_SORT_STYLE="$VG_SORT_STYLE_DEFAULT"
+[[ -z "$VG_DIR_ORDER" ]] && VG_DIR_ORDER="$VG_DIR_ORDER_DEFAULT"
+[[ -z "$VG_FONT_SIZE_MODIFIER" ]] && VG_FONT_SIZE_MODIFIER="$VG_FONT_SIZE_MODIFIER_DEFAULT"
 
 if [[ "$VG_SHELL_MODE" = bash ]]; then
 	# The bash initialization requires a file.
@@ -337,7 +343,7 @@ exec "$VG_DIR"/seer -c "$VG_SHELL_MODE" -e "$VG_EXECUTABLE"     \
                     -o "$VG_SHELL_OUTPUT" -O "$VG_TERM_OUTPUT"  \
                     -d "$VG_DISPLAY" $VG_DISPLAY_OPTS           \
                     -n "$VG_SHOW_MAX" -s "$VG_SORT_STYLE"       \
-		    -z "$VG_FONT_SIZE_MODIFIER"                 \
+                    -z "$VG_FONT_SIZE_MODIFIER"                 \
                     -i "$VG_SHELL_INIT"                         \
                     -x "$VG_EXPAND_COMMAND"
 
