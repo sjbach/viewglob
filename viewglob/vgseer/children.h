@@ -24,54 +24,54 @@
 #  include "config.h"
 #endif
 
-#include "common.h"
+#include "vgseer-common.h"
 #include <X11/Xlib.h>
 
-BEGIN_C_DECLS
+G_BEGIN_DECLS
 
 
 struct args {
-	char** argv;
-	int arg_count;
+	gchar** argv;
+	gint arg_count;
 };
 
 
 struct pty_child {
-	char* name;
+	gchar* name;
 	struct args a;
 	pid_t pid;
-	int fd;
+	gint fd;
 };
 
 
 struct display {
-	char* name;
+	gchar* name;
 	struct args a;
 	pid_t pid;
 	Window xid;
-	char* glob_fifo_name;
-	char* cmd_fifo_name;
-	char* feedback_fifo_name;
-	int glob_fifo_fd;
-	int cmd_fifo_fd;
-	int feedback_fifo_fd;
+	gchar* glob_fifo_name;
+	gchar* cmd_fifo_name;
+	gchar* feedback_fifo_name;
+	gint glob_fifo_fd;
+	gint cmd_fifo_fd;
+	gint feedback_fifo_fd;
 };
 
 #define NEW_PTY_FD -99
 #define CLOSE_FD -98
-bool pty_child_fork(struct pty_child* c, int new_stdin_fd, int new_stdout_fd, int new_stderr_fd);
-bool pty_child_terminate(struct pty_child* c);
+gboolean pty_child_fork(struct pty_child* c, gint new_stdin_fd, gint new_stdout_fd, gint new_stderr_fd);
+gboolean pty_child_terminate(struct pty_child* c);
 
-bool display_init(struct display* d);
-bool display_fork(struct display* d);
-bool display_running(struct display* d);
-bool display_terminate(struct display* d);
-bool display_cleanup(struct display* d);
+gboolean display_init(struct display* d);
+gboolean display_fork(struct display* d);
+gboolean display_running(struct display* d);
+gboolean display_terminate(struct display* d);
+gboolean display_cleanup(struct display* d);
 
 void args_init(struct args* a);
-void args_add(struct args* a, char* new_arg);
+void args_add(struct args* a, gchar* new_arg);
 
-END_C_DECLS
+G_END_DECLS
 
 #endif /* !CHILDREN_H */
 

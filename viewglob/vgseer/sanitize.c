@@ -19,7 +19,7 @@
 
 #include "config.h"
 
-#include "common.h"
+#include "vgseer-common.h"
 #include "sanitize.h"
 
 /*#define DEBUG(blah)	do { } while(0)*/
@@ -30,9 +30,9 @@ extern FILE* df;
 
 static void   sane_add_char(struct sane_cmd* s, char c);
 static void   sane_delete_current_word(struct sane_cmd* s);
-static bool   sane_last_char(struct sane_cmd* s, char c);
+static gboolean   sane_last_char(struct sane_cmd* s, char c);
 
-static bool             in_quote(struct sane_cmd* s, enum quote_type qt);
+static gboolean             in_quote(struct sane_cmd* s, enum quote_type qt);
 static enum quote_type  ql_pop(struct sane_cmd* s);
 static void             ql_push(struct sane_cmd* s, enum quote_type);
 
@@ -44,11 +44,11 @@ char* make_sane_cmd(char* full_command, int length) {
 
 	DEBUG((df,"<full: %s>\n", full_command));
 
-	s.last_char_backslash = false;
-	s.last_char_exclamation = false;
-	s.last_char_dollar = false;
-	s.skip_word = false;
-	s.command = XMALLOC(char, length + 5 + 1);    /* The 5 is a just-in-case buffer. */
+	s.last_char_backslash = FALSE;
+	s.last_char_exclamation = FALSE;
+	s.last_char_dollar = FALSE;
+	s.skip_word = FALSE;
+	s.command = g_new(char, length + 5 + 1);    /* The 5 is a just-in-case buffer. */
 	s.pos = 0;
 	s.ql = NULL;
 
@@ -59,8 +59,8 @@ char* make_sane_cmd(char* full_command, int length) {
 		if (s.last_char_exclamation) {
 			/* Don't allow history expansion. */
 			if ( (c != '(') && (c != ' ') && (c != '\t') && (c != '\n') ) {
-				s.skip_word = true;
-				s.last_char_exclamation = false;
+				s.skip_word = TRUE;
+				s.last_char_exclamation = FALSE;
 				s.pos--;      /* Remove the ! */
 				continue;
 			}
@@ -69,19 +69,19 @@ char* make_sane_cmd(char* full_command, int length) {
 			/* Don't allow $ constructs (variables, command substitution, etc. */
 			if ( (c != ' ') && (c != '\t') && (c != '\n') ) {
 				s.pos--;
-				s.last_char_dollar = false;
+				s.last_char_dollar = FALSE;
 				i = length;   /* Break out of loop. */
 				continue;
 			}
 			else {
 				/* A lone $ is acceptable. */
-				s.last_char_dollar = false;
+				s.last_char_dollar = FALSE;
 			}
 		}
 
 		if (s.skip_word) {
 			if ( (c == ' ') || (c == '\t') )
-				s.skip_word = false;
+				s.skip_word = FALSE;
 			else
 				continue;
 		}
@@ -95,7 +95,7 @@ char* make_sane_cmd(char* full_command, int length) {
 				else if (in_quote(&s, QT_DOUBLE))
 					sane_add_char(&s, c);
 				else if (s.last_char_backslash) {
-					s.last_char_backslash = false;
+					s.last_char_backslash = FALSE;
 					sane_add_char(&s, c);
 				}
 				else {
@@ -112,7 +112,7 @@ char* make_sane_cmd(char* full_command, int length) {
 					sane_add_char(&s, c);
 				}
 				else if (s.last_char_backslash) {
-					s.last_char_backslash = false;
+					s.last_char_backslash = FALSE;
 					sane_add_char(&s, c);
 				}
 				else {
@@ -125,11 +125,11 @@ char* make_sane_cmd(char* full_command, int length) {
 				if (in_quote(&s, QT_SINGLE) || in_quote(&s, QT_DOUBLE))
 					sane_add_char(&s, c);
 				else if (s.last_char_backslash) {
-					s.last_char_backslash = false;
+					s.last_char_backslash = FALSE;
 					sane_add_char(&s, c);
 				}
 				else {
-					s.last_char_backslash = true;
+					s.last_char_backslash = TRUE;
 					sane_add_char(&s, c);
 				}
 				break;
@@ -138,11 +138,11 @@ char* make_sane_cmd(char* full_command, int length) {
 				if (in_quote(&s, QT_SINGLE))
 					sane_add_char(&s, c);
 				else if (s.last_char_backslash) {
-					s.last_char_backslash = false;
+					s.last_char_backslash = FALSE;
 					sane_add_char(&s, c);
 				}
 				else {
-					s.last_char_dollar = true;
+					s.last_char_dollar = TRUE;
 					sane_add_char(&s, c);
 				}
 
@@ -156,11 +156,11 @@ char* make_sane_cmd(char* full_command, int length) {
 					/* No ! allowed in ?( ) constructs. */
 					break;
 				else if (s.last_char_backslash) {
-					s.last_char_backslash = false;
+					s.last_char_backslash = FALSE;
 					sane_add_char(&s, c);
 				}
 				else {
-					s.last_char_exclamation = true;
+					s.last_char_exclamation = TRUE;
 					sane_add_char(&s, c);
 				}
 				break;
@@ -168,11 +168,11 @@ char* make_sane_cmd(char* full_command, int length) {
 			case (' '):
 			case ('\t'):
 				if (s.last_char_exclamation)
-					s.last_char_exclamation = false;
+					s.last_char_exclamation = FALSE;
 				else if (s.last_char_backslash)
-					s.last_char_backslash = false;
+					s.last_char_backslash = FALSE;
 				else if (s.skip_word) {         /* Only ' ' and \t can turn off skip_word. */
-					s.skip_word = false;
+					s.skip_word = FALSE;
 				}
 				sane_add_char(&s, c);
 				break;
@@ -184,7 +184,7 @@ char* make_sane_cmd(char* full_command, int length) {
 					sane_add_char(&s, c);
 				else if (s.last_char_backslash) {
 					DEBUG((df, "!"));
-					s.last_char_backslash = false;
+					s.last_char_backslash = FALSE;
 					sane_add_char(&s, c);
 				}
 				else if (s.last_char_exclamation) {
@@ -193,11 +193,11 @@ char* make_sane_cmd(char* full_command, int length) {
 						/* It sucks that ! is such a multiuse character. There's no good way to deal
 						   here, so just give up. */
 						s.pos--;
-						s.last_char_exclamation = false;
+						s.last_char_exclamation = FALSE;
 						i = length;
 						break;
 					}
-					s.last_char_exclamation = false;
+					s.last_char_exclamation = FALSE;
 					ql_push(&s, QT_EXTGLOB_PAREN);
 					sane_add_char(&s, c);
 				}
@@ -218,7 +218,7 @@ char* make_sane_cmd(char* full_command, int length) {
 				if (in_quote(&s, QT_SINGLE) || in_quote(&s, QT_DOUBLE))
 					sane_add_char(&s, c);
 				else if (s.last_char_backslash) {
-					s.last_char_backslash = false;
+					s.last_char_backslash = FALSE;
 					sane_add_char(&s, c);
 				}
 				else if (in_quote(&s, QT_EXTGLOB_PAREN)) {
@@ -232,7 +232,7 @@ char* make_sane_cmd(char* full_command, int length) {
 				if (in_quote(&s, QT_SINGLE))
 					sane_add_char(&s, c);
 				else if (s.last_char_backslash) {
-					s.last_char_backslash = false;
+					s.last_char_backslash = FALSE;
 					sane_add_char(&s, c);
 				}
 				else
@@ -245,7 +245,7 @@ char* make_sane_cmd(char* full_command, int length) {
 				if (in_quote(&s, QT_SINGLE) || in_quote(&s, QT_DOUBLE) || in_quote(&s, QT_EXTGLOB_PAREN))
 					sane_add_char(&s, c);
 				else if (s.last_char_backslash) {
-					s.last_char_backslash = false;
+					s.last_char_backslash = FALSE;
 					sane_add_char(&s, c);
 				}
 				else
@@ -261,7 +261,7 @@ char* make_sane_cmd(char* full_command, int length) {
 				if (in_quote(&s, QT_SINGLE) || in_quote(&s, QT_DOUBLE) || in_quote(&s, QT_EXTGLOB_PAREN))
 					sane_add_char(&s, c);
 				else if (s.last_char_backslash) {
-					s.last_char_backslash = false;
+					s.last_char_backslash = FALSE;
 					sane_add_char(&s, c);
 				}
 				else {    /* Break out of loop. */
@@ -273,7 +273,7 @@ char* make_sane_cmd(char* full_command, int length) {
 
 			default:
 				if (s.last_char_backslash)
-					s.last_char_backslash = false;
+					s.last_char_backslash = FALSE;
 				sane_add_char(&s, c);
 				break;
 		}
@@ -282,7 +282,7 @@ char* make_sane_cmd(char* full_command, int length) {
 	if (s.last_char_backslash) {
 		/* Can't have a trailing backslash. */
 		s.pos--;
-		s.last_char_backslash = false;
+		s.last_char_backslash = FALSE;
 	}
 
 	/* Close unclosed quotes. */
@@ -292,7 +292,7 @@ char* make_sane_cmd(char* full_command, int length) {
 		if (s.last_char_exclamation) {
 			/* This exclamation could be interpreted as special because of the following quote characters. */
 			s.pos--;
-			s.last_char_exclamation = false;
+			s.last_char_exclamation = FALSE;
 		}
 		
 		switch (qt) {
@@ -318,13 +318,13 @@ char* make_sane_cmd(char* full_command, int length) {
 }
 
 
-static bool sane_last_char(struct sane_cmd* s, char c) {
+static gboolean sane_last_char(struct sane_cmd* s, char c) {
 	if (s->pos > 0) {
 		if ( *(s->command + s->pos - 1) == c )
-			return true;
+			return TRUE;
 	}
 	
-	return false;
+	return FALSE;
 }
 
 
@@ -358,7 +358,7 @@ static enum quote_type  ql_pop(struct sane_cmd* s) {
 	if (s->ql) {
 		struct quote_list* tmp = s->ql->next;
 		popped = s->ql->qt;
-		XFREE(s->ql);
+		g_free(s->ql);
 		s->ql = tmp;
 	}
 	else
@@ -372,22 +372,22 @@ static enum quote_type  ql_pop(struct sane_cmd* s) {
 static void ql_push(struct sane_cmd* s, enum quote_type new_qt) {
 	struct quote_list* new_ql;
 
-	new_ql = XMALLOC(struct quote_list, 1);
+	new_ql = g_new(struct quote_list, 1);
 	new_ql->qt = new_qt;
 	new_ql->next = s->ql;
 	s->ql = new_ql;
 }
 
 
-static bool in_quote(struct sane_cmd* s, enum quote_type qt) {
+static gboolean in_quote(struct sane_cmd* s, enum quote_type qt) {
 	if (s->ql) {
 		if (s->ql->qt == qt)
-			return true;
+			return TRUE;
 		else
-			return false;
+			return FALSE;
 	}
 	else
-		return false;
+		return FALSE;
 }
 
 

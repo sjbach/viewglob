@@ -33,9 +33,9 @@
 #  include "config.h"
 #endif
 
-#include "common.h"
+#include "vgseer-common.h"
 
-BEGIN_C_DECLS
+G_BEGIN_DECLS
 
 void set_program_name (const char *argv0);
 
@@ -46,6 +46,6 @@ void viewglob_fatal   (const char *message);
 int find_prev(const char* string, int pos, char c);
 char* basename(const char* path);
 
-END_C_DECLS
+G_END_DECLS
 
 #endif /* !VIEWGLOB_ERROR_H */

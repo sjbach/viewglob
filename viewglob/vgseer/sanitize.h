@@ -24,9 +24,9 @@
 #  include "config.h"
 #endif
 
-#include "common.h"
+#include "vgseer-common.h"
 
-BEGIN_C_DECLS
+G_BEGIN_DECLS
 
 enum quote_type {
 	QT_DUMMY,
@@ -43,10 +43,10 @@ struct quote_list {
 
 
 struct sane_cmd {
-	bool last_char_backslash;
-	bool last_char_exclamation;
-	bool last_char_dollar;
-	bool skip_word;
+	gboolean last_char_backslash;
+	gboolean last_char_exclamation;
+	gboolean last_char_dollar;
+	gboolean skip_word;
 	struct quote_list* ql;
 	char* command;
 	int pos;
@@ -55,6 +55,6 @@ struct sane_cmd {
 
 char*  make_sane_cmd(char* full_command, int length);
 
-END_C_DECLS
+G_END_DECLS
 
 #endif	/* !SANITIZE_H */

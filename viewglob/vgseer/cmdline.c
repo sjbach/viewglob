@@ -19,7 +19,7 @@
 
 #include "config.h"
 
-#include "common.h"
+#include "vgseer-common.h"
 #include "viewglob-error.h"
 #include "seer.h"
 #include "sequences.h"
@@ -29,8 +29,8 @@
 #include <string.h>
 
 struct overwrite_queue {
-	char c;
-	bool preserve_cret;
+	gchar c;
+	gboolean preserve_cret;
 	struct overwrite_queue* next;
 }* oq = NULL;
 
@@ -41,7 +41,7 @@ extern FILE *df;
 extern struct user_shell u;
 
 /* Initialize working command line and sequence buffer. */
-bool cmd_init(void) {
+gboolean cmd_init(void) {
 
 	/* Initialize u.cmd */
 	u.cmd.length = 0;
@@ -50,37 +50,37 @@ bool cmd_init(void) {
 }
 
 /* Allocate or reallocate space for u.cmd.command. */
-bool cmd_alloc(void) {
-	static int step = 0;
+gboolean cmd_alloc(void) {
+	static gint step = 0;
 	step++;
 
 	/* Allocate */
 	if (step == 1)
-		u.cmd.command = XMALLOC(char, CMD_STEP_SIZE);
+		u.cmd.command = g_new(gchar, CMD_STEP_SIZE);
 	else
-		u.cmd.command = XREALLOC(char, u.cmd.command, step * CMD_STEP_SIZE);
+		u.cmd.command = g_renew(gchar, u.cmd.command, step * CMD_STEP_SIZE);
 
 	/* Set new memory to \0 */
-	memset(u.cmd.command + (step - 1) * CMD_STEP_SIZE, '\0', CMD_STEP_SIZE * sizeof(char));
-	return true;
+	memset(u.cmd.command + (step - 1) * CMD_STEP_SIZE, '\0', CMD_STEP_SIZE);
+	return TRUE;
 }
 
 
 /* Start over from scratch (usually after a command has been executed). */
-bool cmd_clear(void) {
+gboolean cmd_clear(void) {
 	memset(u.cmd.command, '\0', u.cmd.length);
 	u.cmd.pos = 0;
 	u.cmd.length = 0;
-	return true;
+	return TRUE;
 }
 
 
-void cmd_enqueue_overwrite(char c, bool preserve_cret) {
+void cmd_enqueue_overwrite(gchar c, gboolean preserve_cret) {
 	struct overwrite_queue* new_oq;
 
 	DEBUG((df, "enqueuing \'%c\'\n", c));
 
-	new_oq = XMALLOC(struct overwrite_queue, 1);
+	new_oq = g_new(struct overwrite_queue, 1);
 	new_oq->c = c;
 	new_oq->preserve_cret = preserve_cret;
 	new_oq->next = oq;
@@ -91,29 +91,29 @@ void cmd_enqueue_overwrite(char c, bool preserve_cret) {
 void cmd_dequeue_overwrite(void) {
 	if (oq) {
 		struct overwrite_queue* tmp = oq->next;
-		XFREE(oq);
+		g_free(oq);
 		oq = tmp;
 	}
 }
 
 
-bool cmd_has_queue(void) {
+gboolean cmd_has_queue(void) {
 	return oq != NULL;
 }
 
 
-bool cmd_write_queue(void) {
+gboolean cmd_write_queue(void) {
 	struct overwrite_queue* tmp;
-	bool ok = true;
+	gboolean ok = TRUE;
 
 	while (oq) {
 		DEBUG((df, "(queue) "));
 		if ( (!ok) || (!cmd_overwrite_char(oq->c, oq->preserve_cret)) )
-			ok = false;
+			ok = FALSE;
 
 		tmp = oq;
 		oq = oq->next;
-		XFREE(tmp);
+		g_free(tmp);
 	}
 
 	return ok;
@@ -125,13 +125,14 @@ void cmd_clear_queue(void) {
 	while (oq) {
 		tmp = oq;
 		oq = oq->next;
-		XFREE(tmp);
+		g_free(tmp);
 	}
 }
 
+
 /* Determine whether there is whitespace to the left of the cursor. */
-bool cmd_whitespace_to_left(char* holdover) {
-	bool result;
+gboolean cmd_whitespace_to_left(gchar* holdover) {
+	gboolean result;
 
 	if ( (u.cmd.pos == 0) ||
 	     /* Kludge: if the shell buffer has a holdover, which consists
@@ -139,16 +140,16 @@ bool cmd_whitespace_to_left(char* holdover) {
 			complete a sequence and will end up being added to the
 			command line. */
 	     (holdover && strlen(holdover) == 1 && *(holdover) == ' ') )
-		result = true;
+		result = TRUE;
 	else {
 		switch ( *(u.cmd.command + u.cmd.pos - 1) ) {
 			case ' ':
 			case '\n':
 			case '\t':
-				result = true;
+				result = TRUE;
 				break;
 			default:
-				result = false;
+				result = FALSE;
 				break;
 		}
 	}
@@ -159,17 +160,17 @@ bool cmd_whitespace_to_left(char* holdover) {
 
 /* Determine whether there is whitespace to the right of the cursor
    (i.e. underneath the cursor). */
-bool cmd_whitespace_to_right(void) {
-	bool result;
+gboolean cmd_whitespace_to_right(void) {
+	gboolean result;
 
 	switch ( *(u.cmd.command + u.cmd.pos) ) {
 		case ' ':
 		case '\n':
 		case '\t':
-			result = true;
+			result = TRUE;
 			break;
 		default:
-			result = false;
+			result = FALSE;
 			break;
 	}
 
@@ -179,7 +180,7 @@ bool cmd_whitespace_to_right(void) {
 
 /* Overwrite the char in the working command line at pos in command;
    realloc if necessary. */
-bool cmd_overwrite_char(char c, bool preserve_cret) {
+gboolean cmd_overwrite_char(gchar c, gboolean preserve_cret) {
 
 	while ( preserve_cret && *(u.cmd.command + u.cmd.pos) == '\015' ) {
 		/* Preserve ^Ms. */
@@ -196,22 +197,22 @@ bool cmd_overwrite_char(char c, bool preserve_cret) {
 	if (u.cmd.length % CMD_STEP_SIZE == 0) {
 		if (!cmd_alloc()) {
 			viewglob_error("Could not allocate space for cmd");
-			return false;
+			return FALSE;
 		}
 	}
 
 	action_queue(A_SEND_CMD);
-	return true;
+	return TRUE;
 }
 
 
 /* Remove n chars from the working command line at u.cmd.pos. */
-bool cmd_del_chars(int n) {
+gboolean cmd_del_chars(gint n) {
 
 	if (u.cmd.pos + n > u.cmd.length) {
 		/* We've failed to keep up. */
 		action_queue(A_SEND_LOST);
-		return false;
+		return FALSE;
 	}
 
 	memmove(u.cmd.command + u.cmd.pos, u.cmd.command + u.cmd.pos + n, u.cmd.length - (u.cmd.pos + n));
@@ -219,13 +220,13 @@ bool cmd_del_chars(int n) {
 	u.cmd.length -= n;
 
 	action_queue(A_SEND_CMD);
-	return true;
+	return TRUE;
 }
 
 
 /* Trash everything. */
-bool cmd_wipe_in_line(enum direction dir) {
-	int cret_pos_l, cret_pos_r;
+gboolean cmd_wipe_in_line(enum direction dir) {
+	gint cret_pos_l, cret_pos_r;
 
 	switch (dir) {
 		case D_RIGHT:	/* Clear to right (in this line) */
@@ -271,30 +272,30 @@ bool cmd_wipe_in_line(enum direction dir) {
 			break;
 	}
 	action_queue(A_SEND_CMD);
-	return true;
+	return TRUE;
 }
 
 
-bool cmd_backspace(int n) {
-	int i;
+gboolean cmd_backspace(gint n) {
+	gint i;
 	for (i = 0; i < n; i++) {
 		if (u.cmd.pos > 0)
 			u.cmd.pos--;
 		else {
 			viewglob_error("Backspaced out of command line");
 			action_queue(A_SEND_LOST);
-			return false;
+			return FALSE;
 		}
 	}
-	return true;
+	return TRUE;
 }
 
 
-bool cmd_insert_chars(char c, int n) {
+gboolean cmd_insert_chars(gchar c, gint n) {
 	if (n < 0) {
 		viewglob_error("<0 in cmd_insert_chars");
 		action_queue(A_SEND_LOST);
-		return false;
+		return FALSE;
 	}
 
 	memmove(u.cmd.command + u.cmd.pos + n, u.cmd.command + u.cmd.pos, u.cmd.length - u.cmd.pos);
@@ -302,7 +303,7 @@ bool cmd_insert_chars(char c, int n) {
 	u.cmd.length += n;
 
 	action_queue(A_SEND_CMD);
-	return true;
+	return TRUE;
 }
 
 
@@ -311,7 +312,7 @@ bool cmd_insert_chars(char c, int n) {
    They're mostly harmless, and this is treating the symptom rather than the sickness,
    but it seems to work all right. */
 void cmd_del_trailing_crets(void) {
-	int temp;
+	gint temp;
 	while (u.cmd.command[u.cmd.length - 1] == '\015' && u.cmd.pos < u.cmd.length - 1) {
 		temp = u.cmd.pos;
 		u.cmd.pos = u.cmd.length - 1;

@@ -21,7 +21,7 @@
 #  include "config.h"
 #endif
 
-#include "common.h"
+#include "vgseer-common.h"
 #include "viewglob-error.h"
 #include "children.h"
 #include "ptytty.h"
@@ -29,6 +29,7 @@
 #include <signal.h>
 #include <fcntl.h>
 #include <string.h>
+#include <glib.h>
 
 #include <sys/wait.h>
 #ifndef WEXITSTATUS
@@ -43,15 +44,15 @@
 extern FILE* df;
 #endif
 
-static bool create_fifo(char* name);
-static bool waitpid_wrapped(pid_t pid);
-static bool wait_for_data(int fd);
+static gboolean create_fifo(gchar* name);
+static gboolean waitpid_wrapped(pid_t pid);
+static gboolean wait_for_data(gint fd);
  
 
 /* Make five attempts at creating a fifo with the given name. */
-static bool create_fifo(char* name) {
-	int i;
-	bool ok = true;
+static gboolean create_fifo(gchar* name) {
+	gint i;
+	gboolean ok = TRUE;
 
 	for (i = 0; i < 5; i++) {
 
@@ -61,14 +62,14 @@ static bool create_fifo(char* name) {
 				viewglob_warning("Fifo already exists");
 				if (unlink(name) == -1) {
 					viewglob_error("Could not remove old file");
-					ok = false;
+					ok = FALSE;
 					break;
 				}
 			}
 			else {
 				viewglob_error("Could not create fifo");
 				viewglob_error(name);
-				ok = false;
+				ok = FALSE;
 				break;
 			}
 		}
@@ -80,15 +81,15 @@ static bool create_fifo(char* name) {
 
 
 /* Wrapper to interpret both 0 and -1 waitpid() returns as errors. */
-static bool waitpid_wrapped(pid_t pid) {
-	bool result = true;
+static gboolean waitpid_wrapped(pid_t pid) {
+	gboolean result = TRUE;
 
 	switch (waitpid(pid, NULL, 0)) {
 		case 0:
 			/* pid has not exited. */
 		case -1:
 			/* Error. */
-			result = false;
+			result = FALSE;
 			break;
 	}
 
@@ -98,24 +99,24 @@ static bool waitpid_wrapped(pid_t pid) {
 
 /* Initialize the argument array struct. */
 void args_init(struct args* a) {
-	a->argv = XMALLOC(char*, 1);
+	a->argv = g_new(gchar*, 1);
 	*(a->argv) = NULL;
 	a->arg_count = 1;
 }
 
 
 /* Add a new argument to this argument struct. */
-void args_add(struct args* a, char* new_arg) {
-	char* temp;
+void args_add(struct args* a, gchar* new_arg) {
+	gchar* temp;
 
 	if (new_arg) {
-		temp = XMALLOC(char, strlen(new_arg) + 1);
+		temp = g_new(gchar, strlen(new_arg) + 1);
 		strcpy(temp, new_arg);
 	}
 	else
 		temp = NULL;
 
-	a->argv = XREALLOC(char*, a->argv, a->arg_count + 1);
+	a->argv = g_renew(gchar*, a->argv, a->arg_count + 1);
 	*(a->argv + a->arg_count) = temp;
 	a->arg_count++;
 }
@@ -123,46 +124,46 @@ void args_add(struct args* a, char* new_arg) {
 
 /* Initialize communication fifos and the argument array for the display fork.
    Should only be called once, whereas display_fork() can be called multiple times. */
-bool display_init(struct display* d) {
+gboolean display_init(struct display* d) {
 	pid_t pid;
-	char* pid_str;
-	bool ok = true;
+	gchar* pid_str;
+	gboolean ok = TRUE;
 
 	d->a.argv[0] = d->name;
 	d->xid = 0;              /* We'll get this from the display when it's started. */
 
 	/* Get the current pid and turn it into a string. */
-	pid_str = XMALLOC(char, 10 + 1);    /* 10 for the length of the pid, 1 for \0. */
+	pid_str = g_new(gchar, 10 + 1);    /* 10 for the length of the pid, 1 for \0. */
 	pid = getpid();
-	sprintf(pid_str, "%ld", (long int) pid);
+	sprintf(pid_str, "%ld", (glong) pid);
 
 	/* Create the glob fifo name. */
-	d->glob_fifo_name = XMALLOC(char, strlen("/tmp/viewglob") + strlen(pid_str) + strlen("-1") + 1);
+	d->glob_fifo_name = g_new(gchar, strlen("/tmp/viewglob") + strlen(pid_str) + strlen("-1") + 1);
 	(void)strcpy(d->glob_fifo_name, "/tmp/viewglob");
 	(void)strcat(d->glob_fifo_name, pid_str);
 	(void)strcat(d->glob_fifo_name, "-1");
 
 	/* Create the cmd fifo name. */
-	d->cmd_fifo_name = XMALLOC(char, strlen("/tmp/viewglob") + strlen(pid_str) + strlen("-2") + 1);
+	d->cmd_fifo_name = g_new(gchar, strlen("/tmp/viewglob") + strlen(pid_str) + strlen("-2") + 1);
 	(void)strcpy(d->cmd_fifo_name, "/tmp/viewglob");
 	(void)strcat(d->cmd_fifo_name, pid_str);
 	(void)strcat(d->cmd_fifo_name, "-2");
 
 	/* And the feedback fifo name. */
-	d->feedback_fifo_name = XMALLOC(char, strlen("/tmp/viewglob") + strlen(pid_str) + strlen("-3") + 1);
+	d->feedback_fifo_name = g_new(gchar, strlen("/tmp/viewglob") + strlen(pid_str) + strlen("-3") + 1);
 	(void)strcpy(d->feedback_fifo_name, "/tmp/viewglob");
 	(void)strcat(d->feedback_fifo_name, pid_str);
 	(void)strcat(d->feedback_fifo_name, "-3");
 
-	XFREE(pid_str);
+	g_free(pid_str);
 
 	/* Create the fifos. */
 	if ( ! create_fifo(d->glob_fifo_name) )
-		return false;
+		return FALSE;
 	if ( ! create_fifo(d->cmd_fifo_name) )
-		return false;
+		return FALSE;
 	if ( ! create_fifo(d->feedback_fifo_name) )
-		return false;
+		return FALSE;
 
 	/* Add the fifo's to the arguments. */
 	args_add(&(d->a), "-g");
@@ -181,13 +182,13 @@ bool display_init(struct display* d) {
 
 
 /* Open the display and set it up. */
-bool display_fork(struct display* d) {
-	bool ok = true;
+gboolean display_fork(struct display* d) {
+	gboolean ok = TRUE;
 
 	switch (d->pid = fork()) {
 		case -1:
 			viewglob_error("Could not fork display");
-			return false;
+			return FALSE;
 
 		case 0:
 			/* Open the display. */
@@ -205,15 +206,15 @@ bool display_fork(struct display* d) {
 	   to make sure it doesn't get EOF'd by the sandbox shell accidentally. */
 	if ( (d->glob_fifo_fd = open(d->glob_fifo_name, O_WRONLY)) == -1) {
 		viewglob_error("Could not open glob fifo for writing");
-		ok = false;
+		ok = FALSE;
 	}
 	if ( (d->cmd_fifo_fd = open(d->cmd_fifo_name, O_WRONLY)) == -1) {
 		viewglob_error("Could not open cmd fifo for writing");
-		ok = false;
+		ok = FALSE;
 	}
 	if ( (d->feedback_fifo_fd = open(d->feedback_fifo_name, O_RDONLY)) == -1) {
 		viewglob_error("Could not open feedback fifo for reading");
-		ok = false;
+		ok = FALSE;
 	}
 
 
@@ -221,15 +222,15 @@ bool display_fork(struct display* d) {
 }
 
 
-bool display_running(struct display* d) {
+gboolean display_running(struct display* d) {
 	return d->pid != -1;
 }
 
 
 /* Terminate display's process and close communication fifos.  Should be called for
    each forked display. */
-bool display_terminate(struct display* d) {
-	bool ok = true;
+gboolean display_terminate(struct display* d) {
+	gboolean ok = TRUE;
 
 	/* Terminate and wait the child's process. */
 	if (d->pid != -1) {
@@ -243,7 +244,7 @@ bool display_terminate(struct display* d) {
 				break;
 			default:
 				viewglob_error("Could not close display");
-				ok = false;
+				ok = FALSE;
 				break;
 		}
 	}
@@ -254,7 +255,7 @@ bool display_terminate(struct display* d) {
 			d->glob_fifo_fd = -1;
 		else {
 			viewglob_error("Could not close glob fifo");
-			ok = false;
+			ok = FALSE;
 		}
 	}
 	if (d->cmd_fifo_fd != -1) {
@@ -262,7 +263,7 @@ bool display_terminate(struct display* d) {
 			d->cmd_fifo_fd = -1;
 		else {
 			viewglob_error("Could not close cmd fifo");
-			ok = false;
+			ok = FALSE;
 		}
 	}
 	if (d->feedback_fifo_fd != -1) {
@@ -271,7 +272,7 @@ bool display_terminate(struct display* d) {
 		else {
 			viewglob_error("Could not close feedback fifo");
 			viewglob_error(strerror(errno));
-			ok = false;
+			ok = FALSE;
 		}
 	}
 
@@ -281,8 +282,8 @@ bool display_terminate(struct display* d) {
 
 /* Remove fifos and clear the display struct.  Should only be called
    when there will be no more display forks. */
-bool display_cleanup(struct display* d) {
-	bool ok = true;
+gboolean display_cleanup(struct display* d) {
+	gboolean ok = TRUE;
 
 	/* Remove the fifos. */
 	if (d->glob_fifo_name) {
@@ -310,9 +311,9 @@ bool display_cleanup(struct display* d) {
 		}
 	}
 
-	XFREE(d->glob_fifo_name);
-	XFREE(d->cmd_fifo_name);
-	XFREE(d->feedback_fifo_name);
+	g_free(d->glob_fifo_name);
+	g_free(d->cmd_fifo_name);
+	g_free(d->feedback_fifo_name);
 
 	d->glob_fifo_name = d->cmd_fifo_name = d->feedback_fifo_name = NULL;
 
@@ -321,13 +322,13 @@ bool display_cleanup(struct display* d) {
 
 
 /* Fork a new child with a pty. */
-bool pty_child_fork(struct pty_child* c, int new_stdin_fd, int new_stdout_fd, int new_stderr_fd) {
+gboolean pty_child_fork(struct pty_child* c, gint new_stdin_fd, gint new_stdout_fd, gint new_stderr_fd) {
 
-	int pty_slave_fd = -1;
-	int pty_master_fd = -1;
-	const char* pty_slave_name = NULL;
+	gint pty_slave_fd = -1;
+	gint pty_master_fd = -1;
+	const gchar* pty_slave_name = NULL;
 
-	bool ok = true;
+	gboolean ok = TRUE;
 
 	c->a.argv[0] = c->name;
 
@@ -340,7 +341,7 @@ bool pty_child_fork(struct pty_child* c, int new_stdin_fd, int new_stdout_fd, in
 		viewglob_fatal("Could not open master side of pty");
 		c->pid = -1;
 		c->fd = -1;
-		return false;
+		return FALSE;
 	}
 
 	/* Turn on non-blocking -- this is used in rxvt, but I can't see why,
@@ -353,7 +354,7 @@ bool pty_child_fork(struct pty_child* c, int new_stdin_fd, int new_stdout_fd, in
 	switch ( c->pid = fork() ) {
 		case -1:
 			viewglob_error("Could not fork process");
-			return false;
+			return FALSE;
 			/*break;*/
 
 		case 0:
@@ -416,20 +417,20 @@ bool pty_child_fork(struct pty_child* c, int new_stdin_fd, int new_stdout_fd, in
 
 	if (!wait_for_data(c->fd)) {
 		viewglob_error("Did not receive go-ahead from child shell");
-		ok = false;
+		ok = FALSE;
 	}
 
 	return ok;
 }
 
 
-bool pty_child_terminate(struct pty_child* c) {
-	bool ok = true;
+gboolean pty_child_terminate(struct pty_child* c) {
+	gboolean ok = TRUE;
 
 	/* Close the pty to the sandbox shell (if valid). */
 	if ( (c->fd != -1) && (close(c->fd) == -1) ) {
 		viewglob_error("Could not close pty to child");
-		ok = false;
+		ok = FALSE;
 	}
 	
 	/* Terminate and wait the child's process. */
@@ -443,7 +444,7 @@ bool pty_child_terminate(struct pty_child* c) {
 				break;
 			default:
 				viewglob_error("Could not terminate child");
-				ok = false;
+				ok = FALSE;
 				break;
 		}
 	}
@@ -452,14 +453,14 @@ bool pty_child_terminate(struct pty_child* c) {
 }
 
 
-static bool wait_for_data(int fd) {
+static gboolean wait_for_data(gint fd) {
 	fd_set fd_set_write;
 
 	FD_ZERO(&fd_set_write);
 	FD_SET(fd, &fd_set_write);
 	if ( select(fd + 1, NULL, &fd_set_write, NULL, NULL) == -1 )
-		return false;
-	return true;
+		return FALSE;
+	return TRUE;
 }
 
 

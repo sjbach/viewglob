@@ -19,7 +19,7 @@
 
 #include "config.h"
 
-#include "common.h"
+#include "vgseer-common.h"
 #include "viewglob-error.h"
 #include "actions.h"
 
@@ -52,27 +52,27 @@ Action action_queue(Action o) {
 	Action result = A_NOP;
 
 	/* Don't need a queue for these. */
-	static bool send_lost = false;
-	static bool send_cmd = false;
-	static bool send_pwd = false;
-	static bool disable = false;
-	static bool do_exit = false;
+	static gboolean send_lost = FALSE;
+	static gboolean send_cmd = FALSE;
+	static gboolean send_pwd = FALSE;
+	static gboolean disable = FALSE;
+	static gboolean do_exit = FALSE;
 
 	switch (o) {
 
 		case (A_SEND_CMD):
-			send_lost = false;
-			send_cmd = true;
+			send_lost = FALSE;
+			send_cmd = TRUE;
 			break;
 
 		case (A_SEND_PWD):
-			send_cmd = false;
-			send_pwd = true;
+			send_cmd = FALSE;
+			send_pwd = TRUE;
 			break;
 
 		case (A_SEND_LOST):
-			send_cmd = false;
-			send_lost = true;
+			send_cmd = FALSE;
+			send_lost = TRUE;
 			break;
 
 		case (A_SEND_UP):
@@ -85,30 +85,30 @@ Action action_queue(Action o) {
 			break;
 
 		case (A_DISABLE):
-			disable = true;
+			disable = TRUE;
 			break;
 
 		case (A_EXIT):
-			do_exit = true;
+			do_exit = TRUE;
 			break;
 
 		case (A_POP):
 			if (do_exit)
 				result = A_EXIT;
 			else if (disable) {
-				disable = false;
+				disable = FALSE;
 				result = A_DISABLE;
 			}
 			else if (send_lost) {
-				send_lost = false;
+				send_lost = FALSE;
 				result = A_SEND_LOST;
 			}
 			else if (send_pwd) {
-				send_pwd = false;
+				send_pwd = FALSE;
 				result = A_SEND_PWD;
 			}
 			else if (send_cmd) {
-				send_cmd = false;
+				send_cmd = FALSE;
 				result = A_SEND_CMD;
 			}
 			else
@@ -127,7 +127,7 @@ static void al_push(Action a) {
 	struct action_list* new_al;
 	struct action_list* iter;
 
-	new_al = XMALLOC(struct action_list, 1);
+	new_al = g_new(struct action_list, 1);
 	new_al->a = a;
 	new_al->next = NULL;
 
@@ -151,7 +151,7 @@ static Action al_pop(void) {
 		a = al->a;
 		tmp = al;
 		al = al->next;
-		XFREE(tmp);
+		g_free(tmp);
 	}
 	else
 		a = A_DONE;

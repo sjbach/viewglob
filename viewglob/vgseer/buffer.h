@@ -27,13 +27,14 @@
 #include "circular.h"
 #include "sequences.h"
 
-BEGIN_C_DECLS
+G_BEGIN_DECLS
 
 void prepend_holdover(Buffer* b);
-void create_holdover(Buffer* b, bool write_later);
+void create_holdover(Buffer* b, gboolean write_later);
 void eat_segment(Buffer* b);
 void pass_segment(Buffer* b);
 
-END_C_DECLS
+G_END_DECLS
 
 #endif /* !BUFFER_H */
+

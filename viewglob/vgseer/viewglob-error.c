@@ -31,41 +31,41 @@
 #  include "config.h"
 #endif
 
-#include "common.h"
+#include "vgseer-common.h"
 #include "viewglob-error.h"
 #include <string.h>
 
-char *program_name = NULL;
+gchar *program_name = NULL;
 
-static void error(int exit_status, const char *mode, const char *message) {
+static void error(gint exit_status, const gchar *mode, const gchar *message) {
 	fprintf (stderr, "%s: %s: %s.\n", program_name, mode, message);
 
 	if (exit_status >= 0)
 		exit(exit_status);
 }
 
-void viewglob_warning(const char *message) {
+void viewglob_warning(const gchar *message) {
 	error(-1, "warning", message);
 }
 
-void viewglob_error(const char *message) {
+void viewglob_error(const gchar *message) {
 	error(-1, "ERROR", message);
 }
 
-void viewglob_fatal(const char *message) {
+void viewglob_fatal(const gchar *message) {
 	error(EXIT_FAILURE, "FATAL", message);
 }
 
 
-void set_program_name(const char *path) {
+void set_program_name(const gchar *path) {
 	if (!program_name)
 		program_name = basename(path);
 }
 
 /* Takes a sanitized path and returns the base (file) name. */
-char* basename(const char* path) {
-	char* base;
-	int slash_pos;
+gchar* basename(const gchar* path) {
+	gchar* base;
+	gint slash_pos;
 	size_t path_length;
 
 	path_length = strlen(path);
@@ -75,16 +75,16 @@ char* basename(const char* path) {
 
 	if (slash_pos == 0 && path_length == 1) {
 		/* It's root. */
-		base = XMALLOC(char, 2);
+		base = g_new(gchar, 2);
 		(void)strcpy(base, "/");
 	}
 	else if (slash_pos == -1) {
 		/* It's a relative path at pwd. */
-		base = XMALLOC(char, path_length + 1);
+		base = g_new(gchar, path_length + 1);
 		(void)strcpy(base, path);
 	}
 	else {
-		base = XMALLOC(char, path_length - slash_pos);
+		base = g_new(gchar, path_length - slash_pos);
 		(void)strcpy(base, path + slash_pos + 1);
 	}
 
@@ -93,12 +93,12 @@ char* basename(const char* path) {
 
 
 /* Return the position of the previous c from pos, or -1 if not found. */
-int find_prev(const char* string, int pos, char c) {
-	bool found = false;
+gint find_prev(const gchar* string, gint pos, gchar c) {
+	gboolean found = FALSE;
 
 	while (pos >= 0) {
 		if ( *(string + pos) == c ) {
-			found = true;
+			found = TRUE;
 			break;
 		}
 		pos--;

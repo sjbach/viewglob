@@ -24,12 +24,12 @@
 #  include "config.h"
 #endif
 
-#include <glib.h>
+#include "vgseer-common.h"
 
 G_BEGIN_DECLS
 
-bool tc_setraw(void);
-bool tc_restore(void);
+gboolean tc_setraw(void);
+gboolean tc_restore(void);
 
 G_END_DECLS
 

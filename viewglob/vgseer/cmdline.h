@@ -24,42 +24,42 @@
 #  include "config.h"
 #endif
 
-#include "common.h"
+#include "vgseer-common.h"
 
-BEGIN_C_DECLS
+G_BEGIN_DECLS
 
 #define CMD_STEP_SIZE 512
 
 struct cmdline {
-	char* command;
-	int pos;
-	int length;
-	bool rebuilding;
+	gchar* command;
+	gint pos;
+	gint length;
+	gboolean rebuilding;
 };
 
 /* For cmd_wipe_in_line() -- maintain order of enumeration */
 enum direction { D_RIGHT = 0, D_LEFT = 1, D_ALL = 2 };
 
-bool  cmd_init(void);
-bool  cmd_alloc(void);
-bool  cmd_clear(void);
+gboolean  cmd_init(void);
+gboolean  cmd_alloc(void);
+gboolean  cmd_clear(void);
 
-void  cmd_enqueue_overwrite(char c, bool preserve_cret);
-void  cmd_dequeue_overwrite(void);
-bool  cmd_has_queue(void);
-bool  cmd_write_queue(void);
-void  cmd_clear_queue(void);
+void      cmd_enqueue_overwrite(gchar c, gboolean preserve_cret);
+void      cmd_dequeue_overwrite(void);
+gboolean  cmd_has_queue(void);
+gboolean  cmd_write_queue(void);
+void      cmd_clear_queue(void);
 
-bool  cmd_whitespace_to_left(char* holdover);
-bool  cmd_whitespace_to_right(void);
+gboolean  cmd_whitespace_to_left(gchar* holdover);
+gboolean  cmd_whitespace_to_right(void);
 
-bool  cmd_overwrite_char(char c, bool preserve_cret);
-bool  cmd_insert_chars(char c, int n);
-bool  cmd_del_chars(int n);
-bool  cmd_wipe_in_line(enum direction dir);
-bool  cmd_backspace(int n);
-void  cmd_del_trailing_crets(void);
+gboolean  cmd_overwrite_char(gchar c, gboolean preserve_cret);
+gboolean  cmd_insert_chars(gchar c, gint n);
+gboolean  cmd_del_chars(gint n);
+gboolean  cmd_wipe_in_line(enum direction dir);
+gboolean  cmd_backspace(gint n);
+void      cmd_del_trailing_crets(void);
 
-END_C_DECLS
+G_END_DECLS
 
 #endif	/* !CMDLINE_H */

@@ -1,3 +1,17 @@
+2005-03-09 17:19  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* xmalloc.c, misc.c: removed
+	* actions.c, actions.h, buffer.c, buffer.h, children.c, children.h
+	  circular.h, cmdline.c, cmdline.h, sanitize.c, sanitize.h, seer.c,
+	  seer.h, sequences.c, sequences.h, tc_setraw.c, tc_setraw.h,
+	  vgseer-common.h, viewglob-error.c, viewglob-error.h:
+	  Porting seer to GLib.
+
+2005-03-08 22:00  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* Almost all files:
+	  Make system reorganization in preparation for code reorganization.
+
 2005-03-07 17:25  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* AUTHORS, NEWS, README, README.ms, configure.ac, viewglob.1,

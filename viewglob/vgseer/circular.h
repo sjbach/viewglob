@@ -27,7 +27,9 @@
 #  include "config.h"
 #endif
 
-BEGIN_C_DECLS
+#include "vgseer-common.h"
+
+G_BEGIN_DECLS
 
 /* Status of a match attempt. */
 typedef enum _MatchStatus MatchStatus;
@@ -48,6 +50,9 @@ enum process_level {
 
 typedef struct _Buffer Buffer;
 struct _Buffer {
+//	char* name;
+//	int fd_in;
+//	int fd_out;
 	char* buf;
 	size_t size;            /* malloc'd size. */
 	size_t filled;          /* The amount of the buffer that is actually filled. */
@@ -56,11 +61,11 @@ struct _Buffer {
 	enum process_level pl;
 	MatchStatus status;     /* Result of the last check_seqs() attempt. */
 	char* holdover;         /* Segment leftover from the last read. */
-	bool ho_written;        /* The holdover was written already (and thus should be skipped. */
+	gboolean ho_written;        /* The holdover was written already (and thus should be skipped. */
 	size_t skip;            /* Number of bytes to skip writing (already written). */
 };
 
 
-END_C_DECLS
+G_END_DECLS
 
 #endif /* !CIRCULAR_H */

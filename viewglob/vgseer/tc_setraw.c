@@ -10,17 +10,17 @@
 
 */
 
-#include "common.h"
+#include "vgseer-common.h"
 #include "tc_setraw.h"
 #include <termios.h>
 
 static struct termios tbufsave;
-static bool have_attr = false;
+static gboolean have_attr = FALSE;
 
-bool tc_setraw(void) {
+gboolean tc_setraw(void) {
 	struct termios tbuf;
-	long disable;
-	int i;
+	glong disable;
+	gint i;
 
 #ifdef _POSIX_VDISABLE
 	disable = _POSIX_VDISABLE;
@@ -32,7 +32,7 @@ bool tc_setraw(void) {
 #endif
 	if (tcgetattr(STDIN_FILENO, &tbuf) == -1)
 		goto failure;
-	have_attr = true;
+	have_attr = TRUE;
 	tbufsave = tbuf;
 	tbuf.c_cflag &= ~(CSIZE | PARENB);
 	tbuf.c_cflag |= CS8;
@@ -45,21 +45,21 @@ bool tc_setraw(void) {
 	tbuf.c_cc[VTIME] = 0;
 	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &tbuf) == -1)
 		goto failure;
-	return true;
+	return TRUE;
 
 failure:
-	return false;
+	return FALSE;
 }
 
 
-bool tc_restore(void) {
+gboolean tc_restore(void) {
 	if (have_attr) {
 		if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &tbufsave) == -1)
 			goto failure;
 	}
-	return true;
+	return TRUE;
 
 failure:
-	return false;
+	return FALSE;
 }
 

@@ -24,7 +24,7 @@
 #  include "config.h"
 #endif
 
-BEGIN_C_DECLS
+G_BEGIN_DECLS
 
 typedef enum _Action Action;
 enum _Action {
@@ -47,6 +47,6 @@ enum _Action {
 /* Prototypes */
 Action action_queue(Action o);
 
-END_C_DECLS
+G_END_DECLS
 
 #endif /* !ACTIONS_H */

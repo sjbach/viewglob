@@ -24,11 +24,11 @@
 #  include "config.h"
 #endif
 
-#include "common.h"
+#include "vgseer-common.h"
 #include "circular.h"
 #include "buffer.h"
 
-BEGIN_C_DECLS
+G_BEGIN_DECLS
 
 #define IN_PROGRESS(x) ( (!(x & MS_MATCH)) && (x & MS_IN_PROGRESS))
 
@@ -58,9 +58,9 @@ void  enable_all_seqs(enum process_level pl);
 void  clear_seqs(enum process_level pl);
 
 /* These are common to cmdline and sequences, but gotta put them somewhere. */
-int find_prev_cret(int);
-int find_next_cret(int);
+gint find_prev_cret(gint);
+gint find_next_cret(gint);
 
-END_C_DECLS
+G_END_DECLS
 
 #endif	/* !SEQUENCES_H */

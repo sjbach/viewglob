@@ -24,54 +24,41 @@
 #  include "config.h"
 #endif
 
-#include "common.h"
+#include "vgseer-common.h"
 #include "sequences.h"
 #include "cmdline.h"
 #include "children.h"
 
-BEGIN_C_DECLS
+G_BEGIN_DECLS
 
 struct options {
 	enum shell_type shell_type;
-	char* executable;
-	char* display;
-	char* config_file;
-	char* shell_out_file;
-	char* term_out_file;
-	char* init_loc;
-	char* expand_command;
-	bool  smart_insert;
+	gchar* executable;
+	gchar* init_loc;
+	gchar* expand_command;
+	gboolean  smart_insert;
 };
 
 
 /* Data structure for the user's shell. */
 struct user_shell {
-	char* pwd;
+	gchar* pwd;
 	struct cmdline cmd;
 	struct pty_child s;
 
-	int shell_transcript_fd;
-	int term_transcript_fd;
-
-	bool term_size_changed;
-	bool expect_newline;
+	gboolean term_size_changed;
+	gboolean expect_newline;
 };
 
 
 /* Data structure for seer's sandbox shell. */
 struct glob_shell {
-	char* glob_cmd;
+	gchar* glob_cmd;
 	struct pty_child s;
 };
 
 
-/* Prototypes */
-void sigwinch_handler(int signum);
-void sigterm_handler(int signum);
-bool handle_signals(void);
-void handler(int signum);
-size_t strlen_safe(const char* string);
-
-END_C_DECLS
+G_END_DECLS
 
 #endif /* !SEER_H */
+

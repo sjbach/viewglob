@@ -19,7 +19,7 @@
 
 #include "config.h"
 
-#include "common.h"
+#include "vgseer-common.h"
 #include "viewglob-error.h"
 #include "buffer.h"
 
@@ -44,7 +44,7 @@ void prepend_holdover(Buffer* b) {
 	/* If needed, grow the buffer. */
 	if (b->filled + ho_len > b->size) {
 		DEBUG((df, "reallocing %d bytes more\n", ho_len));
-		b->buf = XREALLOC(char, b->buf, b->size + ho_len);
+		b->buf = g_renew(char, b->buf, b->size + ho_len);
 		b->size += ho_len;
 	}
 
@@ -55,7 +55,7 @@ void prepend_holdover(Buffer* b) {
 
 	/* Copy over the holdover and then free it. */
 	memcpy(b->buf, b->holdover, ho_len);
-	XFREE(b->holdover);
+	g_free(b->holdover);
 	b->holdover = NULL;
 
 	b->filled += ho_len;
@@ -79,7 +79,7 @@ void prepend_holdover(Buffer* b) {
 }
 
 
-void create_holdover(Buffer* b, bool write_later) {
+void create_holdover(Buffer* b, gboolean write_later) {
 
 	if (!b->n) {
 		viewglob_warning("b->n == 0");
@@ -91,7 +91,7 @@ void create_holdover(Buffer* b, bool write_later) {
 	}
 
 	/* Copy and null-terminate. */
-	b->holdover = XMALLOC(char, b->n);
+	b->holdover = g_new(char, b->n);
 	strncpy(b->holdover, b->buf + b->pos, (b->n - 1));
 	*(b->holdover + (b->n - 1)) = '\0';
 
@@ -102,11 +102,11 @@ void create_holdover(Buffer* b, bool write_later) {
 		/* Writing of this segment is postponed until after the next buffer read. */
 		DEBUG((df, "writing this holdover later.\n"));
 		b->filled -= (b->n - 1);
-		b->ho_written = false;
+		b->ho_written = FALSE;
 	}
 	else {
 		DEBUG((df, "writing this holdover now.\n"));
-		b->ho_written = true;
+		b->ho_written = TRUE;
 	}
 
 	#if DEBUG_ON
