@@ -42,7 +42,7 @@ struct _DListing {
 	gboolean force_show_all;
 	GtkWidget* menu;
 
-	GtkWidget* file_table;  /* TODO file_box */
+	GtkWidget* file_box;
 };
 
 
@@ -53,7 +53,6 @@ void       dlisting_update_file_counts(DListing* dl, const GString* selected_cou
 void       dlisting_reset_file_count_label(DListing* dl);
 gboolean   dlisting_is_new(const DListing* dl);
 void       dlisting_free(DListing* dl);
-void       dlisting_file_table_update(DListing* dl);
 
 G_END_DECLS
 

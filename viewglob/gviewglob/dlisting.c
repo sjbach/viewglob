@@ -58,7 +58,7 @@ static gint show_context_menu(GtkWidget *widget, GdkEvent *event) {
 static void show_hidden_files_activate_handler(GtkMenuItem* menu_item, DListing* dl) { 
 
 	DEBUG((df, "in show_hidden_blah: %s\n", dl->name->str));
-	file_box_set_show_hidden_files(FILE_BOX(dl->file_table), TRUE);
+	file_box_set_show_hidden_files(FILE_BOX(dl->file_box), TRUE);
 	dl->force_show_hidden = TRUE;
 	dlisting_reset_file_count_label(dl);
 	gtk_widget_set_state(GTK_WIDGET(menu_item), GTK_STATE_INSENSITIVE);
@@ -68,7 +68,7 @@ static void show_hidden_files_activate_handler(GtkMenuItem* menu_item, DListing*
 static void show_all_files_activate_handler(GtkMenuItem* menu_item, DListing* dl) { 
 
 	DEBUG((df, "in show_all_blah: %s\n", dl->name->str));
-	file_box_set_file_display_limit(FILE_BOX(dl->file_table), 0);
+	file_box_set_file_display_limit(FILE_BOX(dl->file_box), 0);
 	dl->force_show_all = TRUE;
 	dlisting_reset_file_count_label(dl);
 	gtk_widget_set_state(GTK_WIDGET(menu_item), GTK_STATE_INSENSITIVE);
@@ -105,7 +105,7 @@ DListing* dlisting_new(const GString* name, gint rank, const GString* selected_c
 	new_dl->total_count = g_string_new(total_count->str);
 	new_dl->hidden_count = g_string_new(hidden_count->str);
 
-	new_dl->file_table = NULL;
+	new_dl->file_box = NULL;
 
 	new_dl->force_show_hidden = v.show_hidden_files;
 	new_dl->force_show_all = v.file_display_limit == 0;
@@ -155,15 +155,15 @@ DListing* dlisting_new(const GString* name, gint rank, const GString* selected_c
 	gtk_widget_show(file_num_label);
 
 	/* Create the file box. */
-	new_dl->file_table = file_box_new();
-	/* wrap_box_set_optimal_width(WRAP_BOX(new_dl->file_table), width - 4); */
-	file_box_set_optimal_width(FILE_BOX(new_dl->file_table), width);
-	file_box_set_show_hidden_files(FILE_BOX(new_dl->file_table), new_dl->force_show_hidden);    /* TODO does a dl need force_show_hidden variable? */
-	file_box_set_file_display_limit(FILE_BOX(new_dl->file_table), v.file_display_limit);        /* Or a file_display_limit variable? */
-	wrap_box_set_hspacing(WRAP_BOX(new_dl->file_table), 5);
-	wrap_box_set_line_justify(WRAP_BOX(new_dl->file_table), GTK_JUSTIFY_LEFT);
-	gtk_box_pack_start(GTK_BOX(vbox), new_dl->file_table, FALSE, FALSE, 0);
-	gtk_widget_show(new_dl->file_table);
+	new_dl->file_box = file_box_new();
+	/* wrap_box_set_optimal_width(WRAP_BOX(new_dl->file_box), width - 4); */
+	file_box_set_optimal_width(FILE_BOX(new_dl->file_box), width);
+	file_box_set_show_hidden_files(FILE_BOX(new_dl->file_box), new_dl->force_show_hidden);    /* TODO does a dl need force_show_hidden variable? */
+	file_box_set_file_display_limit(FILE_BOX(new_dl->file_box), v.file_display_limit);        /* Or a file_display_limit variable? */
+	wrap_box_set_hspacing(WRAP_BOX(new_dl->file_box), 5);
+	wrap_box_set_line_justify(WRAP_BOX(new_dl->file_box), GTK_JUSTIFY_LEFT);
+	gtk_box_pack_start(GTK_BOX(vbox), new_dl->file_box, FALSE, FALSE, 0);
+	gtk_widget_show(new_dl->file_box);
 
 	/* Setup the context menu. */
 	menu = gtk_menu_new();
@@ -302,7 +302,7 @@ void dlisting_free(DListing* dl) {
 
 	gtk_widget_hide(dl->widget);
 
-	file_box_destroy(FILE_BOX(dl->file_table));  /* This also gets the FItems associated with the file box. */
+	file_box_destroy(FILE_BOX(dl->file_box));  /* This also gets the FItems associated with the file box. */
 	gtk_widget_destroy(dl->widget);              /* Should take care of everything else. */
 
 

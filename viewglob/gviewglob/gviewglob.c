@@ -349,7 +349,7 @@ static void process_glob_data(const gchar* buff, gsize bytes, Exhibit* e) {
 						dlisting_mark(dl, dir_rank);
 
 						/* We'll be reading these next, at which point they'll be remarked. */
-						file_box_unmark_all(FILE_BOX(dl->file_table));
+						file_box_unmark_all(FILE_BOX(dl->file_box));
 					}
 					else {
 						/* It's a new DListing. */
@@ -413,7 +413,7 @@ static void process_glob_data(const gchar* buff, gsize bytes, Exhibit* e) {
 			case RS_FILE_NAME:
 				string = read_string(buff, &pos, bytes, '\n', &ho, &completed);
 				if (completed) {
-					file_box_add(FILE_BOX(dl->file_table), string, type, selection);
+					file_box_add(FILE_BOX(dl->file_box), string, type, selection);
 					g_string_free(string, TRUE);
 
 					advance = TRUE;
@@ -450,7 +450,7 @@ static void exhibit_rearrange_and_show(Exhibit* e) {
 		/* DEBUG((df, " - %s\n", dl->name->str)); */
 
 		/* Remove files from this DListing that we didn't see. */
-		file_box_cull(FILE_BOX(dl->file_table));
+		file_box_cull(FILE_BOX(dl->file_box));
 
 		/* Ordering */
 		if (dlisting_is_new(dl)) {
@@ -570,9 +570,9 @@ static void listing_resize_event(GtkWidget* display_vbox, GtkAllocation* allocat
 	e->optimal_width = allocation->width;
 	for (dl_iter = e->dl_slist; dl_iter; dl_iter = g_slist_next(dl_iter)) {
 		dl = dl_iter->data;
-		if (dl->file_table)
-			file_box_set_optimal_width(FILE_BOX(dl->file_table), allocation->width - 4);
-			//wrap_box_set_optimal_width(WRAP_BOX(dl->file_table), allocation->width - 4);
+		if (dl->file_box)
+			file_box_set_optimal_width(FILE_BOX(dl->file_box), allocation->width - 4);
+			//wrap_box_set_optimal_width(WRAP_BOX(dl->file_box), allocation->width - 4);
 	}
 
 }
@@ -591,9 +591,9 @@ static gboolean configure_event(GtkWidget* window, GdkEventConfigure* event, Exh
 	if (event->width != last_width) {
 		for (dl_iter = e->dl_slist; dl_iter; dl_iter = g_slist_next(dl_iter)) {
 			dl = dl_iter->data;
-			if (dl->file_table)
-				file_box_set_optimal_width(FILE_BOX(dl->file_table), event->width - 34);
-				//wrap_box_set_optimal_width(WRAP_BOX(dl->file_table), event->width - 34);
+			if (dl->file_box)
+				file_box_set_optimal_width(FILE_BOX(dl->file_box), event->width - 34);
+				//wrap_box_set_optimal_width(WRAP_BOX(dl->file_box), event->width - 34);
 		}
 		last_width = event->width;
 	}
