@@ -19,3 +19,4 @@
 #*.gif -k 'b'
 *.png -k 'b'
 *.xcf -k 'b'
+*.xpm -k 'b'
