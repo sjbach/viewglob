@@ -59,16 +59,18 @@
 # include <sys/ioctl.h>
 #endif
 
-#if DEBUG_ON
-FILE* df;
-#endif
-
-
-/* Data structure for the user's shell. */
-struct user_shell {
+/* Structure for the state of the user's shell. */
+struct user_state {
 	struct cmdline cmd;
 	struct pty_child proc;
 	enum shell_type type;
+};
+
+/* Structure for data relevant to communicating with vgd. */
+struct vgd_stuff {
+	int fd;
+	Connection* shell_conn;
+	Connection* term_conn;
 };
 
 /* Program argument options. */
@@ -88,24 +90,31 @@ static void     clean_fail(struct pty_child* new_lamb);
 static gsize    strlen_safe(const gchar* string);
 
 /* Program flow. */
-static gboolean fork_shell(struct user_shell* u, gchar* init_loc);
-static void     main_loop(struct user_shell* u, gint vgd_fd);
-static void     io_activity(Connection** bufs, struct user_shell* u);
+static gboolean fork_shell(struct user_state* u, gchar* init_loc);
+static void     main_loop(struct user_state* u, gint vgd_fd);
+static void     io_activity(struct user_state* u, Connection* shell_conn,
+		Connection* term_conn, struct vgd_stuff* vgd);
+static gboolean action_loop(struct user_state* u, struct vgd_stuff* vgd);
+static void     child_wait(struct user_state* u);
+static void     process_shell(Connection* cnct, struct user_state* u);
+static void     process_sandbox(Connection* cnct, struct user_state* u);
+static void     process_terminal(Connection* cnct, struct user_state* u);
+static void     process_vgd(struct vgd_stuff* vgd, struct user_state* u);
 static gboolean scan_for_newline(const Connection* b);
-static void     process_input(Connection* b, struct user_shell* u);
+static void     scan_sequences(Connection* b, struct user_state* u);
 
 /* Communication with vgd. */
-static gint connect_to_vgd(gchar* server, gint port, struct user_shell* u,
-		gchar* expand_opts);
-static void send_order(struct display* d, Action a);
+static gint     connect_to_vgd(gchar* server, gint port,
+		struct user_state* u, gchar* expand_opts);
 static gboolean set_term_title(gint fd, gchar* title);
+static gchar*   escape_filename(gchar* name, struct user_state* u,
+		enum process_level pl, gchar* holdover);
 
 static void parse_args(gint argc, gchar** argv, struct options* opts);
 static void report_version(void);
 
-static gboolean send_term_size(gint shell_fd);
-static void     disable_viewglob(void);
-
+static void send_term_size(gint shell_fd);
+static void disable_vgseer(struct vgd_stuff* vgd);
 
 /* This controls whether or not vgseer should actively do stuff. */
 gboolean vgseer_enabled = TRUE;
@@ -120,9 +129,9 @@ gint main(gint argc, gchar** argv) {
 	struct options opts = { ST_BASH, NULL, NULL, NULL };
 
 	/* Almost everything revolves around this. */
-	struct user_shell u;
+	struct user_state u;
 
-	gint   vgd_fd;
+	gint vgd_fd;
 	
 	/* Set the program name. */
 	gchar* basename = g_path_get_basename(argv[0]);
@@ -133,10 +142,6 @@ gint main(gint argc, gchar** argv) {
 	u.proc.pid = -1;
 	u.proc.fd = -1;
 	args_init(&(u.proc.a));
-
-#if DEBUG_ON
-	df = fopen("/tmp/out1.txt", "w");
-#endif
 
 	/* Fill in the opts struct. */
 	parse_args(argc, argv, &opts);
@@ -161,19 +166,17 @@ gint main(gint argc, gchar** argv) {
 		clean_fail(NULL);
 	}
 
-	/* Send the terminal size to the user's shell. */
-	if (!send_term_size(u.proc.fd)) {
-		g_critical("Could not set terminal size");
-		clean_fail(NULL);
-	}
-
+	send_term_size(u.proc.fd);
 	if (!tc_setraw()) {
 		g_critical("Could not set raw terminal mode: %s", g_strerror(errno));
 		clean_fail(NULL);
 	}
 
 	/* Enter main_loop. */
+	cmd_init(&u.cmd);
+	init_seqs(u.type);
 	main_loop(&u, vgd_fd);
+	cmd_free(&u.cmd);
 
 	/* Done -- Turn off terminal raw mode. */
 	if (!tc_restore()) {
@@ -187,14 +190,14 @@ gint main(gint argc, gchar** argv) {
 }
 
 
-static gint connect_to_vgd(gchar* server, gint port, struct user_shell* u,
+static gint connect_to_vgd(gchar* server, gint port, struct user_state* u,
 		gchar* expand_opts) {
 	struct sockaddr_in sa;
 	gint fd;
 	gchar string[100];
 
 	/* Convert the pid into a string. */
-	if (snprintf(string, sizeof(string), "%ld", (long) getpid()) <= 0) {
+	if (snprintf(string, sizeof(string), "%ld", (glong) getpid()) <= 0) {
 		g_critical("Couldn't convert the pid to a string");
 		return -1;
 	}
@@ -242,7 +245,8 @@ static gint connect_to_vgd(gchar* server, gint port, struct user_shell* u,
 		goto fail;
 
 	/* Set the terminal title. */
-	if (snprintf(string, sizeof(string), "vgseer%ld", (long) getpid()) <= 0) {
+	if (snprintf(string, sizeof(string), "vgseer%ld",
+				(glong) getpid()) <= 0) {
 		g_critical("Couldn't convert the pid to a string");
 		goto fail;
 	}
@@ -307,7 +311,6 @@ static void parse_args(gint argc, gchar** argv, struct options* opts) {
 			case 'v':
 			case 'V':
 				report_version();
-				exit(EXIT_SUCCESS);
 				break;
 			case 'x':
 				/* Vgexpand parameters */
@@ -335,150 +338,149 @@ static void parse_args(gint argc, gchar** argv, struct options* opts) {
 static void report_version(void) {
 	printf("seer %s\n", VERSION);
 	printf("Released %s\n", VG_RELEASE_DATE);
-	return;
+	exit(EXIT_SUCCESS);
 }
 
 
 /* Main program loop. */
-static void main_loop(struct user_shell* u, gint vgd_fd) {
+static void main_loop(struct user_state* u, gint vgd_fd) {
 
 	g_return_if_fail(u != NULL);
 	g_return_if_fail(vgd_fd >= 0);
 
-	Action a;
-	gboolean in_loop = TRUE;
 	gchar common_buf[BUFSIZ];
 
 	/* Terminal reads from stdin and writes to the shell. */
-	Connection term_connection;
-	connection_init(&term_connection, CT_TERMINAL, STDIN_FILENO, u->proc.fd,
+	Connection term_conn;
+	connection_init(&term_conn, CT_TERMINAL, STDIN_FILENO, u->proc.fd,
 			common_buf, sizeof(common_buf), PL_TERMINAL);
 
 	/* Shell reads from shell and writes to stdout. */
-	Connection shell_connection;
-	connection_init(&shell_connection, CT_USER_SHELL, u->proc.fd, STDOUT_FILENO,
+	Connection shell_conn;
+	connection_init(&shell_conn, CT_USER_SHELL, u->proc.fd, STDOUT_FILENO,
 			common_buf, sizeof(common_buf), PL_EXECUTING);
 
-	Connection* connections[3];
-	connections[0] = &term_connection;
-	connections[1] = &shell_connection;
-	connections[2] = NULL;
+	/* When dealing with vgd we have to access data from a bunch of
+	   different places. */
+	struct vgd_stuff vgd;
+	vgd.fd = vgd_fd;
+	vgd.term_conn = &term_conn;
+	vgd.shell_conn = &shell_conn;
 
-	/* Initialize working command line and sequence buffer. */
-	cmd_init(&u->cmd);
-
-	/* Initialize the sequences. */
-	init_seqs(u->type);
-
+	gboolean in_loop = TRUE;
 	while (in_loop) {
 
-		io_activity(connections, u);
+		io_activity(u, &shell_conn, &term_conn, &vgd);
 
-		if (term_size_changed && !send_term_size(u->proc.fd))
-			clean_fail(NULL);
+		if (term_size_changed)
+			send_term_size(u->proc.fd);
 
-		DEBUG2((df, "cmd: %s\t\t(%s)\n", u->cmd.data->str, u->cmd.pwd));
+		child_wait(u);
 
-		for (a = action_queue(A_DEQUEUE); in_loop && (a != A_DONE);
-				a = action_queue(A_DEQUEUE)) {
-			switch (a) {
-				case A_EXIT:
-					DEBUG((df, "::d_exit::\n"));
-					in_loop = FALSE;
-					break;
-
-				case A_DISABLE:
-					DEBUG((df, "::disable::\n"));
-					disable_viewglob();
-					break;
-
-				case A_SEND_CMD:
-					DEBUG((df, "::send cmd::\n"));
-					if (vgseer_enabled) {
-						if (!put_param(vgd_fd, P_CMD, u->cmd.data->str)) {
-							g_critical("Couldn't send command line to vgd");
-							clean_fail(NULL);
-						}
-					}
-					break;
-
-				case A_SEND_PWD:
-					DEBUG((df, "::send pwd::\n"));
-					if (vgseer_enabled) {
-						if (!put_param(vgd_fd, P_PWD, u->cmd.pwd)) {
-							g_critical("Couldn't send PWD to vgd");
-							clean_fail(NULL);
-						}
-					}
-					break;
-
-				case A_TOGGLE:
-					DEBUG((df, "::toggle::\n"));
-					if (vgseer_enabled) {
-						if (!put_param(vgd_fd, P_ORDER, "toggle")) {
-							g_critical("Couldn't send toggle to vgd");
-							clean_fail(NULL);
-						}
-					}
-					break;
-
-				case A_REFOCUS:
-					DEBUG((df, "A_REFOCUS"));
-					if (vgseer_enabled) {
-						if (!put_param(vgd_fd, P_ORDER, "refocus")) {
-							g_critical("Couldn't send refocus to vgd");
-							clean_fail(NULL);
-						}
-					}
-					break;
-
-				case A_SEND_LOST:
-				case A_SEND_UP:
-				case A_SEND_DOWN:
-				case A_SEND_PGUP:
-				case A_SEND_PGDOWN:
-					DEBUG((df, "::send order::\n"));
-					//if (vgseer_enabled && display_running(disp))
-					//	send_order(disp, a);
-					break;
-
-				case A_DONE:
-					DEBUG((df, "::d_done::\n"));
-					break;
-
-				default:
-					g_critical("Received unexpected action");
-					clean_fail(NULL);
-					break;
-			}
-		}
+		in_loop = action_loop(u, &vgd);
 	}
 
-	cmd_free(&u->cmd);
-	connection_free(&shell_connection);
-	connection_free(&term_connection);
+	connection_free(&shell_conn);
+	connection_free(&term_conn);
 }
 
 
-/* Wait for input from the user's shell and the terminal.  If the
-   terminal receives input, it's passed along pretty much untouched.  If
-   the shell receives input, it's examined thoroughly with process_input. */
-static void io_activity(Connection** connections, struct user_shell* u) {
+/* Act on all queued actions.  Most of these involve making calls to
+   vgd. */
+static gboolean action_loop(struct user_state* u, struct vgd_stuff* vgd) {
 
-	fd_set fdset_read;
-	gboolean data_converted;
-	gint i;
-	gint max_fd = -1;
-	Connection* cnt;
-	gssize nread;
+	Action a;
+	enum parameter param = P_NONE;
+	gchar* value = NULL;
 
-	/* Check to see if the user shell has been closed.  This is necessary
-	   because for some reason if the shell opens an external program such
-       as gvim and then exits, it will sit and wait for the external
-	   program to end (even if it's not attached to the terminal).  I
-	   don't know why.  So here we force an exit if the user's shell
-	   closes, and the external programs can stay open. */
-	//FIXME
+	for (a = action_queue(A_DEQUEUE); a != A_DONE;
+			a = action_queue(A_DEQUEUE)) {
+
+		switch (a) {
+			case A_EXIT:
+				return FALSE;
+				/*break;*/
+
+			case A_DISABLE:
+				disable_vgseer(vgd);
+				break;
+
+			case A_SEND_CMD:
+				param = P_CMD;
+				value = u->cmd.data->str;
+				break;
+
+			case A_SEND_PWD:
+				param = P_PWD;
+				value = u->cmd.pwd;
+				break;
+
+			case A_TOGGLE:
+				param = P_ORDER;
+				value = "toggle";
+				break;
+
+			case A_REFOCUS:
+				param = P_ORDER;
+				value = "refocus";
+				break;
+
+			case A_SEND_LOST:
+				param = P_STATUS;
+				value = "lost";
+				break;
+
+			case A_SEND_UP:
+				param = P_ORDER;
+				value = "up";
+				break;
+
+			case A_SEND_DOWN:
+				param = P_ORDER;
+				value = "down";
+				break;
+
+			case A_SEND_PGUP:
+				param = P_ORDER;
+				value = "pgup";
+				break;
+
+			case A_SEND_PGDOWN:
+				param = P_ORDER;
+				value = "pgdown";
+				break;
+
+			case A_DONE:
+				break;
+
+			default:
+				g_return_val_if_reached(FALSE);
+				break;
+		}
+
+		/* Write the parameter to vgd. */
+		if (vgseer_enabled && param != P_NONE && value != NULL) {
+			if (!put_param(vgd->fd, param, value)) {
+				g_critical("Couldn't send parameter to vgd");
+				clean_fail(NULL);
+			}
+			param = P_NONE;
+			value = NULL;
+		}
+	}
+
+	return TRUE;
+}
+
+
+/* Check to see if the user shell has been closed.  This is necessary
+   because for some reason if the shell opens an external program such as
+   gvim and then exits, it will sit and wait for the external program to end
+   (even if it's not attached to the terminal).  I don't know why.  So here
+   we force an exit if the user's shell closes, and the external programs
+   can stay open. */
+static void child_wait(struct user_state* u) {
+
 	switch (waitpid(u->proc.pid, NULL, WNOHANG)) {
 		case 0:
 			break;
@@ -486,132 +488,175 @@ static void io_activity(Connection** connections, struct user_shell* u) {
 		default:
 			u->proc.pid = -1;    /* So we don't try to kill it in cleanup. */
 			action_queue(A_EXIT);
-			return;
-			/*break;*/
-	}
-
-	/* Iterate through the connections and setup the polling. */
-	FD_ZERO(&fdset_read);
-	for (i = 0; (cnt = connections[i]); i++) {
-		FD_SET(cnt->fd_in, &fdset_read);
-		max_fd = MAX(cnt->fd_in, max_fd);
-	}
-
-	/* Poll for output from the buffers. */
-	if (hardened_select(max_fd + 1, &fdset_read, -1) == -1) {
-		g_critical("Problem while waiting for input: %s", g_strerror(errno));
-		clean_fail(NULL);
-	}
-
-	// FIXME if vgseer_disabled, should still eat bad segments (PS1).
-
-	/* Iterate through the connections and process those which are ready. */
-	for (i = 0; (cnt = connections[i]); i++) {
-		if (FD_ISSET(cnt->fd_in, &fdset_read)) {
-
-			/* Prepend holdover from last read on this connection. */
-			prepend_holdover(cnt);
-
-			/* Read in from the connection. */
-			switch (hardened_read(cnt->fd_in, cnt->buf + cnt->filled, cnt->size,
-						&nread)) {
-				case IOR_OK:
-					cnt->filled += nread;
-					break;
-
-				case IOR_ERROR:
-					if (errno == EIO) {
-						DEBUG((df, "~~1~~"));
-						action_queue(A_EXIT);
-					}
-					else {
-						g_critical("Read problem from %s: %s",
-								connection_type_str(cnt->type), g_strerror(errno));
-						clean_fail(NULL);
-					}
-					return;
-					/*break;*/
-
-				case IOR_EOF:
-					DEBUG((df, "~~1~~"));
-					action_queue(A_EXIT);
-					return;
-					/*break;*/
-				default:
-					g_return_if_reached();
-					/*break;*/
-			}
-
-			/* Process the buffer. */
-			if (vgseer_enabled)
-				process_input(cnt, u);
-
-			/* Look for a newline.  If one is found, then a match of a
-			   newline/carriage return in the shell's output (which extends
-			   past the end of the command- line) will be interpreted as
-			   command execution.  Otherwise, they'll be interpreted as a
-			   command wrap.  This is a heuristic (I can't see a guaranteed
-			   way to relate shell input to output); in my testing, it works
-			   very well for a person typing at a shell (i.e. 1 char length
-			   buffers), but less well when text is pasted in (i.e. multichar
-			   length buffers).  Ideas for improvement are welcome. */
-			if (vgseer_enabled && cnt->pl == PL_TERMINAL)
-				u->cmd.expect_newline = scan_for_newline(cnt);
-
-
-			/* Write out the full buffer. */
-			if (cnt->filled) { 
-				switch (write_all(cnt->fd_out, cnt->buf + cnt->skip,
-							cnt->filled - cnt->skip)) {
-					case IOR_OK:
-						break;
-					case IOR_ERROR:
-						g_critical("Problem writing for %s: %s",
-								connection_type_str(cnt->type), g_strerror(errno));
-						clean_fail(NULL);
-						break;
-					default:
-						g_return_if_reached();
-				}
-			}
-		}
+			break;
 	}
 }
 
 
-static void process_input(Connection* b, struct user_shell* u) {
+/* Wait for input and then do something about it. */
+static void io_activity(struct user_state* u, Connection* shell_conn,
+		Connection* term_conn, struct vgd_stuff* vgd) {
+
+	g_return_if_fail(u != NULL);
+	g_return_if_fail(shell_conn != NULL);
+	g_return_if_fail(term_conn != NULL);
+	g_return_if_fail(vgd != NULL);
+
+	fd_set rset;
+	gint max_fd = -1;
+
+	/* Setup polling. */
+	FD_ZERO(&rset);
+	FD_SET(shell_conn->fd_in, &rset);
+	FD_SET(term_conn->fd_in, &rset);
+	max_fd = MAX(shell_conn->fd_in, term_conn->fd_in);
+	if (vgseer_enabled && vgd->fd != -1) {
+		FD_SET(vgd->fd, &rset);
+		max_fd = MAX(max_fd, vgd->fd);
+	}
+
+	/* Wait for readable data. */
+	//FIXME set a limit to see what happens
+	if (hardened_select(max_fd + 1, &rset, -1) == -1) {
+		g_critical("Problem while waiting for input: %s", g_strerror(errno));
+		clean_fail(NULL);
+	}
+
+	if (FD_ISSET(shell_conn->fd_in, &rset))
+		process_shell(shell_conn, u);
+	if (FD_ISSET(term_conn->fd_in, &rset))
+		process_terminal(term_conn, u);
+	if (FD_ISSET(vgd->fd, &rset))
+		process_vgd(vgd, u);
+	// FIXME remote shell
+}
+
+
+static void process_shell(Connection* cnct, struct user_state* u) {
+
+	/* Prepend holdover from last shell read. */
+	prepend_holdover(cnct);
+
+	if (!connection_read(cnct))
+		clean_fail(NULL);
+
+	/* The scan commences whether vgseer_enabled is true or not, since
+	   some viewglob sequences need to be removed or they interfere
+	   with certain terminals. */
+	scan_sequences(cnct, u);
+
+	if (!connection_write(cnct))
+		clean_fail(NULL);
+}
+
+
+static void process_sandbox(Connection* cnct, struct user_state* u) {
+	g_return_if_reached();
+}
+
+
+static void process_terminal(Connection* cnct, struct user_state* u) {
+
+	/* Prepend holdover from last terminal read. */
+	prepend_holdover(cnct);
+
+	if (!connection_read(cnct))
+		clean_fail(NULL);
+
+	if (vgseer_enabled) {
+		scan_sequences(cnct, u);
+
+		/* Look for a newline.  If one is found, then a match of a
+		   newline/carriage return in the shell's output (which extends
+		   past the end of the command line) will be interpreted as
+		   command execution.  Otherwise, they'll be interpreted as a
+		   command wrap.  This is a heuristic (I can't see a guaranteed
+		   way to relate shell input to output); in my testing, it works
+		   very well for a person typing at a shell (i.e. 1 char length
+		   buffers), but less well when text is pasted in (i.e. multichar
+		   length buffers). */
+		u->cmd.expect_newline = scan_for_newline(cnct);
+	}
+
+	if (!connection_write(cnct))
+		clean_fail(NULL);
+}
+
+
+static void process_vgd(struct vgd_stuff* vgd, struct user_state* u) {
+
+	g_return_if_fail(vgd != NULL);
+	g_return_if_fail(u != NULL);
+
+	enum parameter param;
+	gchar* value;
+
+	if (!get_param(vgd->fd, &param, &value)) {
+		g_critical("Out of sync with vgd");
+		disable_vgseer(vgd);
+		return;
+	}
+
+	switch (param) {
+
+		case P_FILE:
+			value = escape_filename(value, u, vgd->shell_conn->pl,
+					vgd->term_conn->holdover);
+			break;
+
+		case P_KEY:
+			g_return_if_fail(strlen(value) == 1);
+			value = g_strdup(value);
+			break;
+
+		case P_EOF:
+			g_critical("vgd closed its connection");
+			disable_vgseer(vgd);
+			return;
+			/*break;*/
+
+		default:
+			g_print("(%d)", param);
+			g_return_if_reached();
+	}
+
+	/* Now pretend this vgd data came from the terminal. */
+	prepend_holdover(vgd->term_conn);
+	strncpy(vgd->term_conn->buf + vgd->term_conn->filled, value,
+			vgd->term_conn->size - vgd->term_conn->filled);
+	vgd->term_conn->filled += strlen(value);
+
+	if (vgseer_enabled) {
+		scan_sequences(vgd->term_conn, u);
+		u->cmd.expect_newline = scan_for_newline(vgd->term_conn);
+	}
+
+	if (!connection_write(vgd->term_conn))
+		clean_fail(NULL);
+
+	g_free(value);
+}
+
+
+/* Scan through the newly read data for sequences. */
+static void scan_sequences(Connection* b, struct user_state* u) {
 
 	while (b->pos + b->seglen < b->filled) {
 
-		DEBUG((df, "Pos at \'%c\' (%d of %d)\n", b->buf[b->pos], b->pos,
-					b->filled - 1));
-
 		cmd_del_trailing_CRs(&u->cmd);
 
-		if (! IN_PROGRESS(b->status))
+		if (!IN_PROGRESS(b->status))
 			enable_all_seqs(b->pl);
-
-		#if DEBUG_ON
-			gsize i;
-			DEBUG((df, "process level: %d checking: --%c %d--\n(", b->pl,
-						b->buf[b->pos + b->seglen], b->pos + b->seglen));
-			for (i = 0; i < b->seglen + 1; i++)
-				DEBUG((df, "%c", b->buf[b->pos + i]));
-			DEBUG((df, ") |%d|\n", b->seglen + 1));
-		#endif
 
 		check_seqs(b, &u->cmd);
 
-		if (b->status & MS_MATCH) {
-			DEBUG((df, "*MS_MATCH*\n"));
+		if (b->status & MS_MATCH)
 			clear_seqs(b->pl);
-		}
-		else if (b->status & MS_IN_PROGRESS) {
-			DEBUG((df, "*MS_IN_PROGRESS*\n"));
+
+		else if (b->status & MS_IN_PROGRESS)
 			b->seglen++;
-		}
+
 		else if (b->status & MS_NO_MATCH) {
-			DEBUG((df, "*MS_NO_MATCH*\n"));
 			if (b->pl == PL_AT_PROMPT) {
 				cmd_overwrite_char(&u->cmd, b->buf[b->pos], FALSE);
 				action_queue(A_SEND_CMD);
@@ -619,22 +664,14 @@ static void process_input(Connection* b, struct user_shell* u) {
 			b->pos++;
 			b->seglen = 0;
 		}
-
-		DEBUG((df, "<<<%s>>> {%d = %c}\n", u->cmd.data->str, u->cmd.pos,
-					*(u->cmd.data->str + u->cmd.pos)));
-		DEBUG((df, "length: %d\tpos: %d\tstrlen: %d\n\n", u->cmd.data->len,
-					u->cmd.pos, strlen(u->cmd.data->str)));
 	}
 
 	/* We might be in the middle of matching a sequence, but we're at the end
 	   of the buffer.  If it's PL_AT_PROMPT, we've gotta write what we've got
 	   since it goes straight to the user.  Otherwise, it's safe to make a
 	   holdover to attach to the next buffer read. */
-	if (IN_PROGRESS(b->status)) {
-		DEBUG((df, "seglen = %d, pos = %d, filled = %d\n", b->seglen,
-					b->pos, b->filled));
+	if (IN_PROGRESS(b->status))
 		create_holdover(b, b->pl != PL_AT_PROMPT);
-	}
 }
 
 
@@ -662,26 +699,25 @@ static gboolean scan_for_newline(const Connection* b) {
 }
 
 
-/* Convert the data in src_b into an escaped filename (maybe) and copy it into
-   dest_b. */
-//FIXME have the escaping be decided later (so we don't have to pass in pl or u)
-#if 0
-static gboolean convert_to_filename(enum process_level pl, gchar* holdover, Connection* src_b, Connection* dest_b) {
-	gsize i, j;
+/* Smart-escape (or not) the given filename.  This is a kludgy function --
+   it requires peeking at the terminal's holdover, the shell's process
+   level, and the command line's current state. */
+static gchar* escape_filename(gchar* name, struct user_state* u,
+		enum process_level pl, gchar* holdover) {
 	gchar c;
+	gchar* retval;
 
-	i = strlen("file:");  /* Point to the first character after the ':'. */
-	j = 0;
+	GString* escaped = g_string_new(NULL);
 
 	if (pl == PL_AT_PROMPT) {
 		/* If there's no whitespace to the left, add a space at the
 		   beginning. */
 		if (!cmd_whitespace_to_left(&u->cmd, holdover))
-			*(dest_b->buf + j++) = ' ';
+			escaped = g_string_append_c(escaped, ' ');
 	}
 
 	/* Fill in the filename. */
-	for (; i < src_b->filled && (c = *(src_b->buf + i)) != '\0'; i++) {
+	while ( (c = *name) != '\0') {
 		switch(c) {
 			/* Shell special characters. */
 			case '*':
@@ -711,56 +747,30 @@ static gboolean convert_to_filename(enum process_level pl, gchar* holdover, Conn
 			case '\\':
 			case '!':
 				if (pl == PL_AT_PROMPT)
-					*(dest_b->buf + j++) = '\\';
+					escaped = g_string_append_c(escaped, '\\');
 			default:
-				*(dest_b->buf + j++) = c;
+				escaped = g_string_append_c(escaped, c);
 				break;
 		}
+		name++;
 	}
 
 	if (pl == PL_AT_PROMPT) {
 		/* If there's no whitespace to the right, add a space at the end. */
 		if (!cmd_whitespace_to_right(&u->cmd))
-			*(dest_b->buf + j++) = ' ';
+			escaped = g_string_append_c(escaped, ' ');
 	}
 
-	dest_b->filled = j;
-	return TRUE;
-}
-#endif
-
-
-static void send_order(struct display* d, Action a) {
-	gchar* order;
-
-	switch (a) {
-		case A_SEND_LOST:
-			order = "order:lost\n";
-			break;
-		case A_SEND_UP:
-			order = "order:up\n";
-			break;
-		case A_SEND_DOWN:
-			order = "order:down\n";
-			break;
-		case A_SEND_PGUP:
-			order = "order:pgup\n";
-			break;
-		case A_SEND_PGDOWN:
-			order = "order:pgdown\n";
-			break;
-		default:
-			g_return_if_reached();
-			return;
-	}
-
-//	if (!hardened_write(d->cmd_fifo_fd, order, strlen(order)))
-//		disable_viewglob();
+	retval = escaped->str;
+	g_string_free(escaped, FALSE);
+	return retval;
 }
 
 
-static void disable_viewglob(void) {
+/* Close connection with vgd and disable most functionality. */
+static void disable_vgseer(struct vgd_stuff* vgd) {
 	g_printerr("(viewglob disabled)");
+	(void) close(vgd->fd);
 	vgseer_enabled = FALSE;
 }
 
@@ -795,24 +805,23 @@ static gboolean set_term_title(gint fd, gchar* title) {
 
 
 /* Send the window size to the given terminal. */
-static gboolean send_term_size(gint shell_fd) {
+static void send_term_size(gint shell_fd) {
 	struct winsize size;
 
 	if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &size) == -1) {
 		g_critical("TIOCGWINSZ ioctl() call failed: %s", g_strerror(errno));
-		return FALSE;
+		clean_fail(NULL);
 	}
 	else if (ioctl(shell_fd, TIOCSWINSZ, &size) == -1) {
 		g_critical("TIOCSWINSZ ioctl() call failed: %s", g_strerror(errno));
-		return FALSE;
+		clean_fail(NULL);
 	}
 
 	term_size_changed = FALSE;
-	return TRUE;
 }
 
 
-static gboolean fork_shell(struct user_shell* u, gchar* init_loc) {
+static gboolean fork_shell(struct user_state* u, gchar* init_loc) {
 
 	g_return_val_if_fail(u != NULL, FALSE);
 	g_return_val_if_fail(init_loc != NULL, FALSE);
@@ -934,6 +943,7 @@ fail:
 }
 
 
+/* Exit with failure, but try to cleanup first. */
 static void clean_fail(struct pty_child* new_lamb) {
 	static struct pty_child* shell_stored;
 

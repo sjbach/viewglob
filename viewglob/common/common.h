@@ -39,8 +39,6 @@
 #include <stdlib.h>
 #include <glib.h>
 
-#define DEBUG_ON 1
-
 #if HAVE_ERRNO_H
 #  include <errno.h>
 #endif
@@ -56,17 +54,5 @@ extern int errno;
 #define STREQ(a, b) (strcmp ((a), (b)) == 0)
 
 #define PERM_FILE	(S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)
-
-#if DEBUG_ON
-#include <stdio.h>
-extern FILE* df;
-#define DEBUG2(blah)	do {					\
-						fprintf blah;	\
-						fflush(df);			\
-					} while (0)
-#define DEBUG(blah)	do { } while(0)
-#else
-#define DEBUG(blah)	do { } while(0)
-#endif
 
 #endif /* !COMMON_H */

@@ -23,14 +23,14 @@
 
 #include "common.h"
 #include "connection.h"
+#include "actions.h"
+#include "hardened-io.h"
 
 #include <string.h>
 
 static gchar* connection_types[CT_COUNT] = {
 	"user shell",
-	"sandbox shell",
 	"terminal",
-	"vgd",
 };
 
 /* Initialize the given Connection. */
@@ -113,7 +113,7 @@ void prepend_holdover(Connection* b) {
 }
 
 
-/* Cut the segment under investigation into a holdover, to be attached to
+/* Cut the segment under investigation into a holdover, to be prepended to
    a later buffer. */
 void create_holdover(Connection* b, gboolean write_later) {
 
@@ -162,5 +162,72 @@ void pass_segment(Connection* b) {
 
 	b->pos += b->seglen + 1;
 	b->seglen = 0;
+}
+
+
+/* Read in from the connection. */
+gboolean connection_read(Connection* cnct) {
+
+	g_return_val_if_fail(cnct != NULL, FALSE);
+
+	gssize nread;
+	gboolean ok = TRUE;
+
+	switch (hardened_read(cnct->fd_in, cnct->buf + cnct->filled,
+				cnct->size - cnct->filled, &nread)) {
+		case IOR_OK:
+			cnct->filled += nread;
+			break;
+
+		case IOR_ERROR:
+			if (errno == EIO) {
+				/* Assume EIO is a gentle error. */
+				action_queue(A_EXIT);
+			}
+			else {
+				g_critical("Read problem from %s: %s",
+						connection_type_str(cnct->type), g_strerror(errno));
+				ok = FALSE;
+			}
+			break;
+
+		case IOR_EOF:
+			action_queue(A_EXIT);
+			break;
+
+		default:
+			g_return_val_if_reached(FALSE);
+	}
+
+	return ok;
+}
+
+
+/* Write out the full (filled) buffer. */
+gboolean connection_write(Connection* cnct) {
+
+	g_return_val_if_fail(cnct != NULL, FALSE);
+
+	gboolean ok = TRUE;
+
+	if (cnct->filled) { 
+		switch (write_all(cnct->fd_out, cnct->buf + cnct->skip,
+					cnct->filled - cnct->skip)) {
+
+			case IOR_OK:
+				break;
+
+			case IOR_ERROR:
+				g_critical("Problem writing for %s: %s",
+						connection_type_str(cnct->type), g_strerror(errno));
+				ok = FALSE;
+				break;
+
+			default:
+				g_return_val_if_reached(FALSE);
+		}
+	}
+
+	return ok;
 }
 

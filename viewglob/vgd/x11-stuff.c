@@ -40,10 +40,6 @@
 
 #include <glib.h>
 
-#if DEBUG_ON
-extern FILE* df;
-#endif
-
 static void activate_window (Display* disp, Window win, gboolean switch_desktop);
 static Window *get_client_list (Display *disp, gulong *size);
 static gchar* get_property (Display* disp, Window win, Atom xa_prop_type, gchar* prop_name, gulong* size);
@@ -80,7 +76,7 @@ static void activate_window(Display* disp, Window win, gboolean switch_desktop) 
 			XA_CARDINAL, "_NET_WM_DESKTOP", NULL)) == NULL) {
 		if ((desktop = (gulong*)get_property(disp, win,
 				XA_CARDINAL, "_WIN_WORKSPACE", NULL)) == NULL) {
-			DEBUG((df, "Cannot find desktop ID of the window.\n"));
+			g_warning("Cannot find desktop ID of the window");
 		}
 	}
 
@@ -88,7 +84,7 @@ static void activate_window(Display* disp, Window win, gboolean switch_desktop) 
 		if (client_msg(disp, DefaultRootWindow(disp), 
 					"_NET_CURRENT_DESKTOP", 
 					*desktop, 0, 0, 0, 0) != EXIT_SUCCESS) {
-			DEBUG((df, "Cannot switch desktop.\n"));
+			g_warning("Cannot switch desktop");
 		}
 		g_free(desktop);
 	}
@@ -143,12 +139,12 @@ static gchar* get_property (Display* disp, Window win,
 	if (XGetWindowProperty(disp, win, xa_prop_name, 0, MAX_PROPERTY_VALUE_LEN / 4, False,
 			xa_prop_type, &xa_ret_type, &ret_format,
 			&ret_nitems, &ret_bytes_after, &ret_prop) != Success) {
-		DEBUG((df, "Cannot get %s property.\n", prop_name));
+		g_warning("Cannot get %s property", prop_name);
 		return NULL;
 	}
   
 	if (xa_ret_type != xa_prop_type) {
-		DEBUG((df, "Invalid type of %s property.\n", prop_name));
+		g_warning("Invalid type of %s property", prop_name);
 		XFree(ret_prop);
 		return NULL;
 	}

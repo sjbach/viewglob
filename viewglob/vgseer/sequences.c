@@ -397,11 +397,6 @@ void init_seqs(enum shell_type shell) {
 	seq_groups[PL_TERMINAL].seqs[13].length = strlen(NAV_CATCH_ALL_SEQ);
 	seq_groups[PL_TERMINAL].seqs[13].func = seq_nav_catch_all;
 	*/
-
-#if DEBUG_ON
-	for (i = 0; i < seq_groups[PL_AT_PROMPT].n; i++)
-		DEBUG((df,"%s (%d)\n", seq_groups[PL_AT_PROMPT].seqs[i].name, seq_groups[PL_AT_PROMPT].seqs[i].length));
-#endif
 }
 
 
@@ -632,14 +627,12 @@ static void init_zsh_seqs(void) {
 
 
 static void disable_seq(Sequence* sq) {
-	DEBUG((df, " (disabled)\n"));
 	sq->enabled = FALSE;
 }
 
 
 void enable_all_seqs(enum process_level pl) {
 	gint i;
-	DEBUG((df, "(all enabled)\n"));
 	for (i = 0; i < seq_groups[pl].n; i++)
 		seq_groups[pl].seqs[i].enabled = TRUE;
 }
@@ -660,8 +653,6 @@ void check_seqs(Connection* b, struct cmdline* cmd) {
 
 		b->status |= check_seq(c, seq);
 		if (b->status & MS_MATCH) {
-
-			DEBUG((df, "Matched seq \"%s\" (%d)\n", seq->name, i));
 
 			/* Execute the pattern match function and analyze. */
 			effect = (*(seq->func))(b, cmd);
@@ -685,12 +676,8 @@ static MatchStatus check_seq(gchar c, Sequence* sq) {
 	MatchStatus result = MS_IN_PROGRESS;
 
 	/* This sequence is disabled right now -- assume no match. */
-	if (sq->enabled == FALSE) {
-		DEBUG((df, "\t~~~"));
+	if (sq->enabled == FALSE)
 		return MS_NO_MATCH;
-	}
-
-	DEBUG((df, "\t<%s> %d %d\n", sq->seq, sq->pos, sq->length));
 
 	switch (sq->seq[sq->pos]) {
 		case DIGIT_C:
@@ -769,7 +756,6 @@ static void analyze_effect(MatchEffect effect, Connection* b, struct cmdline* cm
 	switch (effect) {
 
 		case ME_ERROR:
-			DEBUG((df, "**ERROR**\n"));
 			/* Clear the command line to indicate we're out of sync,
 			   and wait for the next PS1. */
 			cmd_clear(cmd);
@@ -778,16 +764,13 @@ static void analyze_effect(MatchEffect effect, Connection* b, struct cmdline* cm
 			break;
 
 		case ME_NO_EFFECT:
-			DEBUG((df, "**NO_EFFECT**\n"));
 			break;
 
 		case ME_CMD_EXECUTED:
-			DEBUG((df, "**CMD_EXECUTED**\n"));
 			b->pl = PL_EXECUTING;
 			break;
 
 		case ME_CMD_STARTED:
-			DEBUG((df, "**CMD_STARTED**\n"));
 			if (cmd->rebuilding)
 				cmd->rebuilding = FALSE;
 			else
@@ -797,19 +780,16 @@ static void analyze_effect(MatchEffect effect, Connection* b, struct cmdline* cm
 			break;
 
 		case ME_CMD_REBUILD:
-			DEBUG((df, "**CMD_REBUILD**\n"));
 			cmd->rebuilding = TRUE;
 			b->pl = PL_EXECUTING;
 			break;
 
 		case ME_PWD_CHANGED:
 			/* Send the new current directory. */
-			DEBUG((df, "**PWD_CHANGED**\n"));
 			action_queue(A_SEND_PWD);
 			break;
 
 		case ME_RPROMPT_STARTED:
-			DEBUG((df, "**RPROMPT_STARTED**\n"));
 			cmd->rebuilding = TRUE;
 			b->pl = PL_AT_RPROMPT;
 			break;
@@ -853,10 +833,9 @@ static MatchEffect seq_new_pwd(Connection* b, struct cmdline* cmd) {
 		g_free(cmd->pwd);
 
 	cmd->pwd = parse_printables(b->buf + b->pos, NEW_PWD_SEQ);
-	DEBUG((df, "new pwd: %s\n", cmd->pwd));
+
 	eat_segment(b);
 	return ME_PWD_CHANGED;
-
 }
 
 
@@ -1037,7 +1016,6 @@ static MatchEffect seq_term_cursor_up(Connection* b, struct cmdline* cmd) {
 
 	/* First try to find the ^M at the beginning of the wanted line. */
 	if (last_cr_p != NULL) {
-		DEBUG((df, "trying first\n"));
 
 		pos = cmd->data->str + cmd->pos;
 		for (i = 0; i < n + 1 && pos != NULL; i++)
@@ -1059,7 +1037,6 @@ static MatchEffect seq_term_cursor_up(Connection* b, struct cmdline* cmd) {
 
 	/* That failed, so now try to find the ^M at the end of the wanted line. */
 	if (next_cr_p != NULL) {
-		DEBUG((df, "trying second\n"));
 
 		pos = cmd->data->str + cmd->pos;
 		for (i = 0; i < n && pos != NULL; i++)
@@ -1130,8 +1107,6 @@ static MatchEffect seq_term_newline(Connection* b, struct cmdline* cmd) {
 	gchar* p;
 	MatchEffect effect;
 
-	DEBUG((df, "expect_newline: %d", cmd->expect_newline));
-
 	p = g_strstr_len(cmd->data->str + cmd->pos, cmd->data->len - cmd->pos, "\015");
 	if (p == NULL) {
 		if (cmd->expect_newline) {
@@ -1157,7 +1132,6 @@ static MatchEffect seq_term_newline(Connection* b, struct cmdline* cmd) {
 
 
 static MatchEffect seq_nav_up(Connection* b, struct cmdline* cmd) {
-	DEBUG((df, "seq_nav_up!\n"));
 	eat_segment(b);
 	action_queue(A_SEND_UP);
 	return ME_NO_EFFECT;
@@ -1165,7 +1139,6 @@ static MatchEffect seq_nav_up(Connection* b, struct cmdline* cmd) {
 
 
 static MatchEffect seq_nav_down(Connection* b, struct cmdline* cmd) {
-	DEBUG((df, "seq_nav_down!\n"));
 	eat_segment(b);
 	action_queue(A_SEND_DOWN);
 	return ME_NO_EFFECT;
@@ -1173,7 +1146,6 @@ static MatchEffect seq_nav_down(Connection* b, struct cmdline* cmd) {
 
 
 static MatchEffect seq_nav_pgup(Connection* b, struct cmdline* cmd) {
-	DEBUG((df, "seq_nav_pgup!\n"));
 	eat_segment(b);
 	action_queue(A_SEND_PGUP);
 	return ME_NO_EFFECT;
@@ -1181,7 +1153,6 @@ static MatchEffect seq_nav_pgup(Connection* b, struct cmdline* cmd) {
 
 
 static MatchEffect seq_nav_pgdown(Connection* b, struct cmdline* cmd) {
-	DEBUG((df, "seq_nav_pgdown!\n"));
 	eat_segment(b);
 	action_queue(A_SEND_PGDOWN);
 	return ME_NO_EFFECT;
@@ -1189,7 +1160,6 @@ static MatchEffect seq_nav_pgdown(Connection* b, struct cmdline* cmd) {
 
 
 static MatchEffect seq_nav_ctrl_g(Connection* b, struct cmdline* cmd) {
-	DEBUG((df, "seq_nav_ctrlg!\n"));
 
 	/* Let one of the Ctrl-Gs get read by the terminal. */
 	b->seglen--;
@@ -1201,7 +1171,6 @@ static MatchEffect seq_nav_ctrl_g(Connection* b, struct cmdline* cmd) {
 
 
 static MatchEffect seq_nav_toggle(Connection* b, struct cmdline* cmd) {
-	DEBUG((df, "seq_nav_toggle!\n"));
 	eat_segment(b);
 	action_queue(A_TOGGLE);
 	return ME_NO_EFFECT;
@@ -1209,7 +1178,6 @@ static MatchEffect seq_nav_toggle(Connection* b, struct cmdline* cmd) {
 
 
 static MatchEffect seq_nav_refocus(Connection* b, struct cmdline* cmd) {
-	DEBUG((df, "seq_nav_refocus!\n"));
 	eat_segment(b);
 	action_queue(A_REFOCUS);
 	return ME_NO_EFFECT;
@@ -1217,7 +1185,6 @@ static MatchEffect seq_nav_refocus(Connection* b, struct cmdline* cmd) {
 
 
 static MatchEffect seq_nav_disable(Connection* b, struct cmdline* cmd) {
-	DEBUG((df, "seq_nav_disable!\n"));
 	eat_segment(b);
 	action_queue(A_DISABLE);
 	return ME_NO_EFFECT;
@@ -1226,7 +1193,6 @@ static MatchEffect seq_nav_disable(Connection* b, struct cmdline* cmd) {
 
 /*
 static MatchEffect seq_nav_catch_all(Connection* b, struct cmdline* cmd) {
-	DEBUG((df, "seq_nav_catch_all!\n"));
 	eat_segment(b);
 	return ME_NO_EFFECT;
 }

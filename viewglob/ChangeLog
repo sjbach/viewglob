@@ -1,3 +1,10 @@
+2005-03-24 20:50  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* common.h: got read of DEBUG stuff
+	* vgd.c, x11-stuff.c, cmdline.c, connection.c, connection.h,
+	  sequences.c, vgseer.c:
+	  Vgseer now has full local functionality
+
 2005-03-24 13:56  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* vgseer.h: removed again

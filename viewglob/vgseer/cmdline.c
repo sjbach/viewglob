@@ -109,8 +109,6 @@ gboolean cmd_overwrite_char(struct cmdline* cmd, gchar c,
 		cmd->pos++;
 	}
 
-	DEBUG((df, "overwriting \'%c\'\n", c));
-
 	if (cmd->pos == cmd->data->len)
 		cmd->data = g_string_append_c(cmd->data, c);
 	else
@@ -148,7 +146,6 @@ gboolean cmd_wipe_in_line(struct cmdline* cmd, enum direction dir) {
 	switch (dir) {
 
 		case D_RIGHT:	/* Clear to right (in this line) */
-			DEBUG((df, "(right)\n"));
 			CR_r = g_strstr_len(
 					cmd->data->str + cmd->pos,
 					cmd->data->len - cmd->pos,
@@ -170,12 +167,10 @@ gboolean cmd_wipe_in_line(struct cmdline* cmd, enum direction dir) {
 			break;
 
 		case D_LEFT:	/* Clear to left -- I've never seen this happen. */
-			DEBUG((df, "(left)\n"));
 			g_return_val_if_reached(FALSE);
 			break;
 
 		case D_ALL:	/* Clear all (in this line). */
-			DEBUG((df, "(all)\n"));
 
 			/* Find the ^M to the right. */
 			CR_r = g_strstr_len(

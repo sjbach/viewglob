@@ -19,6 +19,7 @@
 
 
 #include <string.h>
+#include <stdio.h>
 
 /* Sockets */
 #include <sys/socket.h>
@@ -213,6 +214,8 @@ static void process_client(struct state* s, struct vgseer_client* v) {
 				v->pwd = g_strdup(value);
 				g_message("(%d) New pwd: %s", v->fd, v->pwd);
 				//FIXME update display (no reglob) if active
+				//put_param(v->fd, P_FILE, "/blah/blah/so/and/so");
+				//put_param(v->fd, P_KEY, "a");
 			}
 			break;
 
@@ -226,11 +229,11 @@ static void process_client(struct state* s, struct vgseer_client* v) {
 			break;
 
 		case P_ORDER:
-			g_message("(%d) Received P_ORDER", v->fd);
+			g_message("(%d) Received P_ORDER: %s", v->fd, value);
 			break;
 
 		case P_VGEXPAND_DATA:
-			g_message("(%d) Received vgexpand_data", v->fd);
+			g_message("(%d) Received vgexpand_data: %s", v->fd, value);
 			break;
 
 		case P_EOF:
