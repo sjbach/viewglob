@@ -1,6 +1,6 @@
 # Only the viewglob/gviewglob script should be in the path.
 # It calls the other programs.
-bin_SCRIPTS = viewglob gviewglob
+bin_SCRIPTS = viewglob
 
 viewglob: Makefile
 	rm -f viewglob.tmp
@@ -19,9 +19,6 @@ getopt.sh: Makefile
 		getopt.sh.in > getopt.sh.tmp
 	chmod a+x getopt.sh.tmp
 	mv getopt.sh.tmp getopt.sh
-
-gviewglob: Makefile
-	$(LN_S) viewglob gviewglob
 
 .zshrc: Makefile
 	cp -f init-viewglob.zshrc .zshrc
@@ -44,7 +41,7 @@ tc_setraw.viewglob.h: Makefile
 	rm -f tc_setraw.viewglob.h
 	patch -i tc_setraw.h.diff -o tc_setraw.viewglob.h tc_setraw.h
 
-CLEANFILES = viewglob gviewglob .zshrc getopt.sh ptutil.viewglob.c       \
+CLEANFILES = viewglob .zshrc getopt.sh ptutil.viewglob.c       \
              ptutil.viewglob.h tc_setraw.viewglob.c tc_setraw.viewglob.h
 
 pkgdata_DATA = init-viewglob.bashrc .zshrc
@@ -64,4 +61,13 @@ noinst_HEADERS = seer.h children.h cmdline.h sequences.h sanitize.h   \
 EXTRA_DIST = ptutil.h ptutil.h.diff ptutil.c ptutil.c.diff \
              tc_setraw.h tc_setraw.h.diff tc_setraw.c tc_setraw.c.diff \
              viewglob.in getopt.sh.in init-viewglob.bashrc init-viewglob.zshrc
+
+# Have the program also callable under the name gviewglob.
+install-exec-hook:
+	cd $(DESTDIR)$(bindir) && \
+	rm -f gviewglob && \
+	$(LN_S) viewglob gviewglob
+
+uninstall-local:
+	rm -f $(DESTDIR)$(bindir)/gviewglob
 
