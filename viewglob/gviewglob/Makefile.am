@@ -17,7 +17,7 @@ icons.h: Makefile
 	gdk-pixbuf-csource --raw --name=all_inline all.png >> icons.h
 
 CLEANFILES = icons.h
-noinst_HEADERS = gviewglob.h fitem.h dlisting.h wrap_box.h
+noinst_HEADERS = gviewglob.h fitem.h dlisting.h wrap_box.h common.h
 EXTRA_DIST = icon_16x16.png icon_24x24.png icon_32x32.png icon_36x36.png \
 			 gnome-fs-regular.png gnome-fs-directory.png \
 			 all.png hidden.png
