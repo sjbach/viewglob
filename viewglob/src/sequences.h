@@ -65,7 +65,7 @@ enum process_level {
 
 /* Sequence functions. */
 void         init_seqs(enum shell_type shell);
-MatchStatus  check_seqs(enum process_level pl, char c, MatchEffect* effect);
+MatchStatus  check_seqs(enum process_level pl, char c);
 void         enable_all_seqs(enum process_level pl);
 void         clear_seqs(enum process_level pl);
 

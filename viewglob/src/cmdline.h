@@ -41,6 +41,7 @@ struct cmdline {
 struct sequence_buff {
 	char string[SEMBUFF_STRING_SIZE];
 	int pos;
+	int length;
 };
 
 /* For cmd_wipe_in_line() -- maintain order of enumeration */
@@ -52,6 +53,7 @@ bool  cmd_clear(void);
 bool  seqbuff_clear(void);
 bool  seqbuff_enqueue(char c);
 bool  seqbuff_dequeue(int n, bool add_to_cmd);
+bool seqbuff_advance(bool add_to_cmd);
 
 bool  cmd_overwrite_char(char c, bool preserve_cret);
 bool  cmd_insert_chars(char c, int n);

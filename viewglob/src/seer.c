@@ -579,7 +579,6 @@ static bool process_input(char* buff, size_t* n) {
 static bool eat(char* buff, size_t* n, size_t* start) {
 	static MatchStatus status = MS_NO_MATCH;
 	size_t i;
-	MatchEffect effect = ME_NO_EFFECT;
 
 	for (i = *start; i < *n; i++) {
 
@@ -590,7 +589,7 @@ static bool eat(char* buff, size_t* n, size_t* start) {
 			enable_all_seqs(PL_EATING);
 
 		DEBUG((df, "eating: %c? <<%s>>\n", buff[i], u.seqbuff.string));
-		status = check_seqs(PL_EATING, buff[i], &effect);
+		status = check_seqs(PL_EATING, buff[i]);
 
 		if (status & MS_MATCH) {
 			/* Matched -- eat away the bad stuff. */
@@ -616,20 +615,20 @@ static bool eat(char* buff, size_t* n, size_t* start) {
 /* Attempt to match each sequence against u.seqbuff. */
 static bool match_loop(enum process_level pl) {
 	static MatchStatus status = MS_NO_MATCH;    /* Remember status of the last match_loop run. */
-	MatchEffect effect = ME_NO_EFFECT;
 	bool is_done = false;
 
 	while (true) {
 
-		if (u.seqbuff.pos > 0) {
+		if (u.seqbuff.length > 0) {
 			if (status != MS_IN_PROGRESS) {
 				/* We're not waiting on a specific match, so let's check all sequences. */
 				enable_all_seqs(pl);
 			}
 
-			DEBUG((df, "process level: %d checking: %c\n", pl, u.seqbuff.string[u.seqbuff.pos - 1]));
+			DEBUG((df, "process level: %d checking: --%c %d--", pl, u.seqbuff.string[u.seqbuff.pos - 1], u.seqbuff.pos));
+			DEBUG((df, " (%s) |%d|\n", u.seqbuff.string, u.seqbuff.length));
 
-			status = check_seqs(pl, u.seqbuff.string[u.seqbuff.pos - 1], &effect);
+			status = check_seqs(pl, u.seqbuff.string[u.seqbuff.pos - 1]);
 		}
 		else {
 			DEBUG((df, "...done trying to match\n"));
@@ -640,12 +639,18 @@ static bool match_loop(enum process_level pl) {
 		if (status == MS_NO_MATCH) {
 			/* Pop off the oldest character, adding it to u.cmd if the user is at the
 			   command line, and start over. */
-			seqbuff_dequeue(1, u.pl == PL_AT_PROMPT);
+			seqbuff_advance(u.pl == PL_AT_PROMPT);
 		}
 		else if (status == MS_IN_PROGRESS) {
-			/* There are potential matches, but no more characters to check against. */
-			is_done = true;
-			break;
+			if (u.seqbuff.pos == u.seqbuff.length) {
+				/* There are potential matches, but no more characters to check against. */
+				is_done = true;
+				break;
+			}
+			else {
+				/* So far so good, and there is more to look at. */
+				u.seqbuff.pos++;
+			}
 		}
 		else if (status & MS_MATCH) {
 			/* Pop off the matched sequence, and start over with any remaining characters.

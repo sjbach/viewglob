@@ -1,3 +1,10 @@
+2004-09-04 17:10  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* cmdline.c, cmdline.h, seer.c, sequences.c, sequences.h:
+	  - Removed a kludge.
+	  - Fixed a bug with seqbuff holding multiple sequences.
+	  - Improved zsh handling.
+
 2004-09-04 14:09  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* children.h, cmdline.c, cmdline.h, init-viewglob.bashrc,

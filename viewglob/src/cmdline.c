@@ -35,13 +35,11 @@ extern FILE *df;
 
 extern struct user_shell u;
 
-/* Kludge variable. */
-int chars_to_save = 0;
-
 /* Initialize working command line and sequence buffer. */
 bool cmd_init(void) {
 
 	/* Initialize u.seqbuff */
+	u.seqbuff.length = 0;
 	u.seqbuff.pos = 0;
 	memset(u.seqbuff.string, '\0', SEMBUFF_STRING_SIZE);
 
@@ -77,14 +75,15 @@ bool cmd_clear(void) {
 }
 
 bool seqbuff_clear(void) {
-	return seqbuff_dequeue(u.seqbuff.pos, false);
+	return seqbuff_dequeue(u.seqbuff.length, false);
 }
 
 
 bool seqbuff_enqueue(char c) {
-	u.seqbuff.string[u.seqbuff.pos] = c;
+	u.seqbuff.string[u.seqbuff.length] = c;
+	u.seqbuff.length++;
 	u.seqbuff.pos++;
-	if (u.seqbuff.pos >= SEMBUFF_STRING_SIZE) {
+	if (u.seqbuff.length >= SEMBUFF_STRING_SIZE) {
 		viewglob_error("End of u.seqbuff reached");
 		return false;
 	}
@@ -98,7 +97,7 @@ bool seqbuff_enqueue(char c) {
 bool seqbuff_dequeue(int n, bool add_to_cmd) {
 	int i;
 
-	if (n > u.seqbuff.pos)
+	if (n > u.seqbuff.length)
 		return false;
 
 	if (add_to_cmd) {
@@ -112,11 +111,46 @@ bool seqbuff_dequeue(int n, bool add_to_cmd) {
 
 	/* Overwrite the first n characters, and clear the duplicated characters
 	   at the end. */
-	n -= chars_to_save;   /* Kludge. */
-	memmove(u.seqbuff.string, u.seqbuff.string + n, u.seqbuff.pos - n);
-	memset(u.seqbuff.string + u.seqbuff.pos - n, '\0', n);
+	memmove(u.seqbuff.string, u.seqbuff.string + n, u.seqbuff.length - n);
+	memset(u.seqbuff.string + u.seqbuff.length - n, '\0', n);
+	u.seqbuff.length -= n;
 	u.seqbuff.pos -= n;
-	chars_to_save = 0;
+	if (u.seqbuff.pos < 0) {
+		viewglob_warning("seqbuff.pos < 0");
+		u.seqbuff.pos = 0;
+		return false;
+	}
+	return true;
+}
+
+
+/* Pop off the oldest character and bring pos back to the front of the buffer. */
+bool seqbuff_advance(bool add_to_cmd) {
+
+	if (u.seqbuff.length <= 0) {
+		viewglob_warning("seqbuff.length <= 0 in seqbuff_advance");
+		return false;
+	}
+
+	if (add_to_cmd) {
+		action_queue(A_SEND_CMD);
+		if (!cmd_overwrite_char(u.seqbuff.string[0], true)) {
+			viewglob_error("Could not overwrite char in u.cmd (seqbuff_advance)");
+			return false;
+		}
+	}
+
+	/* Remove the first character (from the beginning). */
+	memmove(u.seqbuff.string, u.seqbuff.string + 1, u.seqbuff.length - 1);
+	*(u.seqbuff.string + u.seqbuff.length - 1) = '\0';
+	u.seqbuff.length--;
+
+	/* Move pos to the start of the buffer. */
+	if (u.seqbuff.length)
+		u.seqbuff.pos = 1;
+	else
+		u.seqbuff.pos = 0;
+
 	return true;
 }
 
