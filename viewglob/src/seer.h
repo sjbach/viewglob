@@ -40,7 +40,7 @@ struct options {
 	char* config_file;
 	char* shell_out_file;
 	char* term_out_file;
-	char* init_command;
+	char* init_file;
 	char* expand_command;
 };
 

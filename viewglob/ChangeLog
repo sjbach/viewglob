@@ -1,3 +1,10 @@
+2004-08-25 17:30  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* init-viewglob.sh: removed
+	* init-viewglob.sh.in: added
+	* src/Makefile.am, children.c, children.h, seer.c, seer.h, viewglob.in:
+	  - No more ". ./blah/init-viewglob.sh" cluttering .bash_history.
+
 2004-08-25 00:41  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* dlisting.c, file_box.c, file_box.h, gviewglob.c, gviewglob.h,

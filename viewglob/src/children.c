@@ -60,8 +60,17 @@ static bool create_fifo(char* name) {
 	return ok;
 }
 
-/* Add a new argument to this display's argv. */
-void display_add_arg(struct display* d, char* new_arg) {
+
+/* Initialize the argument array struct. */
+void args_init(struct args* a) {
+	a->argv = XMALLOC(char*, 1);
+	*(a->argv) = NULL;
+	a->arg_count = 1;
+}
+
+
+/* Add a new argument to this argument struct. */
+void args_add(struct args* a, char* new_arg) {
 	char* temp;
 
 	if (new_arg) {
@@ -71,10 +80,10 @@ void display_add_arg(struct display* d, char* new_arg) {
 	else
 		temp = NULL;
 
-	d->argv = XREALLOC(char*, d->argv, d->args + 1);
-	d->argv = realloc(d->argv, sizeof(char*) * (d->args + 1));
-	*(d->argv + d->args) = temp;
-	d->args++;
+	a->argv = XREALLOC(char*, a->argv, a->arg_count + 1);
+	a->argv = realloc(a->argv, sizeof(char*) * (a->arg_count + 1));
+	*(a->argv + a->arg_count) = temp;
+	a->arg_count++;
 }
 
 
@@ -84,7 +93,7 @@ bool display_fork(struct display* d) {
 	char* pid_str;
 	bool ok = true;
 
-	d->argv[0] = d->name;
+	d->a.argv[0] = d->name;
 
 	/* Get the current pid and turn it into a string. */
 	pid_str = XMALLOC(char, 10 + 1);    /* 10 for the length of the pid, 1 for \0. */
@@ -112,13 +121,13 @@ bool display_fork(struct display* d) {
 		return false;
 
 	/* Add the fifo's to the arguments. */
-	display_add_arg(d, "-g");
-	display_add_arg(d, d->glob_fifo_name);
-	display_add_arg(d, "-c");
-	display_add_arg(d, d->cmd_fifo_name);
+	args_add(&(d->a), "-g");
+	args_add(&(d->a), d->glob_fifo_name);
+	args_add(&(d->a), "-c");
+	args_add(&(d->a), d->cmd_fifo_name);
 
-	/* Delimit with NULL. */
-	display_add_arg(d, NULL);
+	/* Delimit the args with NULL. */
+	args_add(&(d->a), NULL);
 
 	switch (d->pid = fork()) {
 		case -1:
@@ -128,7 +137,7 @@ bool display_fork(struct display* d) {
 		case 0:
 
 			/* Open the display. */
-			execvp(d->argv[0], d->argv);
+			execvp(d->a.argv[0], d->a.argv);
 
 			viewglob_error("Display exec failed");
 			viewglob_error("If viewglob does not exit, you should do so manually");
@@ -210,12 +219,13 @@ bool display_terminate(struct display* d) {
 bool pty_child_fork(struct pty_child* c, int new_stdin_fd, int new_stdout_fd, int new_stderr_fd) {
 
 	PTINFO* p;
-	char* new_argv[2] = { NULL, NULL };
-
 	bool ok = true;
 
-	new_argv[0] = c->name;
-	
+	c->a.argv[0] = c->name;
+
+	/* Delimit the args with NULL. */
+	args_add(&(c->a), NULL);
+
 	/* Setup a pty for the new shell. */
 	p = pt_open_master();
 	if (p == NULL) {
@@ -264,7 +274,7 @@ bool pty_child_fork(struct pty_child* c, int new_stdin_fd, int new_stdout_fd, in
 			}
 
 			(void)close(PT_GET_SLAVE_FD(p));
-			execvp(new_argv[0], new_argv);
+			execvp(c->name, c->a.argv);
 
 			child_fail:
 			viewglob_error("Exec failed");

@@ -77,19 +77,15 @@ bool viewglob_enabled;  /* This controls whether or not viewglob should actively
 int main(int argc, char* argv[]) {
 
 	int devnull_fd;
-
 	bool ok = true;
-	viewglob_enabled = true;
 
+	viewglob_enabled = true;
 	set_program_name(argv[0]);
 
 	/* Initialize program options. */
 	opts.executable = opts.display = opts.config_file = NULL;
 	opts.shell_out_file = opts.term_out_file = NULL;
-	opts.init_command = opts.expand_command = NULL;
-	disp.argv = XMALLOC(char*, 1);
-	*(disp.argv) = NULL;
-	disp.args = 1;
+	opts.init_file = opts.expand_command = NULL;
 
 	/* Initialize the shell and display structs. */
 	u.s.pid = x.s.pid = disp.pid = -1;
@@ -97,10 +93,17 @@ int main(int argc, char* argv[]) {
 	u.pl = PL_EXECUTING;
 	disp.glob_fifo_name = x.glob_cmd = NULL;
 
+	/* And the argument arrays. */
+	args_init(&(disp.a));
+	args_init(&(u.s.a));
+	args_init(&(x.s.a));
+
 	/* This fills in the opts struct. */
 	parse_args(argc, argv);
 	disp.name = opts.display;
 	u.s.name = x.s.name = opts.executable;
+	args_add(&(u.s.a), "--init-file");
+	args_add(&(u.s.a), opts.init_file);
 
 	/* Open up the log files, if possible. */
 	u.s.transcript_fd = open_warning(opts.shell_out_file, O_CREAT | O_WRONLY | O_TRUNC, PERM_FILE);
@@ -164,24 +167,13 @@ int main(int argc, char* argv[]) {
 		goto done;
 	}
 
-	/* Run the shell initialization command.  Right now this just adds the viewglob
-	   delimiters to $PS1 and $PROMPT_COMMAND.  This must be done after starting
-	   bash instead of changing the environment exported to the child, because the
-	   variables usually are overwritten by sets in bashrc. */
-	if ( ! hardened_write(u.s.fd, opts.init_command, strlen(opts.init_command)) ) {
-		viewglob_error("Could not write shell initialization command");
-		ok = false;
-		goto restore_terminal;
-	}
-
 	/* Enter main_loop. */
 	if ( ! main_loop(&disp) ) {
 		viewglob_error("Problem during processing");
 		ok = false;
 	}
 
-restore_terminal:
-	/* Turn off terminal raw mode. */
+	/* Done -- Turn off terminal raw mode. */
 	if ( ! tc_restore() )
 		viewglob_warning("Could not restore terminal attributes");
 
@@ -216,7 +208,7 @@ static void parse_args(int argc, char** argv) {
 
 			case 'b':
 				/* Disable icons in display. */
-				display_add_arg(&disp, "-b");
+				args_add(&(disp.a), "-b");
 				break;
 			case 'd':
 				/* Display program */
@@ -238,15 +230,14 @@ static void parse_args(int argc, char** argv) {
 				break;
 			case 'i':
 				/* Shell initialization command */
-				XFREE(opts.init_command);
-				opts.init_command = XMALLOC(char, strlen(optarg) + 1 + 1);
-				strcpy(opts.init_command, optarg);
-				strcat(opts.init_command, "\n");
+				XFREE(opts.init_file);
+				opts.init_file = XMALLOC(char, strlen(optarg) + 1);
+				strcpy(opts.init_file, optarg);
 				break;
 			case 'n':
 				/* Maximum number of files to display per directory (unless forced). */
-				display_add_arg(&disp, "-n");
-				display_add_arg(&disp, optarg);
+				args_add(&(disp.a), "-n");
+				args_add(&(disp.a), optarg);
 				break;
 			case 'o':
 				/* Duplicate shell output file */
@@ -262,8 +253,8 @@ static void parse_args(int argc, char** argv) {
 				break;
 			case 's':
 				/* Display sorting style. */
-				display_add_arg(&disp, "-s");
-				display_add_arg(&disp, optarg);
+				args_add(&(disp.a), "-s");
+				args_add(&(disp.a), optarg);
 				break;
 			case 'v':
 			case 'V':
@@ -272,7 +263,7 @@ static void parse_args(int argc, char** argv) {
 				break;
 			case 'w':
 				/* Show hidden files by default in display. */
-				display_add_arg(&disp, "-w");
+				args_add(&(disp.a), "-w");
 				break;
 			case 'x':
 				/* Expand command (glob-expand) */
@@ -287,7 +278,7 @@ static void parse_args(int argc, char** argv) {
 		viewglob_fatal("No display program specified");
 	else if (!opts.executable)
 		viewglob_fatal("No shell executable specified");
-	else if (!opts.init_command)
+	else if (!opts.init_file)
 		viewglob_fatal("No shell initialization command specified");
 	else if (!opts.expand_command)
 		viewglob_fatal("No shell expansion command specified");

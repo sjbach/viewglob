@@ -1,4 +1,5 @@
-# Only the viewglob script should be in the path.
+# Only the viewglob/gviewglob script should be in the path.
+# It calls the other programs.
 bin_SCRIPTS = viewglob gviewglob
 
 viewglob: Makefile
@@ -15,6 +16,13 @@ getopt.sh: Makefile
 		getopt.sh.in > getopt.sh.tmp
 	chmod a+x getopt.sh.tmp
 	mv getopt.sh.tmp getopt.sh
+
+init-viewglob.sh: Makefile
+	rm -f init-viewglob.sh.tmp
+	sed -e 's,@BASH_FULL_PATH\@,$(BASH_FULL_PATH),g' \
+		init-viewglob.sh.in > init-viewglob.sh.tmp
+	chmod a+x init-viewglob.sh.tmp
+	mv init-viewglob.sh.tmp init-viewglob.sh
 
 gviewglob: Makefile
 	$(LN_S) viewglob gviewglob
@@ -37,8 +45,9 @@ tc_setraw.viewglob.h: Makefile
 	rm -f tc_setraw.viewglob.h
 	patch -i tc_setraw.h.diff -o tc_setraw.viewglob.h tc_setraw.h
 
-CLEANFILES = viewglob getopt.sh ptutil.viewglob.c ptutil.viewglob.h \
-             tc_setraw.viewglob.c tc_setraw.viewglob.h gviewglob
+CLEANFILES = viewglob getopt.sh init-viewglob.sh ptutil.viewglob.c        \
+             ptutil.viewglob.h tc_setraw.viewglob.c tc_setraw.viewglob.h  \
+             gviewglob
 
 pkgdata_SCRIPTS = getopt.sh init-viewglob.sh
 pkgdata_PROGRAMS = seer glob-expand
@@ -54,6 +63,6 @@ noinst_HEADERS = seer.h children.h cmdline.h sequences.h \
                  glob-expand.h
 EXTRA_DIST = ptutil.h ptutil.h.diff ptutil.c \
              ptutil.c.diff tc_setraw.h tc_setraw.h.diff \
-			 tc_setraw.c tc_setraw.c.diff viewglob.in \
-			 getopt.sh.in init-viewglob.sh
+             tc_setraw.c tc_setraw.c.diff viewglob.in \
+             getopt.sh.in init-viewglob.sh.in
 

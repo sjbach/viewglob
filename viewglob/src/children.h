@@ -28,8 +28,16 @@
 
 BEGIN_C_DECLS
 
+
+struct args {
+	char** argv;
+	int arg_count;
+};
+
+
 struct pty_child {
 	char* name;
+	struct args a;
 	pid_t pid;
 	int fd;
 	int transcript_fd;
@@ -38,8 +46,7 @@ struct pty_child {
 
 struct display {
 	char* name;
-	char** argv;
-	int args;
+	struct args a;
 	pid_t pid;
 	char* glob_fifo_name;
 	int glob_fifo_fd;
@@ -47,14 +54,15 @@ struct display {
 	int cmd_fifo_fd;
 };
 
-
 #define NEW_PTY_FD -99
 bool pty_child_fork(struct pty_child* c, int new_stdin_fd, int new_stdout_fd, int new_stderr_fd);
 bool pty_child_terminate(struct pty_child* c);
 
 bool display_fork(struct display* d);
 bool display_terminate(struct display* d);
-void display_add_arg(struct display* d, char* new_arg);
+
+void args_init(struct args* a);
+void args_add(struct args* a, char* new_arg);
 
 END_C_DECLS
 
