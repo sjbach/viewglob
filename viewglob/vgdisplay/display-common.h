@@ -17,28 +17,18 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#ifndef VGCLASSIC_H
-#define VGCLASSIC_H
 
+#ifndef DISPLAY_COMMON_H
+#define DISPLAY_COMMON_H
+
+
+#include "config.h"
+
+#include "common.h"
+#include "file-types.h"
 #include <gtk/gtk.h>
-#include <gdk/gdk.h>
 
 G_BEGIN_DECLS
-
-
-struct prefs {
-	/* Options. */
-	gboolean show_icons;
-	gint font_size_modifier;
-};
-
-
-/* Used in the read_string function. */
-struct holdover {
-	GString* string;
-	gboolean has_holdover;
-};
-
 
 enum glob_read_state {
 	GRS_DONE,
@@ -53,7 +43,15 @@ enum glob_read_state {
 	GRS_FILE_NAME,
 };
 
+
+void set_icons(void);
+void write_xwindow_id(GtkWidget* gtk_window);
+gchar* up_to_delimiter(gchar** ptr, char c);
+FileSelection map_selection_state(gchar c);
+FileType map_file_type(gchar c);
+
+
 G_END_DECLS
 
-#endif /* !VGCLASSIC_H */
+#endif
 

@@ -640,18 +640,6 @@ static gboolean fitem_button_press_event(GtkWidget* widget,
 
 			GString* string = g_string_new(NULL);
 
-			/* If shift is held, write out the full path. */
-			if ( (event->state & GDK_SHIFT_MASK) && fi->widget->parent &&
-					fi->widget->parent->parent) {
-				string = g_string_append(string,
-						DLISTING(fi->widget->parent->parent)->name->str);
-
-				/* If the parent dir is / (root), it already has a '/' on the
-				   end. */
-				if ( *(string->str + string->len - 1) != '/')
-					string = g_string_append(string, "/");
-			}
-
 			string = g_string_append(string, fi->name);
 
 			/* Trailing '/' on directories. */

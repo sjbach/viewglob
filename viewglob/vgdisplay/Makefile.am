@@ -3,9 +3,12 @@ AM_CPPFLAGS = @GTK_CFLAGS@ @GLIB_CFLAGS@
 COMMON = ../common
 INCLUDES = -I$(COMMON)
 
-pkglib_PROGRAMS = vgclassic
+pkglib_PROGRAMS = vgclassic vgmini
 vgclassic_SOURCES = vgclassic.c exhibit.c dlisting.c wrap_box.c file_box.c \
-                    lscolors.c $(COMMON)/param-io.c $(COMMON)/hardened-io.c
+                    lscolors.c $(COMMON)/param-io.c $(COMMON)/hardened-io.c \
+		    display-common.c
+vgmini_SOURCES = vgmini.c wrap_box.c file_box.c lscolors.c dircont.c \
+                 $(COMMON)/param-io.c $(COMMON)/hardened-io.c display-common.c
 
 BUILT_SOURCES = app_icons.h file_icons.h
 app_icons.h: Makefile
@@ -18,10 +21,6 @@ app_icons.h: Makefile
 		icon_32x32.png >> app_icons.tmp
 	gdk-pixbuf-csource --raw --name=icon_36x36_inline \
 		icon_36x36.png >> app_icons.tmp
-	gdk-pixbuf-csource --raw --name=context_hidden_inline \
-		hidden.png >> app_icons.tmp
-	gdk-pixbuf-csource --raw --name=context_all_inline \
-		all.png >> app_icons.tmp
 	mv app_icons.tmp app_icons.h
 
 # These are mostly standard Gnome icons.
@@ -47,11 +46,10 @@ file_icons.h: Makefile
 
 
 CLEANFILES = app_icons.h app_icons.tmp file_icons.h file_icons.tmp
-noinst_HEADERS = vgclassic.h exhibit.h dlisting.h wrap_box.h file_box.h \
-                 lscolors.h
+noinst_HEADERS = exhibit.h dlisting.h wrap_box.h file_box.h \
+                 lscolors.h dircont.h display-common.h
 EXTRA_DIST = icon_16x16.png icon_24x24.png icon_32x32.png icon_36x36.png \
              gnome-fs-regular.png gnome-fs-directory.png gnome-fs-fifo.png \
              gnome-dev-symlink.png gnome-fs-blockdev.png gnome-fs-chardev.png \
-             gnome-fs-socket.png gnome-fs-executable.png \
-             all.png hidden.png
+             gnome-fs-socket.png gnome-fs-executable.png
 

@@ -24,10 +24,6 @@
 #include <gtk/gtk.h>
 #include <string.h>   /* For strcmp */
 
-#if DEBUG_ON
-extern FILE* df;
-#endif
-
 #define WIDTH_BUFFER 0
 #define BASE_DIR_FONT_SIZE    +2
 #define BASE_COUNT_FONT_SIZE  -1
@@ -100,14 +96,10 @@ static void dlisting_init(DListing* dl) {
 	GtkWidget* dir_heading_separator;
 	GtkWidget* left_spacer;
 
-	dl->name = NULL;
-	dl->old_rank = -1;
-	dl->rank = -1;
-	dl->marked = FALSE;
-
 	dl->name = g_string_new(NULL);
 	dl->rank = -1;
 	dl->old_rank = -1;
+	dl->marked = FALSE;
 
 	dl->selected_count = g_string_new("0");
 	dl->total_count = g_string_new("0");

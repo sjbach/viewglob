@@ -20,11 +20,11 @@
 #include "config.h"
 
 #include "common.h"
+#include "display-common.h"
 #include "file_box.h"
 #include "dlisting.h"
 #include "exhibit.h"
 #include "param-io.h"
-#include "vgclassic.h"
 #include "file-types.h"
 
 #include <gtk/gtk.h>
@@ -34,21 +34,20 @@
 #include <unistd.h>       /* For getopt. */
 #include <stdio.h>        /* For BUFSIZ. */
 
+struct prefs {
+	/* Options. */
+	gboolean show_icons;
+	gint font_size_modifier;
+};
 
 /* Prototypes. */
 static gboolean receive_data(GIOChannel* source, GIOCondition condition,
 		gpointer data);
-static void write_xwindow_id(GtkWidget* gtk_window);
-
-static void set_icons(void);
 
 static gboolean parse_args(int argc, char** argv, struct prefs* v);
 static void report_version(void);
 
 static void process_glob_data(gchar* buf, gsize bytes, Exhibit* e);
-
-static FileSelection map_selection_state(gchar c);
-static FileType      map_file_type(gchar c);
 
 static gboolean window_delete_event(GtkWidget* widget, GdkEvent* event,
 		gpointer data);
@@ -60,48 +59,6 @@ static gboolean window_key_press_event(GtkWidget* window,
 		GdkEventKey* event, gpointer data);
 
 
-/* Chooses a selection state based on the string's first char. */
-static FileSelection map_selection_state(gchar c) {
-	switch (c) {
-		case '-':
-			return FS_NO;
-		case '~':
-			return FS_MAYBE;
-		case '*':
-			return FS_YES;
-		default:
-			g_warning("Unexpected selection state \"%c\".", c);
-			return FS_NO;
-	}
-}
-
-
-/* Chooses a file type based on the string's first char. */
-static FileType map_file_type(gchar c) {
-	switch (c) {
-		case 'r':
-			return FT_REGULAR;
-		case 'e':
-			return FT_EXECUTABLE;
-		case 'd':
-			return FT_DIRECTORY;
-		case 'y':
-			return FT_SYMLINK;
-		case 'b':
-			return FT_BLOCKDEV;
-		case 'c':
-			return FT_CHARDEV;
-		case 'f':
-			return FT_FIFO;
-		case 's':
-			return FT_SOCKET;
-		default:
-			g_warning("Unexpected file type \"%c\".", c);
-			return FT_REGULAR;
-	}
-}
-
-
 static gboolean window_delete_event(GtkWidget* widget, GdkEvent* event,
 		gpointer data) {
 	gtk_main_quit();
@@ -109,7 +66,7 @@ static gboolean window_delete_event(GtkWidget* widget, GdkEvent* event,
 }
 
 
-/* Attempt to read size bytes into buf from source. */
+/* Receive data from vgd. */
 static gboolean receive_data(GIOChannel* source, GIOCondition condition,
 		gpointer data) {
 
@@ -163,23 +120,13 @@ static gboolean receive_data(GIOChannel* source, GIOCondition condition,
 		}
 	}
 	else {
-		g_critical("Could not receive data form vgd");
+		g_critical("Could not receive data from vgd");
 		exit(EXIT_FAILURE);
 	}
 
 	return TRUE;
 }
 
-
-static gchar* up_to_delimiter(gchar** ptr, char c) {
-	gchar* start = *ptr;
-	while (**ptr != c)
-		(*ptr)++;
-
-	**ptr = '\0';
-	(*ptr)++;
-	return start;
-}
 
 /* Finite state machine to interpret glob data. */
 static void process_glob_data(gchar* buf, gsize bytes, Exhibit* e) {
@@ -286,25 +233,6 @@ static void process_glob_data(gchar* buf, gsize bytes, Exhibit* e) {
 }
 
 
-static void set_icons(void) {
-#include "app_icons.h"
-
-	GList* icons = NULL;
-
-	/* Setup the application icons. */
-	icons = g_list_append(icons,
-			gdk_pixbuf_new_from_inline(-1, icon_16x16_inline, FALSE, NULL));
-	icons = g_list_append(icons,
-			gdk_pixbuf_new_from_inline(-1, icon_24x24_inline, FALSE, NULL));
-	icons = g_list_append(icons,
-			gdk_pixbuf_new_from_inline(-1, icon_32x32_inline, FALSE, NULL));
-	icons = g_list_append(icons,
-			gdk_pixbuf_new_from_inline(-1, icon_36x36_inline, FALSE, NULL));
-	gtk_window_set_default_icon_list(icons);
-}
-
-
-
 /* Resize the DListings if necessary. */
 static void window_allocate_event(GtkWidget* window,
 		GtkAllocation* allocation, Exhibit* e) {
@@ -397,28 +325,6 @@ static gboolean window_key_press_event(GtkWidget* window, GdkEventKey* event,
 }
 
 
-/* Send the id of the display's X window to seer. */
-static void write_xwindow_id(GtkWidget* gtk_window) {
-
-	GdkWindow* gdk_window = gtk_window->window;
-	GString* xwindow_string = g_string_new(NULL);
-
-	if (gdk_window)
-		g_string_printf(xwindow_string, "%lu", GDK_WINDOW_XID(gdk_window));
-	else {
-		g_warning("Couldn't find an id for the display's window.");
-		xwindow_string = g_string_assign(xwindow_string, "0");
-	}
-
-	if (!put_param(STDOUT_FILENO, P_WIN_ID, xwindow_string->str)) {
-		g_critical("Couldn't write window ID to stdout");
-		exit(EXIT_FAILURE);
-	}
-
-	g_string_free(xwindow_string, TRUE);
-}
-
-
 static gboolean parse_args(int argc, char** argv, struct prefs* v) {
 	gboolean in_loop = TRUE;
 
@@ -456,7 +362,7 @@ static void report_version(void) {
 }
 
 
-int main(int argc, char *argv[]) {
+gint main(gint argc, gchar **argv) {
 
 	GtkWidget* vbox;
 	GtkWidget* scrolled_window;
@@ -479,12 +385,13 @@ int main(int argc, char *argv[]) {
 	file_box_set_sizing(v.font_size_modifier);
 	dlisting_set_sizing(v.font_size_modifier);
 
-	/* Create vgclassic window. */
+	/* Create window. */
 	e.window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	gtk_container_set_border_width(GTK_CONTAINER(e.window), 5);
+	gtk_container_set_border_width(GTK_CONTAINER(e.window), 2);
 	gtk_window_set_title(GTK_WINDOW(e.window), "vg");
 	gtk_window_set_default_size(GTK_WINDOW(e.window), 340, 420);
 	e.width_change = 0;
+	set_icons();
 
 	/* VBox for the scrolled window and the command-line widget. */
 	vbox = gtk_vbox_new(FALSE, 2);
@@ -501,7 +408,7 @@ int main(int argc, char *argv[]) {
 	e.vadjustment = gtk_scrolled_window_get_vadjustment(
 			GTK_SCROLLED_WINDOW(scrolled_window));
 
-	/* Command line text widget. */
+	/* The sandbox glob command line. */
 	e.cmdline = gtk_entry_new();
 	gtk_editable_set_editable(GTK_EDITABLE(e.cmdline), FALSE);
 	gtk_widget_set_sensitive(e.cmdline, FALSE);
@@ -529,8 +436,6 @@ int main(int argc, char *argv[]) {
 	g_signal_connect(G_OBJECT(e.window), "key-press-event",
 			G_CALLBACK(window_key_press_event), NULL);
 
-	set_icons();
-
 	/* Setup a watch for glob input. */
 	GIOChannel* stdin_ioc;
 	if ( (stdin_ioc = g_io_channel_unix_new(STDIN_FILENO)) == NULL) {
@@ -546,7 +451,7 @@ int main(int argc, char *argv[]) {
 	/* And we're off... */
 	gtk_widget_show(e.window);
 
-	/* Pass the window ID back to seer. */
+	/* Pass the window ID back to vgd. */
 	write_xwindow_id(e.window);
 
 	gtk_main();

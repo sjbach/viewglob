@@ -19,7 +19,6 @@
 
 #include "common.h"
 #include "file_box.h"
-#include "vgclassic.h"
 #include "exhibit.h"
 #include <string.h>    /* For strcmp */
 
@@ -200,7 +199,6 @@ void exhibit_do_order(Exhibit* e, gchar* order) {
 	if (change) {
 		gtk_adjustment_set_value(e->vadjustment,
 				CLAMP(current + change, lower, upper));
-		gtk_adjustment_value_changed(e->vadjustment);
 	}
 }
 

@@ -119,6 +119,7 @@ gint main(gint argc, gchar** argv) {
 	}
 
 	s.display.exec_name = "/home/steve/vg/vgdisplay/vgclassic";
+//	s.display.exec_name = "/home/steve/vg/vgdisplay/vgmini";
 
 	poll_loop(&s);
 

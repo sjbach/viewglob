@@ -1,3 +1,12 @@
+2005-04-03 21:18  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* all.png, hidden.png, vgclassic.h: removed
+	* vgmini.c, display-common.c, display-common.h, dircont.h, dircont.c,
+	  vgdisplay/Makefile.am:
+	  Began work on new display.
+	* dlisting.c, exhibit.c, file_box.c, vgclassic.c:
+	  Compatibility changes on the old display.
+
 2005-03-30 18:27  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* param-io.c, param-io.h: added P_VERSION
