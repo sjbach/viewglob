@@ -20,6 +20,7 @@
 #include "common.h"
 #include "gviewglob.h"
 #include "wrap_box.h"
+#include "file_box.h"
 
 #if DEBUG_ON
 extern FILE* df;
@@ -103,10 +104,10 @@ DListing* dlisting_new(const GString* name, gint rank, const GString* selected_c
 	new_dl->selected_count = g_string_new(selected_count->str);
 	new_dl->total_count = g_string_new(total_count->str);
 	new_dl->hidden_count = g_string_new(hidden_count->str);
-	new_dl->n_v_fis = 0;
+	//new_dl->n_v_fis = 0;
 
-	new_dl->fi_slist = NULL;
-	new_dl->update_file_table = TRUE;
+	//new_dl->fi_slist = NULL;
+	//new_dl->update_file_table = TRUE;
 	new_dl->file_table = NULL;
 
 	new_dl->force_show_hidden = v.show_hidden_files;
@@ -158,9 +159,11 @@ DListing* dlisting_new(const GString* name, gint rank, const GString* selected_c
 	gtk_widget_show(file_num_label);
 
 	/* Create the file table (actually it's a wrap box). */
-	new_dl->file_table = wrap_box_new();
+	//new_dl->file_table = wrap_box_new();
+	new_dl->file_table = file_box_new();
 	/* wrap_box_set_optimal_width(WRAP_BOX(new_dl->file_table), width - 4); */
-	wrap_box_set_optimal_width(WRAP_BOX(new_dl->file_table), width);
+	//wrap_box_set_optimal_width(WRAP_BOX(new_dl->file_table), width);
+	file_box_set_optimal_width(FILE_BOX(new_dl->file_table), width);
 	wrap_box_set_hspacing(WRAP_BOX(new_dl->file_table), 5);
 	wrap_box_set_line_justify(WRAP_BOX(new_dl->file_table), GTK_JUSTIFY_LEFT);
 	gtk_box_pack_start(GTK_BOX(vbox), new_dl->file_table, FALSE, FALSE, 0);
@@ -205,7 +208,7 @@ DListing* dlisting_new(const GString* name, gint rank, const GString* selected_c
 	return new_dl;
 }
 
-
+/* FIXME this should be part of exhibit.c maybe. */
 void dlisting_unmark_all(GSList* dl_slist) {
 	DListing* dl;
 
@@ -300,6 +303,7 @@ gboolean dlisting_is_new(const DListing* dl) {
 
 /* Remove all memory associated with this DListing. */
 void dlisting_free(DListing* dl) {
+	/* FIXME does this in fact get all data associated with the file box? */
 
 	gtk_widget_destroy(dl->listing_vbox);  /* This should take care of all widgets,
 	                                          Including in the FItems. */
@@ -314,13 +318,16 @@ void dlisting_free(DListing* dl) {
 
 	/* Free the FItems.
 	   We've already destroyed all the widgets, so don't try to delete them again. */
+	/*
 	g_slist_foreach(dl->fi_slist, (GFunc) fitem_free, (gpointer) FALSE);
 	g_slist_free(dl->fi_slist);
+	*/
 
 	g_free(dl);
 }
 
 
+#if 0
 void dlisting_file_table_update(DListing* dl) {
 	FItem* fi;
 	GSList* fi_iter;
@@ -369,9 +376,11 @@ void dlisting_file_table_update(DListing* dl) {
 		fi_iter = g_slist_next(fi_iter);
 	}
 }
+#endif
 
 
 static void dlisting_create_and_show_fitem_widgets_hidden(DListing* dl) {
+#if 0
 	FItem* fi;
 	GSList* fi_iter;
 	gint pos = 0;
@@ -399,10 +408,12 @@ static void dlisting_create_and_show_fitem_widgets_hidden(DListing* dl) {
 	dl->force_show_hidden = TRUE;
 	dlisting_reset_file_count_label(dl);
 	return;
+#endif
 }
 
 
 static void dlisting_create_and_show_fitem_widgets_all(DListing* dl) {
+#if 0
 	FItem* fi;
 	GSList* fi_iter;
 	gint pos = 0;
@@ -429,5 +440,6 @@ static void dlisting_create_and_show_fitem_widgets_all(DListing* dl) {
 	dl->force_show_all = TRUE;
 	dlisting_reset_file_count_label(dl);
 	return;
+#endif
 }
 

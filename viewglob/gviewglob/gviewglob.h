@@ -22,7 +22,8 @@
 
 #include <gtk/gtk.h>
 #include <gdk/gdk.h>
-#include "fitem.h"
+//#include "fitem.h"
+#include "file_box.h"
 #include "dlisting.h"
 
 #define GVIEWGLOB_VERSION "0.8.1"
@@ -43,7 +44,8 @@ struct viewable_preferences {
 	gboolean show_icons;
 	gboolean show_hidden_files;
 	glong file_display_limit;
-	GCompareFunc sort_function;
+	//GCompareFunc sort_function;
+	FileBoxOrdering ordering;
 
 	/* Input Fifos */
 	gchar* glob_fifo;
@@ -97,15 +99,17 @@ static void process_glob_data(const gchar* buff, gsize bytes, Exhibit* e);
 static void rearrange_and_show(Exhibit* e);
 static void delete_old_dlistings(Exhibit* e);
 
-static enum selection_state  map_selection_state(const GString* string);
-static enum file_type        map_file_type(const GString* string);
+//static enum selection_state  map_selection_state(const GString* string);
+static FileSelection  map_selection_state(const GString* string);
+//static enum file_type        map_file_type(const GString* string);
+static FileType       map_file_type(const GString* string);
 
 static gint cmp_dlisting_same_name(gconstpointer a, gconstpointer b);
 static gint cmp_dlisting_same_rank(gconstpointer a, gconstpointer b);
-static gint cmp_fitem_same_name(gconstpointer a, gconstpointer b);
+//static gint cmp_fitem_same_name(gconstpointer a, gconstpointer b);
 
-static gint cmp_fitem_ordering_type_alphabetical(gconstpointer a, gconstpointer b);
-static gint cmp_fitem_ordering_alphabetical(gconstpointer a, gconstpointer b);
+//static gint cmp_fitem_ordering_type_alphabetical(gconstpointer a, gconstpointer b);
+//static gint cmp_fitem_ordering_alphabetical(gconstpointer a, gconstpointer b);
 
 static void listing_resize_event(GtkWidget* widget, GtkAllocation* allocation, Exhibit* e);
 

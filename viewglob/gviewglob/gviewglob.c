@@ -28,7 +28,8 @@
 #include <glib.h>
 #include <string.h>       /* for strcmp */
 #include <unistd.h>       /* For getopt */
-#include "wrap_box.h"
+//#include "wrap_box.h"
+#include "file_box.h"
 #include "gviewglob.h"
 
 struct viewable_preferences v;
@@ -38,29 +39,31 @@ FILE* df;
 #endif
 
 /* Chooses a selection state based on the string's first char. */
-static enum selection_state map_selection_state(const GString* string) {
+//static enum selection_state map_selection_state(const GString* string) {
+static FileSelection map_selection_state(const GString* string) {
 
 	/* DEBUG((df, "state: %s\n", string->str)); */
 	switch ( *(string->str) ) {
 		case '-':
-			return S_NO;
+			return FS_NO;
 		case '~':
-			return S_MAYBE;
+			return FS_MAYBE;
 		case '*':
-			return S_YES;
+			return FS_YES;
 	}
 }
 
 
 /* Chooses a file type based on the string's first char. */
-static enum file_type map_file_type(const GString* string) {
+//static enum file_type map_file_type(const GString* string) {
+static FileType map_file_type(const GString* string) {
 
 	/* DEBUG((df, "type: %s\n", string->str)); */
 	switch ( *(string->str) ) {
 		case 'f':
-			return T_FILE;
+			return FT_FILE;
 		case 'd':
-			return T_DIR;
+			return FT_DIR;
 	}
 }
 
@@ -86,15 +89,18 @@ static gint cmp_dlisting_same_rank(gconstpointer a, gconstpointer b) {
 }
 
 
+/*
 static gint cmp_fitem_same_name(gconstpointer a, gconstpointer b) {
 	const FItem* aa = a;
 	const GString* bb = b;
 
 	return strcmp( aa->name->str, bb->str );
 }
+*/
 
 
 /* Sort by type (dir first), then by name (default Windows style). */
+/*
 static gint cmp_fitem_ordering_type_alphabetical(gconstpointer a, gconstpointer b) {
 	const FItem* aa = a;
 	const FItem* bb = b;
@@ -112,15 +118,18 @@ static gint cmp_fitem_ordering_type_alphabetical(gconstpointer a, gconstpointer 
 			return strcmp( aa->name->str, bb->name->str );
 	}
 }
+*/
 
 
 /* Sort strictly by name (default ls style). */
+/*
 static gint cmp_fitem_ordering_alphabetical(gconstpointer a, gconstpointer b) {
 	const FItem* aa = a;
 	const FItem* bb = b;
 
 	return strcmp( aa->name->str, bb->name->str );
 }
+*/
 
 
 /* Try to get a string from the given buffer.  If delim is not seen, save the string for the
@@ -260,6 +269,7 @@ static void dlisting_debug_print_marked(const GSList* dl_slist) {
 }
 
 
+/*
 static void fitem_debug_print_names(const GSList* fi_slist) {
 	FItem* fi;
 	DEBUG((df, "\nNames:\n"));
@@ -270,6 +280,7 @@ static void fitem_debug_print_names(const GSList* fi_slist) {
 	}
 	DEBUG((df, "---\n"));
 }
+*/
 
 
 /* Finite state machine to interpret cmd data. */
@@ -330,8 +341,10 @@ static void process_glob_data(const gchar* buff, gsize bytes, Exhibit* e) {
 	static GString* total_count;
 	static GString* hidden_count;
 
-	static enum file_type type;
-	static enum selection_state state;
+	//static enum file_type type;
+	//static enum selection_state state;
+	static FileType type;
+	static FileSelection selection;
 
 	static gint dir_rank = 0;
 	static DListing* dl;
@@ -397,7 +410,8 @@ static void process_glob_data(const gchar* buff, gsize bytes, Exhibit* e) {
 						dl = search_result->data;
 						dlisting_update_file_counts(dl, selected_count, total_count, hidden_count);
 						dlisting_mark(dl, dir_rank);
-						fitem_unmark_all(dl->fi_slist);  /* We'll be reading these next, at which point they'll be remarked. */
+						//fitem_unmark_all(dl->fi_slist);  /* We'll be reading these next, at which point they'll be remarked. */
+						file_box_unmark_all(FILE_BOX(dl->file_table));
 					}
 					else {
 						/* It's a new DListing. */
@@ -439,14 +453,14 @@ static void process_glob_data(const gchar* buff, gsize bytes, Exhibit* e) {
 			case RS_FILE_STATE:
 				string = read_string(buff, &pos, bytes, ' ', &ho, &completed);
 				if (completed) {
-					state = map_selection_state(string);
+					selection = map_selection_state(string);
 					g_string_free(string, TRUE);
 
 					advance = TRUE;
 					rs = RS_FILE_TYPE;
 				}
 				break;
-				
+
 			case RS_FILE_TYPE:
 				string = read_string(buff, &pos, bytes, ' ', &ho, &completed);
 				if (completed) {
@@ -462,12 +476,13 @@ static void process_glob_data(const gchar* buff, gsize bytes, Exhibit* e) {
 				string = read_string(buff, &pos, bytes, '\n', &ho, &completed);
 				if (completed) {
 
+#if 0
 					search_result = g_slist_find_custom(dl->fi_slist, string, cmp_fitem_same_name);
 					if (search_result) {
 						/* We've seen this FItem before. */
 						fi = search_result->data;
 						fitem_mark(fi);
-						if ( ! fitem_update_type_and_state(fi, type, state) ) {
+						if ( ! fitem_update_type_and_state(fi, type, selection) ) {
 							/* The type was modified, so this FItem must be resorted. */
 							dl->fi_slist = g_slist_remove(dl->fi_slist, fi);
 							dl->fi_slist = g_slist_insert_sorted(dl->fi_slist, fi, v.sort_function);
@@ -482,16 +497,18 @@ static void process_glob_data(const gchar* buff, gsize bytes, Exhibit* e) {
 						if ( (v.file_display_limit == 0 || dl->n_v_fis < v.file_display_limit) &&         /* Check if we're under the limit. */
 						     ((hidden && (v.show_hidden_files || dl->force_show_hidden)) || !hidden)) {   /* Check if we should display it. */
 							/* We're good to go.  Build the widgets. */
-							fi = fitem_new(string, state, type, TRUE);
+							fi = fitem_new(string, selection, type, TRUE);
 							dl->n_v_fis++;
 							dl->update_file_table = TRUE;
 						}
 						else {
 							/* Don't build the widgets. */
-							fi = fitem_new(string, state, type, FALSE);
+							fi = fitem_new(string, selection, type, FALSE);
 						}
 						dl->fi_slist = g_slist_insert_sorted(dl->fi_slist, fi, v.sort_function);
 					}
+#endif
+					file_box_add(FILE_BOX(dl->file_table), string, type, selection);
 
 					g_string_free(string, TRUE);
 
@@ -530,7 +547,8 @@ static void rearrange_and_show(Exhibit* e) {
 
 		/* FIXME need mechanism to determine if not all files have been marked */
 		/*if (dl->update_file_table)	{ */
-			dlisting_file_table_update(dl);
+			//dlisting_file_table_update(dl);
+		file_box_cull(FILE_BOX(dl->file_table));
 		/*	dl->update_file_table = FALSE; */
 		/*} */
 
@@ -604,26 +622,30 @@ static void set_icons(Exhibit* e) {
 	icon_info = gtk_icon_theme_lookup_icon(current_theme, "gnome-fs-directory", ICON_SIZE, GTK_ICON_LOOKUP_USE_BUILTIN);
 	if (icon_info) {
 		/* Use whatever the user has. */
-		/* (I should be checking for an error here) */
-		v.dir_pixbuf = gtk_icon_info_load_icon(icon_info, NULL);
+		/* (I should be checking for an error here FIXME) */
+		//v.dir_pixbuf = gtk_icon_info_load_icon(icon_info, NULL);
+		file_box_set_icon(FT_DIR, gtk_icon_info_load_icon(icon_info, NULL));
 		gtk_icon_info_free(icon_info);
 	}
 	else {
 		/* Use this icon from old Gnome. */
-		v.dir_pixbuf = make_pixbuf_scaled(directory_inline);
+		file_box_set_icon(FT_DIR, make_pixbuf_scaled(directory_inline));
+		//v.dir_pixbuf = make_pixbuf_scaled(directory_inline);
 	}
 
 	/* Regular file icon */
 	icon_info = gtk_icon_theme_lookup_icon(current_theme, "gnome-fs-regular", ICON_SIZE, GTK_ICON_LOOKUP_USE_BUILTIN);
 	if (icon_info) {
 		/* Use whatever the user has. */
-		/* (I should be checking for an error here) */
-		v.file_pixbuf = gtk_icon_info_load_icon(icon_info, NULL);
+		/* (I should be checking for an error here FIXME) */
+		//v.file_pixbuf = gtk_icon_info_load_icon(icon_info, NULL);
+		file_box_set_icon(FT_FILE, gtk_icon_info_load_icon(icon_info, NULL));
 		gtk_icon_info_free(icon_info);
 	}
 	else {
 		/* Use this icon from old Gnome. */
-		v.file_pixbuf = make_pixbuf_scaled(regular_inline);
+		file_box_set_icon(FT_FILE, make_pixbuf_scaled(regular_inline));
+		//v.file_pixbuf = make_pixbuf_scaled(regular_inline);
 	}
 
 	/* Context menu icons. */
@@ -657,7 +679,8 @@ static void listing_resize_event(GtkWidget* display_vbox, GtkAllocation* allocat
 	for (dl_iter = e->dl_slist; dl_iter; dl_iter = g_slist_next(dl_iter)) {
 		dl = dl_iter->data;
 		if (dl->file_table)
-			wrap_box_set_optimal_width(WRAP_BOX(dl->file_table), allocation->width - 4);
+			file_box_set_optimal_width(FILE_BOX(dl->file_table), allocation->width - 4);
+			//wrap_box_set_optimal_width(WRAP_BOX(dl->file_table), allocation->width - 4);
 	}
 
 }
@@ -677,7 +700,8 @@ static gboolean configure_event(GtkWidget* window, GdkEventConfigure* event, Exh
 		for (dl_iter = e->dl_slist; dl_iter; dl_iter = g_slist_next(dl_iter)) {
 			dl = dl_iter->data;
 			if (dl->file_table)
-				wrap_box_set_optimal_width(WRAP_BOX(dl->file_table), event->width - 34);
+				file_box_set_optimal_width(FILE_BOX(dl->file_table), event->width - 34);
+				//wrap_box_set_optimal_width(WRAP_BOX(dl->file_table), event->width - 34);
 		}
 		last_width = event->width;
 	}
@@ -726,9 +750,14 @@ static gboolean parse_args(int argc, char** argv) {
 			case 's':
 				/* File sorting style. */
 				if (strcmp(optarg, "ls") == 0)
-					v.sort_function = cmp_fitem_ordering_alphabetical;
+					// FIXME
+					//v.sort_function = cmp_fitem_ordering_alphabetical;
+					//v.ordering = FBO_LS;
+					file_box_set_ordering(FBO_LS);
 				else if (strcmp(optarg, "win") == 0 || strcmp(optarg, "windows") == 0)
-					v.sort_function = cmp_fitem_ordering_type_alphabetical;
+					file_box_set_ordering(FBO_WIN);
+					//v.ordering = FBO_WIN;
+					//v.sort_function = cmp_fitem_ordering_type_alphabetical;
 				break;
 			case 'v':
 			case 'V':
@@ -777,7 +806,8 @@ int main(int argc, char *argv[]) {
 	v.show_icons = TRUE;
 	v.show_hidden_files = FALSE;
 	v.file_display_limit = 300;
-	v.sort_function = cmp_fitem_ordering_alphabetical;
+	//v.sort_function = cmp_fitem_ordering_alphabetical;
+	v.ordering = FBO_LS;
 	v.glob_fifo = v.cmd_fifo = NULL;
 	if (! parse_args(argc, argv) )
 		return 0;
@@ -805,6 +835,7 @@ int main(int argc, char *argv[]) {
 	command_line_entry = gtk_entry_new();
 	gtk_editable_set_editable(GTK_EDITABLE(command_line_entry), FALSE);
 	gtk_widget_set_state(command_line_entry, GTK_STATE_INSENSITIVE);
+	//gtk_widget_set_sensitive(command_line_entry, FALSE);
 	gtk_box_pack_start(GTK_BOX(vbox), command_line_entry, FALSE, FALSE, 0);
 	gtk_widget_show(command_line_entry);
 	e.cmdline = command_line_entry;

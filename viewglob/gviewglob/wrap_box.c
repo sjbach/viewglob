@@ -29,6 +29,7 @@
 
 #include "wrap_box.h"
 
+
 /* --- properties --- */
 enum {
   PROP_0,
@@ -37,7 +38,7 @@ enum {
   PROP_VSPACING,
   PROP_LINE_JUSTIFY,
   PROP_CHILD_LIMIT,
-  PROP_OPTIMAL_WIDTH,
+  //PROP_OPTIMAL_WIDTH,
 };
 
 enum {
@@ -62,13 +63,12 @@ static void   wrap_box_forall(GtkContainer *container, gboolean include_internal
 static GType  wrap_box_child_type(GtkContainer *container);
 
 static void     wrap_box_size_request(GtkWidget *widget, GtkRequisition *requisition);
+void            wrap_box_size_request_optimal(GtkWidget* widget, GtkRequisition* requisition, guint optimal_width);
 static void     wrap_box_size_allocate(GtkWidget *widget, GtkAllocation *allocation);
 static GSList*  reverse_list_col_children(WrapBox *wbox, WrapBoxChild **child_p, GtkAllocation *area, guint *max_child_width);
 
 static guint get_n_visible_children(WrapBox* this);
 static guint get_upper_bound_cols(WrapBox* this, guint optimal_width);
-
-
 
 
 /* --- variables --- */
@@ -163,6 +163,7 @@ static void wrap_box_class_init (WrapBoxClass *class) {
 						      GTK_JUSTIFY_BOTTOM,
 						      G_PARAM_READWRITE));
 
+	/*
 	g_object_class_install_property (object_class,
 				   PROP_OPTIMAL_WIDTH,
 				   g_param_spec_uint ("optimal_width",
@@ -172,6 +173,7 @@ static void wrap_box_class_init (WrapBoxClass *class) {
 							  G_MAXINT,
 							  0,
 							  G_PARAM_READWRITE));
+	*/
 
 
 	g_object_class_install_property (object_class,
@@ -206,7 +208,7 @@ static void wrap_box_init(WrapBox *wbox) {
 	wbox->child_limit = 32767;
 	wbox->max_child_width = 0;
 	wbox->max_child_height = 0;
-	wbox->optimal_width = 0;
+	//wbox->optimal_width = 0;
 }
 
 
@@ -215,8 +217,7 @@ GtkWidget* wrap_box_new (void) {
 }
 
 
-static void wrap_box_set_property (GObject *object, guint property_id, const GValue *value, GParamSpec *pspec)
-{
+static void wrap_box_set_property (GObject *object, guint property_id, const GValue *value, GParamSpec *pspec) {
 	WrapBox *wbox = WRAP_BOX (object);
 	
 	switch (property_id) {
@@ -243,8 +244,7 @@ static void wrap_box_set_property (GObject *object, guint property_id, const GVa
 }
 
 
-static void wrap_box_get_property (GObject *object, guint property_id, GValue *value, GParamSpec *pspec)
-{
+static void wrap_box_get_property (GObject *object, guint property_id, GValue *value, GParamSpec *pspec) {
 	WrapBox *wbox = WRAP_BOX (object);
 	GtkWidget *widget = GTK_WIDGET (object);
 
@@ -264,8 +264,8 @@ static void wrap_box_get_property (GObject *object, guint property_id, GValue *v
 		case PROP_CHILD_LIMIT:
 			g_value_set_uint (value, wbox->child_limit);
 			break;
-		case PROP_OPTIMAL_WIDTH:
-			g_value_set_uint (value, wbox->optimal_width);
+		//case PROP_OPTIMAL_WIDTH:
+		//	g_value_set_uint (value, wbox->optimal_width);
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
 			break;
@@ -354,6 +354,8 @@ void wrap_box_set_line_justify(WrapBox *wbox, GtkJustification line_justify) {
 }
 
 
+
+#if 0
 void wrap_box_set_optimal_width(WrapBox* wbox, guint optimal_width) {
 	g_return_if_fail(IS_WRAP_BOX(wbox));
 	g_return_if_fail(optimal_width >= GTK_CONTAINER(wbox)->border_width * 2);
@@ -369,6 +371,7 @@ void wrap_box_set_optimal_width(WrapBox* wbox, guint optimal_width) {
 		gtk_widget_queue_resize(GTK_WIDGET(wbox));
 	}
 }
+#endif
 
 
 void wrap_box_pack(WrapBox *wbox, GtkWidget *child) {
@@ -448,45 +451,6 @@ void wrap_box_reorder_child (WrapBox *wbox, GtkWidget *child, gint position) {
 			gtk_widget_queue_resize (child);
 	}
 }
-
-
-/*
-guint* wrap_box_query_line_lengths (WrapBox *wbox, guint *_n_lines) {
-	WrapBoxChild *next_child = NULL;
-	GtkAllocation area, *allocation;
-	gboolean expand_line;
-	GSList *slist;
-	guint max_child_size, border, n_lines = 0, *lines = NULL;
-
-	if (_n_lines)
-		*_n_lines = 0;
-	g_return_val_if_fail (IS_WRAP_BOX (wbox), NULL);
-
-	allocation = &GTK_WIDGET(wbox)->allocation;
-	border = GTK_CONTAINER (wbox)->border_width;
-	area.x = allocation->x + border;
-	area.y = allocation->y + border;
-	area.width = MAX (1, (gint) allocation->width - border * 2);
-	area.height = MAX (1, (gint) allocation->height - border * 2);
-
-	next_child = wbox->children;
-	slist = WRAP_BOX_GET_CLASS (wbox)->rlist_line_children (wbox, &next_child, &area, &max_child_size, &expand_line);
-	while (slist) {
-		guint l = n_lines++;
-
-		lines = g_renew (guint, lines, n_lines);
-		lines[l] = g_slist_length (slist);
-		g_slist_free (slist);
-
-		slist = WRAP_BOX_GET_CLASS (wbox)->rlist_line_children (wbox, &next_child, &area, &max_child_size, &expand_line);
-	}
-
-	if (_n_lines)
-		*_n_lines = n_lines;
-
-	return lines;
-}
-*/
 
 
 static void wrap_box_map (GtkWidget *widget) {
@@ -655,8 +619,8 @@ static guint get_n_visible_children(WrapBox* this) {
 }
 
 
-static void wrap_box_size_request(GtkWidget* widget, GtkRequisition* requisition) {
-
+/* This is the smart size request; we try to maximize the width of the file box. */
+void wrap_box_size_request_optimal(GtkWidget* widget, GtkRequisition* requisition, guint optimal_width) {
 	WrapBox* this = WRAP_BOX(widget);
 	WrapBoxChild* child;
 	GtkRequisition child_req;
@@ -670,7 +634,7 @@ static void wrap_box_size_request(GtkWidget* widget, GtkRequisition* requisition
 	guint16 n_visible_children;
 	guint hspacing;
 
-	cols = get_upper_bound_cols(this, this->optimal_width);
+	cols = get_upper_bound_cols(this, optimal_width);
 
 	n_visible_children = get_n_visible_children(this);
 
@@ -701,7 +665,7 @@ static void wrap_box_size_request(GtkWidget* widget, GtkRequisition* requisition
 					child_width += this->hspacing;
 
 				col_width = MAX(col_width, child_width);
-				if (total_width + col_width > this->optimal_width) {
+				if (total_width + col_width > optimal_width) {
 					/* Too many columns.  Start over with one less. */
 					cols--;
 					goto start;
@@ -731,12 +695,34 @@ static void wrap_box_size_request(GtkWidget* widget, GtkRequisition* requisition
 	else {
 		/* Make the best of the situation. */
 		/*g_printerr("{no go}");*/
-		requisition->width = this->optimal_width + GTK_CONTAINER(this)->border_width * 2;
+		requisition->width = optimal_width + GTK_CONTAINER(this)->border_width * 2;
 		requisition->height = n_visible_children * this->vspacing + n_visible_children * this->max_child_height + GTK_CONTAINER(this)->border_width * 2;
 	}
 
 	/*g_printerr("\ncols: %d, rows: %d\n", cols, rows);*/
 	/*g_printerr("req: width: %d, height: %d\n", requisition->width, requisition->height);*/
+}
+
+
+/* This is the dumb size request -- we have no knowledge of a good width, so we just go for
+   one column. */
+static void wrap_box_size_request(GtkWidget* widget, GtkRequisition* requisition) {
+	WrapBox* this = WRAP_BOX(widget);
+	WrapBoxChild* child;
+	GtkRequisition child_req;
+
+	guint width = 0, height = 0;
+
+	for (child = this->children; child; child = child->next) {
+		if (GTK_WIDGET_VISIBLE(child->widget)) {
+			gtk_widget_size_request(child->widget, &child_req);
+			width = MAX(width, child_req.width);
+			height += child_req.height;
+		}
+	}
+
+	requisition->width = width + GTK_CONTAINER(this)->border_width * 2;
+	requisition->height = height + GTK_CONTAINER(this)->border_width * 2;
 }
 
 

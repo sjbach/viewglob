@@ -2,7 +2,7 @@ LDADD = @GTK_LIBS@
 CFLAGS = @GTK_CFLAGS@
 
 pkgdata_PROGRAMS = gviewglob
-gviewglob_SOURCES = gviewglob.c fitem.c dlisting.c wrap_box.c
+gviewglob_SOURCES = gviewglob.c dlisting.c wrap_box.c file_box.c
 
 BUILT_SOURCES = icons.h
 icons.h: Makefile
@@ -17,7 +17,7 @@ icons.h: Makefile
 	gdk-pixbuf-csource --raw --name=all_inline all.png >> icons.h
 
 CLEANFILES = icons.h
-noinst_HEADERS = gviewglob.h fitem.h dlisting.h wrap_box.h common.h
+noinst_HEADERS = gviewglob.h dlisting.h wrap_box.h file_box.h common.h
 EXTRA_DIST = icon_16x16.png icon_24x24.png icon_32x32.png icon_36x36.png \
 			 gnome-fs-regular.png gnome-fs-directory.png \
 			 all.png hidden.png

@@ -53,7 +53,7 @@ struct _WrapBox {
 
 	guint          max_child_width;
 	guint          max_child_height;
-	guint          optimal_width;
+	//guint          optimal_width;
 
 	guint          justify : 4;
 	guint          line_justify : 4;
@@ -85,7 +85,7 @@ void       wrap_box_set_hspacing(WrapBox *wbox, guint hspacing);
 void       wrap_box_set_vspacing(WrapBox *wbox, guint vspacing);
 void       wrap_box_set_justify(WrapBox *wbox, GtkJustification justify);
 void       wrap_box_set_line_justify(WrapBox *wbox, GtkJustification line_justify);
-void       wrap_box_set_optimal_width(WrapBox* wbox, guint optimal_width);
+//void       wrap_box_set_optimal_width(WrapBox* wbox, guint optimal_width);
 void       wrap_box_pack(WrapBox *wbox, GtkWidget *child);
 void       wrap_box_reorder_child(WrapBox *wbox, GtkWidget *child, gint position);
 
