@@ -1,7 +1,9 @@
-2004-11-16 19:37  Stephen Bach <sjbach@users.sourceforge.net>
+2004-11-16 19:57  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* dlisting.c, dlisting.h, file_box.c, gviewglob.c, gviewglob.h:
 	  Display accepts -z flag to set modifier for all font sizes.
+	* viewglob.in, seer.c:
+	  Accept -z and --font-size-modifier flags.
 
 2004-11-16 15:38  Stephen Bach <sjbach@users.sourceforge.net>
 

@@ -25,7 +25,7 @@ vg_usage() {
 	cat >&2 << EOF
 usage: $SCRIPT_NAME [-d <display program>] [-f <config file>]
                    [-o <shell output file>] [-O <terminal output file]
-                   [-p <name|inode>] [-s <ls|windows>] [-n <##>]
+                   [-p <name|inode>] [-s <ls|windows>] [-z <+/-#>] [-n <##>]
                    [-r <descending|ascending|ascending-pwd-first>]
                    [-b] [-t] [-m] [-w] [ -e <executable>]
 -c, --shell-mode            Shell to use (bash or zsh).
@@ -38,6 +38,8 @@ usage: $SCRIPT_NAME [-d <display program>] [-f <config file>]
                             file (i.e. the stuff you type into the shell).
 -s, --sort-style            File sorting style.
 -r, --dir-order             Order in which to list directories in the display.
+-z, --font-size-modifier    Increase or decrease the size of text in the
+                            display.
 -n, --show-max              Maximum number of files to show per directory
                             (you can still force show if max is reached).
 -b, --disable-icons         Don't show file/directory icons in display.
@@ -123,6 +125,13 @@ vg_test_show_max() {
 	fi
 }
 
+vg_test_font_size_modifier() {
+	if [[ "$1" != ?([-+])*([0-9]) ]]
+		then vg_error "Invalid font size modifier" 1
+	fi
+}
+
+
 if [[ -z "$DISPLAY" ]]
 	then vg_error "Must be run from a graphical environment" 2
 elif [[ "$VG_VIEWGLOB_ACTIVE" = yep ]]
@@ -142,7 +151,7 @@ export VG_ASTERISK=yep
 . $VG_DIR/getopt.sh
 
 # Parse the options.
-while getoptex "b; c: e: d: f: m; n: o: O: r: s: t; w; h; v; V; shell-mode: executable: display: config-file: shell-output: show-hidden; show-max: sort-style: dir-order: term-output: disable-star; disable-icons; disable-smart-insert; help; version;" "$@"
+while getoptex "b; c: e: d: f: m; n: o: O: r: s: t; w; h; v; V; z: shell-mode: executable: display: config-file: shell-output: show-hidden; show-max: font-size-modifier: sort-style: dir-order: term-output: disable-star; disable-icons; disable-smart-insert; help; version;" "$@"
 	do case "$OPTOPT" in
 
 		b|disable-icons)
@@ -196,6 +205,11 @@ while getoptex "b; c: e: d: f: m; n: o: O: r: s: t; w; h; v; V; shell-mode: exec
 
 		t|disable-star)
 			VG_ASTERISK=nope
+			;;
+
+		z|font-size-modifier)
+			vg_test_font_size_modifier "$OPTARG"
+			VG_FONT_SIZE_MODIFIER=$OPTARG
 			;;
 
 		n|show-max)
@@ -256,6 +270,11 @@ if [ -r "$VG_CONFIG_FILE" ]; then
 				[[ -z "$VG_SHOW_MAX" ]] && vg_test_show_max "$arg" && \
 					VG_SHOW_MAX=$arg
 				;;
+			font-size-modifier)
+				[[ -z "$VG_FONT_SIZE_MODIFIER" ]] && \
+					vg_test_font_size_modifier "$OPTARG" && \
+					VG_FONT_SIZE_MODIFIER=$arg
+				;;
 			show-hidden)
 				VG_DISPLAY_OPTS="${VG_DISPLAY_OPTS} -w"
 				;;
@@ -291,6 +310,7 @@ fi
 [[ -z "$VG_SHOW_MAX" ]] && VG_SHOW_MAX=500
 [[ -z "$VG_SORT_STYLE" ]] && VG_SORT_STYLE=ls
 [[ -z "$VG_DIR_ORDER" ]] && VG_DIR_ORDER=descending
+[[ -z "$VG_FONT_SIZE_MODIFIER" ]] && VG_FONT_SIZE_MODIFIER=0
 
 if [[ "$VG_SHELL_MODE" = bash ]]; then
 	# The bash initialization requires a file.
@@ -317,6 +337,7 @@ exec "$VG_DIR"/seer -c "$VG_SHELL_MODE" -e "$VG_EXECUTABLE"     \
                     -o "$VG_SHELL_OUTPUT" -O "$VG_TERM_OUTPUT"  \
                     -d "$VG_DISPLAY" $VG_DISPLAY_OPTS           \
                     -n "$VG_SHOW_MAX" -s "$VG_SORT_STYLE"       \
+		    -z "$VG_FONT_SIZE_MODIFIER"                 \
                     -i "$VG_SHELL_INIT"                         \
                     -x "$VG_EXPAND_COMMAND"
 

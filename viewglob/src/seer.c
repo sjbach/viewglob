@@ -229,7 +229,7 @@ static void parse_args(int argc, char** argv) {
 
 	opterr = 0;
 	while (in_loop) {
-		switch (getopt(argc, argv, "bc:d:e:f:i:mn:o:O:s:vVx:w")) {
+		switch (getopt(argc, argv, "bc:d:e:f:i:mn:o:O:s:vVx:wz:")) {
 			case -1:
 				in_loop = false;
 				break;
@@ -321,6 +321,11 @@ static void parse_args(int argc, char** argv) {
 				XFREE(opts.expand_command);
 				opts.expand_command = XMALLOC(char, strlen(optarg) + 1);
 				strcpy(opts.expand_command, optarg);
+				break;
+			case 'z':
+				/* Font size modifier (for display) */
+				args_add(&(disp.a), "-z");
+				args_add(&(disp.a), optarg);
 				break;
 		}
 	}
