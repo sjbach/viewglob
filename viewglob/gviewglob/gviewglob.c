@@ -38,7 +38,6 @@ static gboolean  receive_data(GIOChannel* source, gchar* buff, gsize size, gsize
 static GString*  read_string(const gchar* buff, gsize* start, gsize n, gchar delim, struct holdover* ho, gboolean* finished);
 
 static void        set_icons(Exhibit* e);
-static GdkPixbuf*  make_pixbuf_scaled(const guint8 icon_inline[], gint scale_height);
 
 static gboolean  parse_args(int argc, char** argv);
 static void      report_version(void);
@@ -487,25 +486,9 @@ static void process_glob_data(const gchar* buff, gsize bytes, Exhibit* e) {
 
 
 static void set_icons(Exhibit* e) {
-#include "icons.h"
+#include "app_icons.h"
 
 	GList* icons = NULL;
-
-	GtkIconTheme* current_theme;
-	GtkIconInfo* icon_info;
-
-	guint icon_size;
-	GtkWidget* test_label;
-	PangoLayout* test_layout;
-
-	/* Figure out a good size for the icons. */
-	test_label = gtk_label_new("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890./{}[]|");
-	test_layout = gtk_label_get_layout(GTK_LABEL(test_label));
-	pango_layout_get_pixel_size(test_layout, NULL, &icon_size);
-	gtk_widget_destroy(test_label);
-
-	if (icon_size < 6)
-		icon_size = 12;
 
 	/* Setup the application icons. */
 	icons = g_list_append(icons, gdk_pixbuf_new_from_inline(-1, icon_16x16_inline, FALSE, NULL));
@@ -517,125 +500,11 @@ static void set_icons(Exhibit* e) {
 	if (!v.show_icons)
 		return;
 
-	/* Try to get icons from the current theme. */
-	current_theme = gtk_icon_theme_get_default();
-
-	/* Regular file icon */
-	icon_info = gtk_icon_theme_lookup_icon(current_theme, "gnome-fs-regular", icon_size, GTK_ICON_LOOKUP_USE_BUILTIN);
-	if (icon_info) {
-		/* Use whatever the user has. */
-		file_box_set_icon(FT_REGULAR, gtk_icon_info_load_icon(icon_info, NULL));
-		gtk_icon_info_free(icon_info);
-	}
-	else {
-		/* Use this icon from old Gnome. */
-		file_box_set_icon(FT_REGULAR, make_pixbuf_scaled(regular_inline, icon_size));
-	}
-
-	/* Executable icon */
-	icon_info = gtk_icon_theme_lookup_icon(current_theme, "gnome-fs-executable", icon_size, GTK_ICON_LOOKUP_USE_BUILTIN);
-	if (icon_info) {
-		/* Use whatever the user has. */
-		file_box_set_icon(FT_EXECUTABLE, gtk_icon_info_load_icon(icon_info, NULL));
-		gtk_icon_info_free(icon_info);
-	}
-	else {
-		/* Use this icon from old Gnome. */
-		file_box_set_icon(FT_EXECUTABLE, make_pixbuf_scaled(executable_inline, icon_size));
-	}
-
-	/* Directory icon */
-	icon_info = gtk_icon_theme_lookup_icon(current_theme, "gnome-fs-directory", icon_size, GTK_ICON_LOOKUP_USE_BUILTIN);
-	if (icon_info) {
-		/* Use whatever the user has. */
-		file_box_set_icon(FT_DIRECTORY, gtk_icon_info_load_icon(icon_info, NULL));
-		gtk_icon_info_free(icon_info);
-	}
-	else {
-		/* Use this icon from old Gnome. */
-		file_box_set_icon(FT_DIRECTORY, make_pixbuf_scaled(directory_inline, icon_size));
-	}
-
-	/* Block device icon */
-	icon_info = gtk_icon_theme_lookup_icon(current_theme, "gnome-fs-blockdev", icon_size, GTK_ICON_LOOKUP_USE_BUILTIN);
-	if (icon_info) {
-		/* Use whatever the user has. */
-		file_box_set_icon(FT_BLOCKDEV, gtk_icon_info_load_icon(icon_info, NULL));
-		gtk_icon_info_free(icon_info);
-	}
-	else {
-		/* Use this icon from old Gnome. */
-		file_box_set_icon(FT_BLOCKDEV, make_pixbuf_scaled(blockdev_inline, icon_size));
-	}
-
-	/* Character device icon */
-	icon_info = gtk_icon_theme_lookup_icon(current_theme, "gnome-fs-chardev", icon_size, GTK_ICON_LOOKUP_USE_BUILTIN);
-	if (icon_info) {
-		/* Use whatever the user has. */
-		file_box_set_icon(FT_CHARDEV, gtk_icon_info_load_icon(icon_info, NULL));
-		gtk_icon_info_free(icon_info);
-	}
-	else {
-		/* Use this icon from old Gnome. */
-		file_box_set_icon(FT_CHARDEV, make_pixbuf_scaled(chardev_inline, icon_size));
-	}
-
-	/* Fifo icon */
-	icon_info = gtk_icon_theme_lookup_icon(current_theme, "gnome-fs-fifo", icon_size, GTK_ICON_LOOKUP_USE_BUILTIN);
-	if (icon_info) {
-		/* Use whatever the user has. */
-		file_box_set_icon(FT_FIFO, gtk_icon_info_load_icon(icon_info, NULL));
-		gtk_icon_info_free(icon_info);
-	}
-	else {
-		/* Use this icon from old Gnome. */
-		file_box_set_icon(FT_FIFO, make_pixbuf_scaled(fifo_inline, icon_size));
-	}
-
-	/* Symlink icon */
-	icon_info = gtk_icon_theme_lookup_icon(current_theme, "gnome-dev-symlink", icon_size, GTK_ICON_LOOKUP_USE_BUILTIN);
-	if (icon_info) {
-		/* Use whatever the user has. */
-		file_box_set_icon(FT_SYMLINK, gtk_icon_info_load_icon(icon_info, NULL));
-		gtk_icon_info_free(icon_info);
-	}
-	else {
-		/* Use this icon from old Gnome. */
-		file_box_set_icon(FT_SYMLINK, make_pixbuf_scaled(symlink_inline, icon_size));
-	}
-
-	/* Socket icon */
-	icon_info = gtk_icon_theme_lookup_icon(current_theme, "gnome-fs-socket", icon_size, GTK_ICON_LOOKUP_USE_BUILTIN);
-	if (icon_info) {
-		/* Use whatever the user has. */
-		file_box_set_icon(FT_SOCKET, gtk_icon_info_load_icon(icon_info, NULL));
-		gtk_icon_info_free(icon_info);
-	}
-	else {
-		/* Use this icon from old Gnome. */
-		file_box_set_icon(FT_SOCKET, make_pixbuf_scaled(socket_inline, icon_size));
-	}
-
-
 	/* Context menu icons. */
 	dlisting_set_show_hidden_pixbuf(gdk_pixbuf_new_from_inline(-1, context_hidden_inline, FALSE, NULL));
 	dlisting_set_show_all_pixbuf(gdk_pixbuf_new_from_inline(-1, context_all_inline, FALSE, NULL));
 }
 
-
-static GdkPixbuf* make_pixbuf_scaled(const guint8 icon_inline[], gint scale_size) {
-		gint width, height;
-		GdkPixbuf* temp;
-		GdkPixbuf* result;
-
-		temp = gdk_pixbuf_new_from_inline(-1, icon_inline, FALSE, NULL);
-		width = gdk_pixbuf_get_width(temp);
-		height = gdk_pixbuf_get_height(temp);
-		result = gdk_pixbuf_scale_simple(temp, scale_size, scale_size, GDK_INTERP_BILINEAR);
-
-		g_free(temp);
-		return result;
-}
 
 
 /* Resize the DListings if necessary. */
@@ -835,6 +704,8 @@ int main(int argc, char *argv[]) {
 	v.glob_fifo = v.cmd_fifo = v.feedback_fifo = NULL;
 	if (! parse_args(argc, argv) )
 		return 0;
+
+	file_box_set_sizing(-10);  // FIXME
 
 	/* Create gviewglob window. */
 	e.window = gtk_window_new(GTK_WINDOW_TOPLEVEL);

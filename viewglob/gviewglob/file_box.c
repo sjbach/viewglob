@@ -29,6 +29,8 @@
 extern FILE* df;
 #endif
 
+#define BASE_FONT_SIZE 0
+
 /* --- properties --- */
 enum {
   PROP_0,
@@ -63,11 +65,21 @@ static gint cmp_same_name(gconstpointer a, gconstpointer b);
 static gint cmp_ordering_ls(gconstpointer a, gconstpointer b);
 static gint cmp_ordering_win(gconstpointer a, gconstpointer b);
 
+static void initialize_icons(void);
+static GdkPixbuf*  make_pixbuf_scaled(const guint8 icon_inline[], gint scale_height);
+
 
 /* --- variables --- */
 static gpointer parent_class = NULL;
-static GdkPixbuf* file_type_icons[8] = { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
+
+#define FILE_TYPE_ICONS_COUNT  8
+static GdkPixbuf* file_type_icons[FILE_TYPE_ICONS_COUNT] =
+	{ NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
+
 static GCompareFunc ordering_func = cmp_ordering_ls;
+
+static gchar* fitem_font_tags_open = NULL;
+static gchar* fitem_font_tags_close = NULL;
 
 
 /* --- functions --- */
@@ -329,6 +341,206 @@ void file_box_set_icon(FileType type, GdkPixbuf* icon) {
 }
 
 
+void file_box_set_sizing(gint modifier) {
+
+	gint size;
+	gchar* temp;
+
+	gint i;
+
+	g_return_if_fail(size < 10);   /* Constrain between -10 and 10. */
+	g_return_if_fail(size > -10);
+
+	g_free(fitem_font_tags_open);
+	g_free(fitem_font_tags_close);
+
+	fitem_font_tags_open = g_strdup("");
+	fitem_font_tags_close = g_strdup("");
+
+	size = BASE_FONT_SIZE + modifier;
+
+	/* Create the tag strings. */
+	if (size > 0) {
+		for (i = 0; i < size; i++) {
+			temp = fitem_font_tags_open;
+			fitem_font_tags_open = g_strconcat(fitem_font_tags_open, "<big>", NULL);
+			g_free(temp);
+
+			temp = fitem_font_tags_close;
+			fitem_font_tags_close = g_strconcat(fitem_font_tags_close, "</big>", NULL);
+			g_free(temp);
+		}
+	}
+	else if (size < 0) {
+		for (i = 0; i > size; i--) {
+			temp = fitem_font_tags_open;
+			fitem_font_tags_open = g_strconcat(fitem_font_tags_open, "<small>", NULL);
+			g_free(temp);
+
+			temp = fitem_font_tags_close;
+			fitem_font_tags_close = g_strconcat(fitem_font_tags_close, "</small>", NULL);
+			g_free(temp);
+		}
+	}
+
+	/* (Re)set the icons with the new sizing. */
+	initialize_icons();
+}
+
+
+static void initialize_icons(void) {
+#include "file_icons.h"
+
+	GtkIconTheme* current_theme;
+	GtkIconInfo* icon_info;
+
+	const gchar* test_string = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ123456789";
+
+	guint icon_size;
+	GtkWidget* test_label;
+	PangoLayout* test_layout;
+	gchar* label_markup;
+
+	int i;
+
+	/* Free the old icons, if present. */
+	for (i = 0; i < FILE_TYPE_ICONS_COUNT; i++) {
+		if (file_type_icons[i]) {
+			g_object_unref(file_type_icons[i]);
+			file_type_icons[i] = NULL;
+		}
+	}
+
+	/* Figure out a good size for the file type icons. */
+	if (fitem_font_tags_open && fitem_font_tags_close)
+		label_markup = g_strconcat(fitem_font_tags_open, test_string, fitem_font_tags_close, NULL);
+	else
+		label_markup = g_strdup(test_string);
+	test_label = gtk_label_new(NULL);
+	gtk_label_set_markup(GTK_LABEL(test_label), label_markup);
+	test_layout = gtk_label_get_layout(GTK_LABEL(test_label));
+	pango_layout_get_pixel_size(test_layout, NULL, &icon_size);
+	gtk_widget_destroy(test_label);
+
+	/* Try to get icons from the current theme. */
+	current_theme = gtk_icon_theme_get_default();
+
+	/* Regular file icon */
+	icon_info = gtk_icon_theme_lookup_icon(current_theme, "gnome-fs-regular", icon_size, GTK_ICON_LOOKUP_USE_BUILTIN);
+	if (icon_info) {
+		/* Use whatever the user has. */
+		file_box_set_icon(FT_REGULAR, gtk_icon_info_load_icon(icon_info, NULL));
+		gtk_icon_info_free(icon_info);
+	}
+	else {
+		/* Use this icon from old Gnome. */
+		file_box_set_icon(FT_REGULAR, make_pixbuf_scaled(regular_inline, icon_size));
+	}
+
+	/* Executable icon */
+	icon_info = gtk_icon_theme_lookup_icon(current_theme, "gnome-fs-executable", icon_size, GTK_ICON_LOOKUP_USE_BUILTIN);
+	if (icon_info) {
+		/* Use whatever the user has. */
+		file_box_set_icon(FT_EXECUTABLE, gtk_icon_info_load_icon(icon_info, NULL));
+		gtk_icon_info_free(icon_info);
+	}
+	else {
+		/* Use this icon from old Gnome. */
+		file_box_set_icon(FT_EXECUTABLE, make_pixbuf_scaled(executable_inline, icon_size));
+	}
+
+	/* Directory icon */
+	icon_info = gtk_icon_theme_lookup_icon(current_theme, "gnome-fs-directory", icon_size, GTK_ICON_LOOKUP_USE_BUILTIN);
+	if (icon_info) {
+		/* Use whatever the user has. */
+		file_box_set_icon(FT_DIRECTORY, gtk_icon_info_load_icon(icon_info, NULL));
+		gtk_icon_info_free(icon_info);
+	}
+	else {
+		/* Use this icon from old Gnome. */
+		file_box_set_icon(FT_DIRECTORY, make_pixbuf_scaled(directory_inline, icon_size));
+	}
+
+	/* Block device icon */
+	icon_info = gtk_icon_theme_lookup_icon(current_theme, "gnome-fs-blockdev", icon_size, GTK_ICON_LOOKUP_USE_BUILTIN);
+	if (icon_info) {
+		/* Use whatever the user has. */
+		file_box_set_icon(FT_BLOCKDEV, gtk_icon_info_load_icon(icon_info, NULL));
+		gtk_icon_info_free(icon_info);
+	}
+	else {
+		/* Use this icon from old Gnome. */
+		file_box_set_icon(FT_BLOCKDEV, make_pixbuf_scaled(blockdev_inline, icon_size));
+	}
+
+	/* Character device icon */
+	icon_info = gtk_icon_theme_lookup_icon(current_theme, "gnome-fs-chardev", icon_size, GTK_ICON_LOOKUP_USE_BUILTIN);
+	if (icon_info) {
+		/* Use whatever the user has. */
+		file_box_set_icon(FT_CHARDEV, gtk_icon_info_load_icon(icon_info, NULL));
+		gtk_icon_info_free(icon_info);
+	}
+	else {
+		/* Use this icon from old Gnome. */
+		file_box_set_icon(FT_CHARDEV, make_pixbuf_scaled(chardev_inline, icon_size));
+	}
+
+	/* Fifo icon */
+	icon_info = gtk_icon_theme_lookup_icon(current_theme, "gnome-fs-fifo", icon_size, GTK_ICON_LOOKUP_USE_BUILTIN);
+	if (icon_info) {
+		/* Use whatever the user has. */
+		file_box_set_icon(FT_FIFO, gtk_icon_info_load_icon(icon_info, NULL));
+		gtk_icon_info_free(icon_info);
+	}
+	else {
+		/* Use this icon from old Gnome. */
+		file_box_set_icon(FT_FIFO, make_pixbuf_scaled(fifo_inline, icon_size));
+	}
+
+	/* Symlink icon */
+	icon_info = gtk_icon_theme_lookup_icon(current_theme, "gnome-dev-symlink", icon_size, GTK_ICON_LOOKUP_USE_BUILTIN);
+	if (icon_info) {
+		/* Use whatever the user has. */
+		file_box_set_icon(FT_SYMLINK, gtk_icon_info_load_icon(icon_info, NULL));
+		gtk_icon_info_free(icon_info);
+	}
+	else {
+		/* Use this icon from old Gnome. */
+		file_box_set_icon(FT_SYMLINK, make_pixbuf_scaled(symlink_inline, icon_size));
+	}
+
+	/* Socket icon */
+	icon_info = gtk_icon_theme_lookup_icon(current_theme, "gnome-fs-socket", icon_size, GTK_ICON_LOOKUP_USE_BUILTIN);
+	if (icon_info) {
+		/* Use whatever the user has. */
+		file_box_set_icon(FT_SOCKET, gtk_icon_info_load_icon(icon_info, NULL));
+		gtk_icon_info_free(icon_info);
+	}
+	else {
+		/* Use this icon from old Gnome. */
+		file_box_set_icon(FT_SOCKET, make_pixbuf_scaled(socket_inline, icon_size));
+	}
+
+}
+
+
+static GdkPixbuf* make_pixbuf_scaled(const guint8 icon_inline[], gint scale_size) {
+		gint width, height;
+		GdkPixbuf* temp;
+		GdkPixbuf* result;
+
+		temp = gdk_pixbuf_new_from_inline(-1, icon_inline, FALSE, NULL);
+		width = gdk_pixbuf_get_width(temp);
+		height = gdk_pixbuf_get_height(temp);
+		result = gdk_pixbuf_scale_simple(temp, scale_size, scale_size, GDK_INTERP_BILINEAR);
+
+		g_free(temp);
+		return result;
+}
+
+
+
+
 gboolean file_box_get_show_hidden_files(FileBox* fbox) {
 	g_return_val_if_fail(IS_FILE_BOX(fbox), FALSE);
 	return fbox->show_hidden_files;
@@ -526,7 +738,9 @@ static void fitem_build_widgets(FItem* fi) {
 	GtkWidget* hbox;
 	GtkWidget* eventbox;
 
+	gchar* label_markup;
 	gchar* temp;
+	gsize  length;
 
 	/* Event Box (to show selection) */
 	eventbox = gtk_event_box_new();
@@ -547,10 +761,23 @@ static void fitem_build_widgets(FItem* fi) {
 		gtk_box_pack_start(GTK_BOX(hbox), icon_image, FALSE, FALSE, 0);
 	}
 
-	/* Label -- must convert the text to utf8. */
-	temp = g_filename_to_utf8(fi->name, strlen(fi->name), NULL, NULL, NULL);
-	label = gtk_label_new(temp);
-	g_free(temp);
+	/* Label -- must convert the text to utf8, then escape markup special characters. */
+	label_markup = g_filename_to_utf8(fi->name, strlen(fi->name), NULL, &length, NULL);
+	temp = g_markup_escape_text(label_markup, length);
+	g_free(label_markup);
+
+	/* Add beginning and end tags, if present. */
+	if (fitem_font_tags_open && fitem_font_tags_close) {
+		label_markup = g_strconcat(fitem_font_tags_open, temp, fitem_font_tags_close, NULL);
+		g_free(temp);
+	}
+	else
+		label_markup = temp;
+
+	label = gtk_label_new(NULL);
+	gtk_label_set_markup(GTK_LABEL(label), label_markup);
+	g_free(label_markup);
+
 	gtk_misc_set_padding(GTK_MISC(label), 1, 0);
 	gtk_widget_show(label);
 	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
