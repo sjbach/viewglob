@@ -83,9 +83,9 @@ int main(int argc, char* argv[]) {
 	set_program_name(argv[0]);
 
 	/* Initialize program options. */
-	opts.executable = opts.display = opts.config_file = NULL;
-	opts.shell_out_file = opts.term_out_file = NULL;
-	opts.init_file = opts.expand_command = NULL;
+	opts.shell_mode = opts.executable = opts.display = NULL;
+	opts.config_file = opts.shell_out_file = opts.term_out_file = NULL;
+	opts.init_loc = opts.expand_command = NULL;
 
 	/* Initialize the shell and display structs. */
 	u.s.pid = x.s.pid = disp.pid = -1;
@@ -102,8 +102,32 @@ int main(int argc, char* argv[]) {
 	parse_args(argc, argv);
 	disp.name = opts.display;
 	u.s.name = x.s.name = opts.executable;
-	args_add(&(u.s.a), "--init-file");
-	args_add(&(u.s.a), opts.init_file);
+
+	/* Get ready for the user shell child fork. */
+	if (strcmp(opts.shell_mode, "bash") == 0) {
+		/* Bash is simple. */
+		args_add(&(u.s.a), "--init-file");
+		args_add(&(u.s.a), opts.init_loc);
+	}
+	else if (strcmp(opts.shell_mode, "zsh") == 0) {
+		/* Zsh requires the init file be named ".zshrc", and its location determined
+		   by the ZDOTDIR environment variable. */
+		char* zdotdir = XMALLOC(char, strlen("ZDOTDIR=") + strlen(opts.init_loc) + 1);
+		strcpy(zdotdir, "ZDOTDIR=");
+		strcat(zdotdir, opts.init_loc);
+		if (putenv(zdotdir) != 0) {
+			viewglob_error("Could not modify the environment");
+			ok = false;
+			goto done;
+		}
+		args_add(&(x.s.a), "+Z");  /* Disable the line editor in the sandbox shell.  This can
+		                              be overridden, so we also disable it in the rc file. */
+	}
+	else {
+		viewglob_error("Unknown shell mode");
+		ok = false;
+		goto done;
+	}
 
 	/* Open up the log files, if possible. */
 	u.s.transcript_fd = open_warning(opts.shell_out_file, O_CREAT | O_WRONLY | O_TRUNC, PERM_FILE);
@@ -128,6 +152,7 @@ int main(int argc, char* argv[]) {
 	}
 
 	/* Setup another shell to glob stuff in. */
+	putenv("VG_SANDBOX=yep");
 	if ( ! pty_child_fork(&(x.s), NEW_PTY_FD, devnull_fd, devnull_fd) ) {
 		viewglob_error("Could not create sandbox shell");
 		ok = false;
@@ -198,7 +223,7 @@ static void parse_args(int argc, char** argv) {
 
 	opterr = 0;
 	while (in_loop) {
-		switch (getopt(argc, argv, "bd:e:f:i:n:o:O:s:vVx:w")) {
+		switch (getopt(argc, argv, "bc:d:e:f:i:n:o:O:s:vVx:w")) {
 			case -1:
 				in_loop = false;
 				break;
@@ -210,6 +235,14 @@ static void parse_args(int argc, char** argv) {
 				/* Disable icons in display. */
 				args_add(&(disp.a), "-b");
 				break;
+
+			case 'c':
+				/* Set the shell mode. */
+				XFREE(opts.shell_mode);
+				opts.shell_mode = XMALLOC(char, strlen(optarg) + 1);
+				strcpy(opts.shell_mode, optarg);
+				break;
+
 			case 'd':
 				/* Display program */
 				XFREE(opts.display);
@@ -230,9 +263,9 @@ static void parse_args(int argc, char** argv) {
 				break;
 			case 'i':
 				/* Shell initialization command */
-				XFREE(opts.init_file);
-				opts.init_file = XMALLOC(char, strlen(optarg) + 1);
-				strcpy(opts.init_file, optarg);
+				XFREE(opts.init_loc);
+				opts.init_loc = XMALLOC(char, strlen(optarg) + 1);
+				strcpy(opts.init_loc, optarg);
 				break;
 			case 'n':
 				/* Maximum number of files to display per directory (unless forced). */
@@ -241,15 +274,21 @@ static void parse_args(int argc, char** argv) {
 				break;
 			case 'o':
 				/* Duplicate shell output file */
-				XFREE(opts.shell_out_file);
-				opts.shell_out_file = XMALLOC(char, strlen(optarg) + 1);
-				strcpy(opts.shell_out_file, optarg);
+				if (optarg && strlen(optarg) > 0) {
+					/* Do nothing if there's no argument. */
+					XFREE(opts.shell_out_file);
+					opts.shell_out_file = XMALLOC(char, strlen(optarg) + 1);
+					strcpy(opts.shell_out_file, optarg);
+				}
 				break;
 			case 'O':
 				/* Duplicate term output file */
-				XFREE(opts.term_out_file);
-				opts.term_out_file = XMALLOC(char, strlen(optarg) + 1);
-				strcpy(opts.term_out_file, optarg);
+				if (optarg && strlen(optarg) > 0) {
+					/* Do nothing if there's no argument. */
+					XFREE(opts.term_out_file);
+					opts.term_out_file = XMALLOC(char, strlen(optarg) + 1);
+					strcpy(opts.term_out_file, optarg);
+				}
 				break;
 			case 's':
 				/* Display sorting style. */
@@ -276,9 +315,11 @@ static void parse_args(int argc, char** argv) {
 
 	if (!opts.display)
 		viewglob_fatal("No display program specified");
+	else if (!opts.shell_mode)
+		viewglob_fatal("No shell mode specified");
 	else if (!opts.executable)
 		viewglob_fatal("No shell executable specified");
-	else if (!opts.init_file)
+	else if (!opts.init_loc)
 		viewglob_fatal("No shell initialization command specified");
 	else if (!opts.expand_command)
 		viewglob_fatal("No shell expansion command specified");
@@ -425,6 +466,7 @@ static bool user_activity(void) {
 			ok = false;
 			goto done;
 		}
+		// FIXME this should actually be aprt of u, not x.
 		if (x.s.transcript_fd != -1 && !hardened_write(x.s.transcript_fd, buff, nread))
 			viewglob_warning("Could not write term transcript");
 
@@ -702,13 +744,13 @@ static void send_sane_cmd(struct display* d) {
 
 	XFREE(x.glob_cmd);
 	x.glob_cmd = XMALLOC(char,
-		strlen("cd ") + strlen(u.pwd) + strlen(" && ") +
+		strlen("cd \"") + strlen(u.pwd) + strlen("\" && ") +
 		strlen(opts.expand_command) + strlen(" ") + strlen(sane_cmd) +
 		strlen(" >> ") + strlen(d->glob_fifo_name) + strlen(" ; cd /\n") + 1);
 
-	strcpy(x.glob_cmd, "cd ");
+	strcpy(x.glob_cmd, "cd \"");
 	strcat(x.glob_cmd, u.pwd);
-	strcat(x.glob_cmd, " && ");
+	strcat(x.glob_cmd, "\" && ");
 	strcat(x.glob_cmd, opts.expand_command);
 	strcat(x.glob_cmd, " ");
 	strcat(x.glob_cmd, sane_cmd);

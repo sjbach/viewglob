@@ -17,15 +17,11 @@ getopt.sh: Makefile
 	chmod a+x getopt.sh.tmp
 	mv getopt.sh.tmp getopt.sh
 
-init-viewglob.sh: Makefile
-	rm -f init-viewglob.sh.tmp
-	sed -e 's,@BASH_FULL_PATH\@,$(BASH_FULL_PATH),g' \
-		init-viewglob.sh.in > init-viewglob.sh.tmp
-	chmod a+x init-viewglob.sh.tmp
-	mv init-viewglob.sh.tmp init-viewglob.sh
-
 gviewglob: Makefile
 	$(LN_S) viewglob gviewglob
+
+.zshrc: Makefile
+	cp -f init-viewglob.zshrc .zshrc
 
 # Very slight modifications to these files from Marc J. Rochkind's
 # book Advanced Unix Programming 2nd ed.  You can get them on the
@@ -45,24 +41,24 @@ tc_setraw.viewglob.h: Makefile
 	rm -f tc_setraw.viewglob.h
 	patch -i tc_setraw.h.diff -o tc_setraw.viewglob.h tc_setraw.h
 
-CLEANFILES = viewglob getopt.sh init-viewglob.sh ptutil.viewglob.c        \
-             ptutil.viewglob.h tc_setraw.viewglob.c tc_setraw.viewglob.h  \
-             gviewglob
+CLEANFILES = viewglob gviewglob .zshrc getopt.sh ptutil.viewglob.c       \
+             ptutil.viewglob.h tc_setraw.viewglob.c tc_setraw.viewglob.h
 
-pkgdata_SCRIPTS = getopt.sh init-viewglob.sh
+pkgdata_DATA = init-viewglob.bashrc .zshrc
+pkgdata_SCRIPTS = getopt.sh
 pkgdata_PROGRAMS = seer glob-expand
-seer_SOURCES = seer.c children.c cmdline.c sequences.c   \
-               sanitize.c tc_setraw.viewglob.c ptutil.viewglob.c xmalloc.c \
-               viewglob-error.c hardened_io.c misc.c
-glob_expand_SOURCES = glob-expand.c xmalloc.c \
-                      viewglob-error.c
 
-noinst_HEADERS = seer.h children.h cmdline.h sequences.h \
-                 sanitize.h tc_setraw.h ptutil.h \
-                 viewglob-error.h hardened_io.h common.h \
-                 glob-expand.h
-EXTRA_DIST = ptutil.h ptutil.h.diff ptutil.c \
-             ptutil.c.diff tc_setraw.h tc_setraw.h.diff \
-             tc_setraw.c tc_setraw.c.diff viewglob.in \
-             getopt.sh.in init-viewglob.sh.in
+seer_SOURCES = seer.c children.c cmdline.c sequences.c sanitize.c  \
+               tc_setraw.viewglob.c ptutil.viewglob.c xmalloc.c    \
+               viewglob-error.c hardened_io.c misc.c
+
+glob_expand_SOURCES = glob-expand.c xmalloc.c viewglob-error.c
+
+noinst_HEADERS = seer.h children.h cmdline.h sequences.h sanitize.h   \
+                 tc_setraw.h ptutil.h viewglob-error.h hardened_io.h  \
+                 common.h glob-expand.h
+
+EXTRA_DIST = ptutil.h ptutil.h.diff ptutil.c ptutil.c.diff \
+             tc_setraw.h tc_setraw.h.diff tc_setraw.c tc_setraw.c.diff \
+             viewglob.in getopt.sh.in init-viewglob.bashrc init-viewglob.zshrc
 

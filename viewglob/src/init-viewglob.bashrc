@@ -1,6 +1,3 @@
-#! @BASH_FULL_PATH@
-
-SCRIPT_NAME=${0##*/}
 
 # Source the user's run-control file.
 [ -f ~/.bashrc ] && . ~/.bashrc
@@ -22,5 +19,5 @@ fi
 # Adding semaphores to the ends of these variables.
 export PS1="${PS1}\[\033[0;30m\]\[\033[0m\]\[\033[1;37m\]\[\033[0m\]"
 export PS2="${PS2}\[\033[0;34m\]\[\033[0m\]\[\033[0;31m\]\[\033[0m\]"
-export PROMPT_COMMAND="${PROMPT_COMMAND}"'echo -ne "\033P${PWD}\033\\"'
+export PROMPT_COMMAND="${PROMPT_COMMAND}"'printf "\033P${PWD}\033\\"'
 

@@ -27,6 +27,7 @@ usage: $SCRIPT_NAME [-d <display program>] [-f <config file>]
                    [-o <shell output file>] [-O <terminal output file]
                    [-p <name|inode>] [-s <ls|windows>] [-n <##>]
                    [-b] [-t] [-w] [ -e <executable>]
+-c, --shell-mode    Shell to use (bash or zsh).
 -d, --display       Name or path to a display program to use instead of the
                     default.
 -f, --config-file   Alternate config file.
@@ -40,8 +41,8 @@ usage: $SCRIPT_NAME [-d <display program>] [-f <config file>]
 -b, --disable-icons Don't show file/directory icons in display.
 -t, --disable-star  Don't show the viewglob asterisk indicator in the shell.
 -w, --show-hidden   Display hidden files by default.
--e, --executable    Alternate shell to run
-                    (you probably don't want to use this).
+-e, --executable    Alternate shell executable to run
+                    (you probably don't need to use this).
 -h, --help          This usage.
 -V, --version       Print the version.
 EOF
@@ -60,6 +61,12 @@ viewglob 0.8.4
 Released August 31, 2004
 EOF
 	exit 0
+}
+
+vg_test_shell_mode() {
+	if [ "$1" != bash ] && [ "$1" != zsh ]
+		then vg_error "Shell mode must be \"bash\" or \"zsh\"" 1
+	fi
 }
 
 vg_test_executable() {
@@ -117,8 +124,6 @@ fi
 VG_CONFIG_FILE="$HOME/.viewglobrc"
 
 # The viewglob initialization script will pick up this variable from the environment.
-# A better way would be pass it as an argument to the script, but bash's --init-file
-# option doesn't take arguments.
 export VG_ASTERISK=yep
 
 # This is an excellent script to replace bash's getopts with one which allows long names.
@@ -127,15 +132,16 @@ export VG_ASTERISK=yep
 . $VG_DIR/getopt.sh
 
 # Parse the options.
-while getoptex "b; c; e: d: f: n: o: O: p: s: t; w; h; v; V; executable: display: config-file: shell-output: show-hidden; show-max: sort-style: term-output: disable-star; disable-icons; compare-mode; help; version;" "$@"
+while getoptex "b; c: e: d: f: n: o: O: p: s: t; w; h; v; V; shell-mode: executable: display: config-file: shell-output: show-hidden; show-max: sort-style: term-output: disable-star; disable-icons; compare-mode; help; version;" "$@"
 	do case "$OPTOPT" in
 
 		b|disable-icons)
 			VG_DISPLAY_OPTS="${VG_DISPLAY_OPTS} -b"
 			;;
 
-		c)
-			# Ignored for now.
+		c|shell-mode)
+			vg_test_shell_mode "$OPTARG"
+			VG_SHELL_MODE="$OPTARG"
 			;;
 
 		e|executable)
@@ -155,12 +161,12 @@ while getoptex "b; c; e: d: f: n: o: O: p: s: t; w; h; v; V; executable: display
 
 		o|shell-output)
 			vg_test_output_file "$OPTARG"
-			VG_OPTS="$VG_OPTS -o \"$OPTARG\""
+			VG_SHELL_OUTPUT="$OPTARG"
 			;;
 
 		O|term-output)
 			vg_test_output_file "$OPTARG"
-			VG_OPTS="$VG_OPTS -O \"$OPTARG\""
+			VG_TERM_OUTPUT="$OPTARG"
 			;;
 
 		p|compare-mode)
@@ -207,6 +213,9 @@ if [ -r "$VG_CONFIG_FILE" ]; then
 			\#*)
 				# Ignore comments.
 				;;
+			shell-mode)
+				[[ -z "$VG_SHELL_MODE" ]] && vg_test_shell_mode "$arg" && VG_SHELL_MODE="$arg"
+				;;
 			display)
 				[[ -z "$VG_DISPLAY" ]] && vg_test_display "$arg" && VG_DISPLAY="$arg"
 				;;
@@ -242,20 +251,37 @@ if [ -r "$VG_CONFIG_FILE" ]; then
 	done < "$VG_CONFIG_FILE"
 fi
 
-# These are the default values.
+
+# Set default values for unused variables.
+# (VG_SHELL_OUTPUT and VG_TERM_OUTPUT have no defaults).
+
+if [[ -z "$VG_SHELL_MODE" ]]; then
+	VG_SHELL_MODE=bash
+fi
+
+[[ -z "$VG_EXECUTABLE" ]] && VG_EXECUTABLE="$VG_SHELL_MODE"
 [[ -z "$VG_DISPLAY" ]] && VG_DISPLAY="$VG_DIR/gviewglob"
-[[ -z "$VG_EXECUTABLE" ]] && VG_EXECUTABLE=bash
 [[ -z "$VG_COMPARE_MODE" ]] && VG_COMPARE_MODE=inode
 [[ -z "$VG_SHOW_MAX" ]] && VG_SHOW_MAX=500
 [[ -z "$VG_SORT_STYLE" ]] && VG_SORT_STYLE=ls
+
+if [[ "$VG_SHELL_MODE" = bash ]]; then
+	# The bash initialization requires a file.
+	VG_SHELL_INIT="$VG_DIR/init-viewglob.bashrc"
+else
+	# The zsh initialization just requires a directory.
+	VG_SHELL_INIT="$VG_DIR"
+fi
 
 if [ $VG_COMPARE_MODE = name ]; then
 	VG_EXPAND_OPTS="${VG_EXPAND_OPTS} -n"
 fi
 
 # Exec seer.
-exec "$VG_DIR"/seer $VG_OPTS -d "$VG_DISPLAY" -e "$VG_EXECUTABLE" -f "$VG_CONFIG_FILE"   \
-                           $VG_DISPLAY_OPTS -n "$VG_SHOW_MAX" -s "$VG_SORT_STYLE"        \
-                           -i "$VG_DIR/init-viewglob.sh"                                 \
-                           -x "$VG_DIR/glob-expand $VG_EXPAND_OPTS --"
+exec "$VG_DIR"/seer -c "$VG_SHELL_MODE" -e "$VG_EXECUTABLE" -f "$VG_CONFIG_FILE"  \
+                    -o "$VG_SHELL_OUTPUT" -O "$VG_TERM_OUTPUT"                    \
+                    -d "$VG_DISPLAY" $VG_DISPLAY_OPTS                             \
+                    -n "$VG_SHOW_MAX" -s "$VG_SORT_STYLE"                         \
+                    -i "$VG_SHELL_INIT"                                           \
+                    -x "$VG_DIR/glob-expand $VG_EXPAND_OPTS --"
 

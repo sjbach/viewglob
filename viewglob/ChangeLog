@@ -1,3 +1,12 @@
+2004-09-03 16:19  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* init-viewglob.sh.in: removed
+	* init-viewglob.bashrc, init-viewglob.zshrc: added
+	* src/Makefile.am, seer.c, seer.h, viewglob.in:
+	  - Preliminary zsh support.
+	  - Fixed transcript naming bug.
+	  - Fixed bug involving directory names with special characters.
+
 2004-08-31 11:15  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* NEWS, README, README.ms, TODO, configure.ac, viewglob.1, gviewglob.h,
