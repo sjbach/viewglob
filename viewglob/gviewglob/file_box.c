@@ -46,7 +46,7 @@ static void   file_box_size_request(GtkWidget* widget, GtkRequisition* requisiti
 static guint  file_box_get_display_pos(FileBox* fbox, FItem* fitem);
 static void   file_box_allow_size_requests(FileBox* fbox, gboolean allow);
 
-static FItem*    fitem_new(const GString* name, FileType type, FileSelection selection);
+static FItem*    fitem_new(const gchar* name, FileType type, FileSelection selection);
 static void      fitem_build_widgets(FItem* fi);
 static void      fitem_free(FItem* fi, gboolean destroy_widgets);
 static void      fitem_update_type_selection_and_order(FItem* fi, FileType t, FileSelection s, FileBox* fbox);
@@ -346,13 +346,13 @@ void file_box_add(FileBox* fbox, GString* name, FileType type, FileSelection sel
 	FItem* fi;
 
 	/* Check if we've already got this FItem. */
-	search_result = g_slist_find_custom(fbox->fi_slist, name, cmp_same_name);
+	search_result = g_slist_find_custom(fbox->fi_slist, name->str, cmp_same_name);
 	if (search_result) {
 		fi = search_result->data;
 		fitem_update_type_selection_and_order(fi, type, selection, fbox);
 	}
 	else {
-		fi = fitem_new(name, type, selection);
+		fi = fitem_new(name->str, type, selection);
 		fbox->fi_slist = g_slist_insert_sorted(fbox->fi_slist, fi, ordering_func);
 	}
 
@@ -500,11 +500,11 @@ static void file_box_size_request(GtkWidget* widget, GtkRequisition* requisition
 
 
 
-static FItem* fitem_new(const GString* name, FileType type, FileSelection selection) {
+static FItem* fitem_new(const gchar* name, FileType type, FileSelection selection) {
 	FItem* new_fitem;
 
 	new_fitem = g_new(FItem, 1);
-	new_fitem->name = g_string_new(name->str);
+	new_fitem->name = g_strdup(name);
 	new_fitem->type = type;
 	new_fitem->selection = selection;
 	new_fitem->disp_cat = FDC_INDETERMINATE;
@@ -547,7 +547,7 @@ static void fitem_build_widgets(FItem* fi) {
 
 	/* Label -- must convert the text to utf8. */
 	//label = gtk_label_new(NULL);
-	temp = g_filename_to_utf8(fi->name->str, fi->name->len, NULL, NULL, NULL);
+	temp = g_filename_to_utf8(fi->name, strlen(fi->name), NULL, NULL, NULL);
 	//temp = g_strconcat("<span foreground=\"black\">", temp, "</span>", NULL);
 	//gtk_label_set_text(GTK_LABEL(label), temp);
 	label = gtk_label_new(temp);
@@ -568,10 +568,9 @@ static void fitem_free(FItem* fi, gboolean destroy_widgets) {
 	if (!fi)
 		return;
 
-	DEBUG((df, "destroying: %s (%d)\n", fi->name->str, destroy_widgets));
+	DEBUG((df, "destroying: %s (%d)\n", fi->name, destroy_widgets));
 
-	if (fi->name)
-		g_string_free(fi->name, TRUE);
+	g_free(fi->name);
 	if (destroy_widgets && fi->widget)
 		gtk_widget_destroy(fi->widget);   /* This will grab all the stuff inside, too. */
 
@@ -598,7 +597,7 @@ static void fitem_update_type_selection_and_order(FItem* fi, FileType t, FileSel
 
 	/* File type. */
 	if (fi->type != t) {
-		DEBUG((df, "%s type changed.\n", fi->name->str));
+		DEBUG((df, "%s type changed.\n", fi->name));
 		fi->type = t;
 
 		/* Remove the widgets for this fitem (if it has any).
@@ -624,16 +623,16 @@ static void fitem_update_type_selection_and_order(FItem* fi, FileType t, FileSel
 
 
 static gboolean fitem_is_hidden(FItem* fi) {
-	return *(fi->name->str) == '.';
+	return *(fi->name) == '.';
 }
 
 
 
 static gint cmp_same_name(gconstpointer a, gconstpointer b) {
 	const FItem* aa = a;
-	const GString* bb = b;
+	const gchar* bb = b;
 
-	return strcmp( aa->name->str, bb->str );
+	return strcmp(aa->name, bb);
 }
 
 
@@ -645,7 +644,7 @@ static gint cmp_ordering_win(gconstpointer a, gconstpointer b) {
 
 	if (aa->type == FT_DIRECTORY) {
 		if (bb->type == FT_DIRECTORY)
-			return strcmp( aa->name->str, bb->name->str );
+			return strcmp( aa->name, bb->name);
 		else
 			return -1;
 	}
@@ -653,7 +652,7 @@ static gint cmp_ordering_win(gconstpointer a, gconstpointer b) {
 		if (bb->type == FT_DIRECTORY)
 			return 1;
 		else
-			return strcmp( aa->name->str, bb->name->str );
+			return strcmp( aa->name, bb->name);
 	}
 }
 
@@ -664,6 +663,6 @@ static gint cmp_ordering_ls(gconstpointer a, gconstpointer b) {
 	const FItem* aa = a;
 	const FItem* bb = b;
 
-	return strcmp( aa->name->str, bb->name->str );
+	return strcmp( aa->name, bb->name);
 }
 

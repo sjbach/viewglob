@@ -93,7 +93,7 @@ struct _FileBoxClass {
 
 struct _FItem {
 	GtkWidget*           widget;
-	GString*             name;
+	gchar*               name;
 	FileType             type;
 	FileSelection        selection;
 

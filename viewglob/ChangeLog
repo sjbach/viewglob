@@ -1,3 +1,7 @@
+2004-08-30 21:34  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* file_box.c, file_box.h: use gchars instead of GStrings.
+
 2004-08-30 21:03  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* file_box.c, file_box.h, gviewglob.c, gviewglob.h, wrap_box.c, wrap_box.h:
