@@ -21,10 +21,31 @@
 if [ "$VG_SANDBOX" = yep ]; then
 	# This is all for the sandbox shell.
 
-	# Just in case the user put setopt zle in their .zshrc.
+	# We have to disable this stuff because...
+	# History expansion is a no-go.
+	# The NOMATCH error message prevents glob-expand from running.
+	# Global aliases could be dangerous to the filesystem, and they can't be
+	#   disabled without disabling all aliases (AFAIK).
+	# No spell check!
+	# BAD_PATTERN can prevent glob-expand from running.
+	# The sandbox should NEVER modify the file system, but turn off clobbering
+	#   and star_silent just in case.
+	# The user could put setopt zle in their .zshrc, overriding seer's +Z.
 	setopt \
-		NO_ZLE \
-		NO_BANGHIST
+		NO_BANG_HIST      \
+		NO_NOMATCH        \
+		NO_ALIASES        \
+		NO_CORRECT        \
+		NO_CORRECT_ALL    \
+		NO_BAD_PATTERN    \
+		NO_CLOBBER        \
+		NO_RM_STAR_SILENT \
+		NO_ZLE
+
+	# And we don't want these functions in the sandbox.
+	unfunction chpwd periodic precmd preexec        2>/dev/null
+	unfunction TRAPHUP TRAPDEBUG TRAPEXIT TRAPZERR  2>/dev/null
+
 else
 	# This is all for the user's shell.
 
@@ -44,13 +65,23 @@ else
 	if typeset -f precmd >/dev/null; then
 		# The user already has a precmd function.  Gotta do some finagling.
 
-		VG_TEMP_FILE=/tmp/vg$$
+		if [ "$TMPDIR" ]; then
+			VG_TEMP_FILE="$TMPDIR/vg$$"
+		else
+			VG_TEMP_FILE=/tmp/vg$$
+		fi
+
+		# Try to create a temporary file.
+		if ! touch "$VG_TEMP_FILE"; then
+			print "viewglob: Could not make a temporary file" >&2
+			exit 9   # Nothing to do but give up.
+		fi
 
 		# Rename the user's precmd to vg_precmd (sad hack).
-		typeset -f precmd | sed '1s/precmd/vg_precmd/' > $VG_TEMP_FILE
-		chmod u+x $VG_TEMP_FILE
-		. $VG_TEMP_FILE
-		rm -f $VG_TEMP_FILE
+		typeset -f precmd | sed '1s/precmd/vg_precmd/' >> "$VG_TEMP_FILE"
+		chmod u+x "$VG_TEMP_FILE"
+		. "$VG_TEMP_FILE"
+		rm -f "$VG_TEMP_FILE"
 
 		# Now make a new one, which first calls the user's.
 		precmd() {
@@ -59,11 +90,14 @@ else
 		}
 
 	else
-		# The user doesn't have a precmd, so we make one.
+		# The user doesn't have a precmd, so we just make one.
 		precmd() {
 			printf "\033P${PWD}\033\\"
 		}
 	fi
+
+	# If viewglob is to exit correctly, zsh shouldn't handle SIGHUP.
+	unfunction TRAPHUP  2>/dev/null
 
 	# Used to make sure the user doesn't run viewglob on top of a viewglob
 	# shell.  The naming is purposely ugly to ensure there's no clobbering.

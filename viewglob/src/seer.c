@@ -108,6 +108,8 @@ int main(int argc, char* argv[]) {
 		/* Bash is simple. */
 		args_add(&(u.s.a), "--init-file");
 		args_add(&(u.s.a), opts.init_loc);
+		args_add(&(x.s.a), "--init-file");
+		args_add(&(x.s.a), opts.init_loc);
 	}
 	else if (opts.shell_type == ST_ZSH) {
 		/* Zsh requires the init file be named ".zshrc", and its location determined

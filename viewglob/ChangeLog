@@ -1,3 +1,8 @@
+2004-09-04 22:40  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* init-viewglob.zshrc: hardened the sandbox and user shell.
+	* seer.c: have the bash sandbox shell use the init-viewglob file.
+
 2004-09-04 21:06  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* gviewglob.c, ptutil.c.diff, ptutil.c.viewglob, sequences.c, sequences.h:
