@@ -1,4 +1,4 @@
-.TH VIEWGLOB 1 "31 August 2004"
+.TH VIEWGLOB 1 "9 September 2004"
 .SH NAME
 viewglob, gviewglob \- display shell expansion and globbing dynamically
 .SH SYNOPSIS
@@ -65,6 +65,27 @@ If the number of files in a shown directory is above the given max, viewglob wil
 At the bottom of the display window is a textbox with your command line.  This is what viewglob is actually globbing on; if you find the display is not showing what you expected, check to make sure the display's command line is the same as the one in the shell, as they can be different (see \fBNOTES\fP below).
 .PP
 If you close the display without exiting the viewglob-supervised shell, you'll get a single warning while viewglob figures out what's going on.  It will then mostly disable itself and you'll have a regular shell.
+.PP
+You can navigate the display from the terminal by pressing C-g (Ctrl-G) followed by a direction character.  They are:
+.PP
+.RS
+.PD 0
+.TP 12n
+Up:
+k, p, <Up Arrow>
+.TP
+Down:
+j, n, <Down Arrow>
+.TP
+Page Up:
+b, u, <PgUp>
+.TP
+Page Down:
+f, d, <PgDown>
+.PD
+.RE
+.LP
+Their C- counterparts should also work.
 .PP
 Directories referenced in several different ways will always be interpreted as the same directory if they're on the same device and have the same inode (i.e. they are indeed the same).  Therefore these three names are equivalent to viewglob (and a trailing slash does not differentiate a directory from one without a trailing slash):
 .IP

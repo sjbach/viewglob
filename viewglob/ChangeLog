@@ -1,3 +1,7 @@
+2004-09-09 02:15  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* README, README.ms, HACKING, TODO, viewglob.1: updating documentation
+
 2004-09-08 23:58  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* init-viewglob.bashrc, init-viewglob.zshrc, viewglob.in:

@@ -41,13 +41,13 @@ These are the main pieces of viewglob:
 	  viewglob as semaphores).
 	- When seer finds the command line, it tries to track changes to it by
 	  watching changes in the terminal, NOT by emulating the shell (that would
-	  be way too hard).  Every time the command line changes, seer submits it as
+	  be a lost cause).  Every time the command line changes, seer submits it as
 	  an argument to glob-expand in its sandbox shell.
 	- Seer also forks the display, gviewglob, which it connects to with two
 	  fifos.  One of the fifos is used to pass data from glob-expand and the
 	  other is used to pass non-glob data (such as the command line or
 	  navigation commands).  Two fifos are required because otherwise the glob
-	  data can bleed into the command data because the sandbox shell's timing
+	  data can bleed into the command data, because the sandbox shell's timing
 	  is unpredictable.
 
 	init-viewglob.bashrc
@@ -66,6 +66,4 @@ These are the main pieces of viewglob:
 	  representations of the glob-expand data.
 
 Only the viewglob shell script is callable from PATH.
-
-
 
