@@ -43,7 +43,7 @@ pkglib_PROGRAMS = seer glob-expand
 
 seer_SOURCES = seer.c children.c cmdline.c sequences.c sanitize.c  \
                tc_setraw.viewglob.c ptytty.c xmalloc.c buffer.c    \
-               viewglob-error.c hardened_io.c misc.c actions.c     \
+               viewglob-error.c hardened_io.c misc.c actions.c 
 
 glob_expand_SOURCES = glob-expand.c xmalloc.c viewglob-error.c
 
