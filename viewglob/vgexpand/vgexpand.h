@@ -61,7 +61,7 @@ struct _File {
 	gchar* name;
 	enum selection selected;
 	enum file_type type;
-	File* next_file;
+	gboolean shown;
 };
 
 typedef struct _Directory Directory;
@@ -72,8 +72,10 @@ struct _Directory {
 	gint selected_count;
 	gint file_count;
 	gint hidden_count;
-	File* file_list;
+	GTree* files;
 	Directory* next_dir;
+	gchar* lookup;       /* Piggyback filename for mark_traverse. */
+	gsize  lookup_len;
 };
 
 

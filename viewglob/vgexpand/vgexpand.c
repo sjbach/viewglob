@@ -25,6 +25,7 @@
 #include <sys/stat.h>
 #include <string.h>
 #include <stdlib.h>
+#include <fnmatch.h>
 
 #if HAVE_DIRENT_H
 #  include <dirent.h>
@@ -46,6 +47,7 @@
 static gint  parse_args(gint argc, gchar** argv);
 static void  report_version(void);
 static void  compile_data(gint argc, gchar** argv);
+static void mask_match(void);
 static void  home_to_tilde(void);
 static void  report(void);
 static void  print_dir(Directory* dir);
@@ -67,20 +69,33 @@ static enum file_type  determine_type(const struct stat* file_stat);
 static File*           make_new_file(gchar* name, enum file_type type);
 static Directory*      make_new_dir(gchar* dir_name, dev_t dev_id,
 		ino_t inode);
-static gboolean        mark_files(Directory* dir, gchar* file_name);
+//static gboolean        mark_files(Directory* dir, gchar* file_name);
 static gboolean        have_dir(gchar* name, dev_t dev_id, ino_t inode,
 		Directory** return_dir);
 
+gboolean mark_traverse(gpointer key, gpointer value, gpointer data);
+gboolean mask_traverse(gpointer key, gpointer value, gpointer data);
+gboolean print_traverse(gpointer key, gpointer value, gpointer data);
 
 /* Directory comparisons are done by inode and device id. */
 static gboolean compare_by_inode(dev_t dev_id1, ino_t inode1, dev_t dev_id2,
 		ino_t inode2);
 
+/* File comparison functions */
+static gint cmp_ls(gconstpointer a, gconstpointer b);
+static gint cmp_win(gconstpointer a, gconstpointer b);
+
+
 /* Order in which to list the directories. */
 enum sort_order ordering = SO_DESCENDING;
 
+/* Filename sorting */
+GCompareFunc filename_cmp = cmp_ls;
+
 static gchar* pwd;
 static size_t pwd_length;
+
+gchar* mask = "*";
 
 static Directory* dirs = NULL;
 
@@ -116,6 +131,7 @@ gint main(gint argc, gchar* argv[]) {
 	pwd_length = strlen(pwd);
 
 	compile_data(argc - offset, argv + offset);
+	mask_match();
 	home_to_tilde();
 	report();
 
@@ -124,13 +140,14 @@ gint main(gint argc, gchar* argv[]) {
 
 
 /* Figure out where vgexpand's options end and its expansion output
-   begins.  Also determine which directory matching function will be used. */
+   begins.  Also determine which directory matching function will be used and
+   the file mask. */
 static gint parse_args(gint argc, gchar** argv) {
 	gint i, j;
 	gboolean has_double_dash = FALSE;
 
 	for (i = 1; i < argc; i++) {
-		if ( strcmp("--", *(argv + i)) == 0 ) {
+		if (STREQ("--", *(argv + i)) ) {
 			has_double_dash = TRUE;
 			break;
 		}
@@ -138,15 +155,22 @@ static gint parse_args(gint argc, gchar** argv) {
 
 	if (has_double_dash) {
 		for (j = 1; j < i; j++) {
-			if ( (strcmp("-v", *(argv + j)) == 0) ||
-			     (strcmp("-V", *(argv + j)) == 0))
+			if ( (STREQ("-v", *(argv + j))) ||
+			     (STREQ("-V", *(argv + j))))
 				report_version();
-			else if (strcmp("-d", *(argv + j)) == 0)
+			else if (STREQ("-d", *(argv + j)))
 				ordering = SO_DESCENDING;
-			else if (strcmp("-a", *(argv + j)) == 0)
+			else if (STREQ("-a", *(argv + j)))
 				ordering = SO_ASCENDING;
-			else if (strcmp("-p", *(argv + j)) == 0)
+			else if (STREQ("-p", *(argv + j)))
 				ordering = SO_ASCENDING_PWD_FIRST;
+			else if (STREQ("-w", *(argv + j)))
+				filename_cmp = cmp_win;
+			else if (STREQ("-m", *(argv + j))) {
+				j++;
+				if (j < i)
+					mask = *(argv + j);
+			}
 		}
 		i++;
 	}
@@ -192,8 +216,10 @@ static void compile_data(gint argc, gchar** argv) {
 		new_dir_name = vg_dirname(normal_path);
 		new_file_name = vg_basename(normal_path);
 
-		if (stat(new_dir_name, &dir_stat) == 0)
-			correlate(new_dir_name, new_file_name, dir_stat.st_dev, dir_stat.st_ino);
+		if (stat(new_dir_name, &dir_stat) == 0) {
+			correlate(new_dir_name, new_file_name, dir_stat.st_dev,
+					dir_stat.st_ino);
+		}
 
 		/* When the filename is used, a copy is made from the dirent entry. */
 		g_free(new_file_name);
@@ -205,9 +231,9 @@ static void compile_data(gint argc, gchar** argv) {
 		g_free(normal_path);
 
 		if (has_trailing_slash(argv[i])) {
-			/* The file argument is being referenced as a directory.  We've already
-			   dealt with it as a file, so now lets also see if it's a directory,
-			   and if so we'll print its contents too. */
+			/* The file argument is being referenced as a directory.  We've
+			   already dealt with it as a file, so now lets also see if it's a
+			   directory, and if so we'll print its contents too. */
 			normal_path = normalize_path(argv[i], FALSE);
 			new_dir_name = vg_dirname(normal_path);
 
@@ -216,6 +242,16 @@ static void compile_data(gint argc, gchar** argv) {
 
 			g_free(normal_path);
 		}
+	}
+}
+
+
+static void mask_match(void) {
+	Directory* dir_iter;
+
+	for (dir_iter = dirs; dir_iter; dir_iter = dir_iter->next_dir) {
+		if (dir_iter->files)
+			g_tree_foreach(dir_iter->files, mask_traverse, dir_iter);
 	}
 }
 
@@ -237,7 +273,7 @@ static void home_to_tilde(void) {
 	for (dir_iter = dirs; dir_iter; dir_iter = dir_iter->next_dir) {
 		dir_len = strlen(dir_iter->name);
 		if (home_len == dir_len) {
-			if (strcmp(home, dir_iter->name) == 0)
+			if (STREQ(home, dir_iter->name))
 				strcpy(dir_iter->name, "~");
 		}
 		else if (home_len < dir_len) {
@@ -251,7 +287,6 @@ static void home_to_tilde(void) {
 			}
 		}
 	}
-
 }
 
 
@@ -305,6 +340,20 @@ static void report(void) {
 }
 
 
+static void print_dir(Directory* dir) {
+	if (dir) {
+		printf("%d %d %d %s\n",
+				dir->selected_count,
+				dir->file_count,
+				dir->hidden_count,
+				dir->name);
+
+		if (dir->files)
+			g_tree_foreach(dir->files, print_traverse, NULL);
+	}
+}
+
+
 static Directory* reverse_list(Directory* head) {
 	Directory* p1 = NULL;
 	Directory* p2;
@@ -326,9 +375,9 @@ static Directory* reverse_list(Directory* head) {
 }
 
 
-static void print_dir(Directory* dir) {
+gboolean print_traverse(gpointer key, gpointer value, gpointer data) {
 
-	static gchar types[FILE_TYPE_COUNT] = {
+	static const gchar types[FILE_TYPE_COUNT] = {
 		/*FT_REGULAR*/    'r',
 		/*FT_EXECUTABLE*/ 'e',
 		/*FT_DIRECTORY*/  'd',
@@ -339,29 +388,21 @@ static void print_dir(Directory* dir) {
 		/*FT_SYMLINK*/    'y',
 	};
 
-	static gchar selections[SELECTION_COUNT] = {
+	static const gchar selections[SELECTION_COUNT] = {
 		/*S_YES*/    '*',
 		/*S_NO*/     '-',
 		/*S_MAYBE*/  '~',
 	};
 
-	File* file_iter;
-
-	if (dir) {
-		printf("%d %d %d %s\n",
-				dir->selected_count,
-				dir->file_count,
-				dir->hidden_count,
-				dir->name);
-		
-		for (file_iter = dir->file_list; file_iter;
-				file_iter = file_iter->next_file) {
-			printf("\t%c %c %s\n",
-					selections[file_iter->selected],
-					types[file_iter->type],
-					file_iter->name);
-		}
+	File* file = key;
+	if (file->shown) {
+		printf("\t%c %c %s\n",
+				selections[file->selected],
+				types[file->type],
+				file->name);
 	}
+
+	return FALSE;
 }
 
 
@@ -378,18 +419,21 @@ static void correlate(gchar* dir_name, gchar* file_name, dev_t dev_id,
 	Directory* search_dir;
 
 	if (have_dir(dir_name, dev_id, dir_inode, &search_dir)) {
-		/* In this case search_dir is the located directory. */
-		/* Since the dir is already known, we don't need this. */
+		/* In this case search_dir is the located directory.
+		   Since the dir is already known, we don't need this. */
 		g_free(dir_name);
-		if (file_name)
-			mark_files(search_dir, file_name);
 	}
 	else {
-		/* In this case search_dir is the last directory struct in the list, so
-		   add this new dir to the end. */
+		/* In this case search_dir is the last directory struct in the list,
+		   so add this new dir to the end. */
 		search_dir->next_dir = make_new_dir(dir_name, dev_id, dir_inode);
-		if (file_name)
-			mark_files(search_dir->next_dir, file_name);
+		search_dir = search_dir->next_dir;
+	}
+
+	if (file_name) {
+		search_dir->lookup = file_name;
+		search_dir->lookup_len = strlen(file_name);
+		g_tree_foreach(search_dir->files, mark_traverse, search_dir);
 	}
 }
 
@@ -407,10 +451,11 @@ static gboolean have_dir(gchar* name, dev_t dev_id, ino_t inode,
 			*return_dir = dir_iter;
 			return TRUE;
 		}
-	} while ( (dir_iter->next_dir != NULL) && (dir_iter = dir_iter->next_dir) );
+	} while ((dir_iter->next_dir != NULL) && (dir_iter = dir_iter->next_dir));
 	/* ^^ Don't want to iterate to NULL, thus the weird invariant. */
 
-	*return_dir = dir_iter;  /* This is the last directory struct in the list. */
+	/* This is the last directory struct in the list. */
+	*return_dir = dir_iter;  
 	return FALSE;
 }
 
@@ -421,39 +466,45 @@ static gboolean compare_by_inode(dev_t dev_id1, ino_t inode1, dev_t dev_id2,
 }
 
 
-/* Try to match the given file_name against all file structs in dir. */
-static gboolean mark_files(Directory* dir, gchar* file_name) {
+gboolean mask_traverse(gpointer key, gpointer value, gpointer data) {
+	File* file = key;
+	Directory* dir = data;
 
-	File* file_iter;
-
-
-	for (file_iter = dir->file_list; file_iter;
-			file_iter = file_iter->next_file) {
-
-		/* Don't bother with the file if it's already selected. */
-		if (file_iter->selected == S_YES)
-			continue;
-
-		/* Try to match only up to the length of file_name. */
-		if (strncmp(file_name, file_iter->name, strlen(file_name)) == 0) {
-
-			if (strcmp(file_name, file_iter->name) == 0) {
-				/* Explicit match. */
-				file_iter->selected = S_YES;
-				dir->selected_count++;
-			}
-			else {
-				/* Only a partial match. */
-				if (file_iter->selected != S_YES) {
-					/* Might be S_NO, might be S_MAYBE, the result is the
-					   same. */
-					file_iter->selected = S_MAYBE;
-				}
-			}
+	if (file->selected != S_YES) {
+		if (fnmatch(mask, file->name, FNM_PERIOD) == 0) {
+			file->shown = TRUE;
+			dir->hidden_count--;
 		}
 	}
 
-	return TRUE;
+	return FALSE;
+}
+
+
+gboolean mark_traverse(gpointer key, gpointer value, gpointer data) {
+	File* file = key;
+	Directory* dir = data;
+
+	/* Don't bother with the file if it's already selected. */
+	if (file->selected == S_YES)
+		return FALSE;
+
+	/* Try to match only up to the length of file_name. */
+	if (STRNEQ(dir->lookup, file->name, dir->lookup_len)) {
+		if (dir->lookup_len == strlen(file->name)) {
+			/* Explicit match. */
+			file->selected = S_YES;
+			file->shown = TRUE;
+			dir->selected_count++;
+			dir->hidden_count--;
+		}
+		else {
+			/* Only a partial match. */
+			file->selected = S_MAYBE;
+		}
+	}
+
+	return FALSE;
 }
 
 
@@ -464,7 +515,7 @@ static File* make_new_file(gchar* name, enum file_type type) {
 	new_file->name = name;
 	new_file->selected = S_NO;
 	new_file->type = type;
-	new_file->next_file = NULL;
+	new_file->shown = FALSE;
 	return new_file;
 }
 
@@ -474,11 +525,10 @@ static Directory* make_new_dir(gchar* dir_name, dev_t dev_id, ino_t inode) {
 	struct dirent* entry;
 
 	Directory* new_dir;
-	gint entry_count = 0, hidden_count = 0;
+	gint entry_count = 0;
 
 	gchar* file_name;
 	gchar* full_path;
-	File* file_iter = NULL;
 	struct stat file_stat;
 	enum file_type type;
 
@@ -488,11 +538,12 @@ static Directory* make_new_dir(gchar* dir_name, dev_t dev_id, ino_t inode) {
 	new_dir->inode = inode;
 	new_dir->selected_count = 0;
 	new_dir->next_dir = NULL;
+	new_dir->files = NULL;
 
 	dirp = opendir(dir_name);
 	if (dirp == NULL) {
 		g_warning("Directory is inaccessible: %s", g_strerror(errno));
-		new_dir->file_list = NULL;
+		new_dir->files = NULL;
 		new_dir->file_count = 0;
 		new_dir->hidden_count = 0;
 		return new_dir;
@@ -503,50 +554,36 @@ static Directory* make_new_dir(gchar* dir_name, dev_t dev_id, ino_t inode) {
 	while (errno = 0, (entry = readdir(dirp)) != NULL) {
 
 		/* Make a copy of the name since the original data isn't reliable. */
-		file_name = g_malloc(NAMLEN(entry) + 1);
-		strcpy(file_name, entry->d_name);
-
-		/* Need to have the full path for stat. */
-		full_path = g_malloc(strlen(dir_name) + 1 + NAMLEN(entry) + 1);
-		(void)strcpy(full_path, dir_name);
-		(void)strcat(full_path, "/");
-		(void)strcat(full_path, entry->d_name);
+		file_name = g_strdup(entry->d_name);
 
 		/* Stat to determine the file type.
 		   Using lstat so that symbolic links are detected instead of
 		   followed.  May wish to switch at some point. */
-		if ( lstat(full_path, &file_stat) == -1 ) {
+		full_path = g_strconcat(dir_name, "/", entry->d_name, NULL);
+		if (lstat(full_path, &file_stat) == -1) {
 			g_warning("Could not stat file: %s", g_strerror(errno));
 			type = FT_REGULAR;   /* We don't want to just skip this; assume
 			                        it's regular. */
 		}
 		else
 			type = determine_type(&file_stat);
-
-		if (file_iter) {
-			file_iter->next_file = make_new_file(file_name, type);
-			file_iter = file_iter->next_file;
-		}
-		else {     /* It's the first file. */
-			new_dir->file_list = make_new_file(file_name, type);
-			file_iter = new_dir->file_list;
-		}
-
 		g_free(full_path);
 
+		/* Add the file to the tree. */
+		if (!new_dir->files)
+			new_dir->files = g_tree_new(filename_cmp);
+		g_tree_insert(new_dir->files, make_new_file(file_name, type), NULL);
+
 		entry_count++;
-		if (*(entry->d_name) == '.')
-			hidden_count++;
 	}
 
 	new_dir->file_count = entry_count;
-	new_dir->hidden_count = hidden_count;
+	new_dir->hidden_count = entry_count;
 
 	if (closedir(dirp) == -1)
 		g_warning("Could not close directory: %s", g_strerror(errno));
 
 	return new_dir;
-
 }
 
 
@@ -619,7 +656,7 @@ static gchar* vg_dirname(const gchar* path) {
 			/* Build an absolute path with pwd and the argument's path. */
 			dirname = g_malloc(pwd_length + 1 + slash_pos + 1);
 			(void)strcpy(dirname, pwd);
-			if (strcmp(dirname, "/") != 0) {
+			if (!STREQ(dirname, "/")) {
 				/* (Kludge for directories at root) */
 				(void)strcat(dirname, "/");
 			}
@@ -672,7 +709,6 @@ gchar* vg_basename(const gchar* path) {
 
 	return base;
 }
-
 
 
 /* Removes repeated /'s and takes out the ending /, if present. */
@@ -734,5 +770,34 @@ gint find_prev(const gchar* string, gint pos, gchar c) {
 		return pos;
 	else
 		return -1;
+}
+
+
+/* Sort strictly by name (default ls style). */
+static gint cmp_ls(gconstpointer a, gconstpointer b) {
+	const File* aa = a;
+	const File* bb = b;
+
+	return (strcmp(aa->name, bb->name));
+}
+
+
+/* Sort by type (dir first), then by name (default Windows style). */
+static gint cmp_win(gconstpointer a, gconstpointer b) {
+	const File* aa = a;
+	const File* bb = b;
+
+	if (aa->type == FT_DIRECTORY) {
+		if (bb->type == FT_DIRECTORY)
+			return strcmp(aa->name, bb->name);
+		else
+			return -1;
+	}
+	else {
+		if (bb->type == FT_DIRECTORY)
+			return 1;
+		else
+			return strcmp(aa->name, bb->name);
+	}
 }
 

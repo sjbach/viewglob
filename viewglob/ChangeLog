@@ -1,3 +1,10 @@
+2005-03-27 14:03  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* vgexpand.c, vgexpand.h:
+	  - Added preliminary mask functionality
+	  - Use tree instead of list for files
+	  - Added sorting
+
 2005-03-26 18:51  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* init-viewglob.bashrc, init-viewglob.zshrc:
