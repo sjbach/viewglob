@@ -21,6 +21,7 @@
 
 #include "common.h"
 
+#include "sanitize.h"
 #include "tc_setraw.h"
 #include "actions.h"
 #include "connection.h"
@@ -72,8 +73,7 @@ struct vgd_stuff {
 	int fd;
 	Connection* shell_conn;
 	Connection* term_conn;
-	Connection* sandbox_conn;
-	GByteArray* expanded;
+	GString* expanded;
 	gboolean vgexpand_called;
 };
 
@@ -102,13 +102,11 @@ static gboolean putenv_wrapped(gchar* string);
 /* Program flow. */
 static void     main_loop(struct user_state* u, gint vgd_fd);
 static void     io_activity(struct user_state* u, Connection* shell_conn,
-		Connection* term_conn, Connection* sandbox_conn,
-		struct vgd_stuff* vgd);
+		Connection* term_conn, struct vgd_stuff* vgd);
 static gboolean action_loop(struct user_state* u, struct vgd_stuff* vgd);
 static void     child_wait(struct user_state* u);
 static void     process_shell(struct user_state* u, Connection* cnct);
-static void     process_sandbox(struct user_state* u, struct vgd_stuff* vgd,
-		Connection* cnct);
+static void     process_sandbox(struct user_state* u, struct vgd_stuff* vgd);
 static void     process_terminal(struct user_state* u, Connection* cnct);
 static void     process_vgd(struct user_state* u, struct vgd_stuff* vgd);
 static gboolean scan_for_newline(const Connection* b);
@@ -121,6 +119,7 @@ static gboolean set_term_title(gint fd, gchar* title);
 static gchar*   escape_filename(gchar* name, struct user_state* u,
 		enum process_level pl, gchar* holdover);
 static void    call_vgexpand(struct user_state* u, struct vgd_stuff* vgd);
+static void put_param_wrapped(gint fd, enum parameter param, gchar* value);
 
 static void parse_args(gint argc, gchar** argv, struct options* opts);
 static void report_version(void);
@@ -374,25 +373,19 @@ static void main_loop(struct user_state* u, gint vgd_fd) {
 	connection_init(&shell_conn, "shell", u->shell.fd_in, STDOUT_FILENO,
 			common_buf, sizeof(common_buf), PL_EXECUTING);
 
-	/* Reads from sandbox and writes to sandbox. */
-	Connection sandbox_conn;
-	connection_init(&sandbox_conn, "sandbox", u->sandbox.fd_in,
-			u->sandbox.fd_out, common_buf, sizeof(common_buf), PL_EXECUTING);
-
 	/* When dealing with vgd we have to access data from a bunch of
 	   different places. */
 	struct vgd_stuff vgd;
 	vgd.fd = vgd_fd;
 	vgd.term_conn = &term_conn;
 	vgd.shell_conn = &shell_conn;
-	vgd.sandbox_conn = &sandbox_conn;
-	vgd.expanded = g_byte_array_sized_new(sizeof(common_buf));
+	vgd.expanded = g_string_sized_new(sizeof(common_buf));
 	vgd.vgexpand_called = FALSE;
 
 	gboolean in_loop = TRUE;
 	while (in_loop) {
 
-		io_activity(u, &shell_conn, &term_conn, &sandbox_conn, &vgd);
+		io_activity(u, &shell_conn, &term_conn, &vgd);
 
 		if (term_size_changed)
 			send_term_size(u->shell.fd_out);
@@ -429,8 +422,9 @@ static gboolean action_loop(struct user_state* u, struct vgd_stuff* vgd) {
 
 			case A_SEND_CMD:
 				call_vgexpand(u, vgd);
-				param = P_CMD;
-				value = u->cmd.data->str;
+				/* The parameters were already sent. */
+				param = P_NONE;
+				value = NULL;
 				break;
 
 			case A_SEND_PWD:
@@ -478,11 +472,6 @@ static gboolean action_loop(struct user_state* u, struct vgd_stuff* vgd) {
 				value = u->cmd.mask->str;
 				break;
 
-			case A_MASK_FINAL:
-				param = P_MASK;
-				value = u->cmd.mask->str;
-				break;
-
 			case A_DONE:
 				break;
 
@@ -492,14 +481,9 @@ static gboolean action_loop(struct user_state* u, struct vgd_stuff* vgd) {
 		}
 
 		/* Write the parameter to vgd. */
-		if (vgseer_enabled && param != P_NONE && value != NULL) {
-			if (!put_param(vgd->fd, param, value)) {
-				g_critical("Couldn't send parameter to vgd");
-				clean_fail(NULL);
-			}
-			param = P_NONE;
-			value = NULL;
-		}
+		put_param_wrapped(vgd->fd, param, value);
+		param = P_NONE;
+		value = NULL;
 	}
 
 	return TRUE;
@@ -528,28 +512,26 @@ static void child_wait(struct user_state* u) {
 
 /* Wait for input and then do something about it. */
 static void io_activity(struct user_state* u, Connection* shell_conn,
-		Connection* term_conn, Connection* sandbox_conn,
-		struct vgd_stuff* vgd) {
+		Connection* term_conn, struct vgd_stuff* vgd) {
 
 	g_return_if_fail(u != NULL);
 	g_return_if_fail(shell_conn != NULL);
 	g_return_if_fail(term_conn != NULL);
-	g_return_if_fail(sandbox_conn != NULL);
 	g_return_if_fail(vgd != NULL);
 
 	fd_set rset;
 	gint max_fd = -1;
 
 	/* Setup polling. */
-	// TODO kill sandbox shell on fail
+	// TODO kill sandbox shell on disable.
 	FD_ZERO(&rset);
 	FD_SET(shell_conn->fd_in, &rset);
 	FD_SET(term_conn->fd_in, &rset);
 	max_fd = MAX(shell_conn->fd_in, term_conn->fd_in);
 	if (vgseer_enabled) {
-		FD_SET(sandbox_conn->fd_in, &rset);
+		FD_SET(u->sandbox.fd_in, &rset);
 		FD_SET(vgd->fd, &rset);
-		max_fd = MAX(MAX(max_fd, vgd->fd), sandbox_conn->fd_in);
+		max_fd = MAX(MAX(max_fd, vgd->fd), u->sandbox.fd_in);
 	}
 
 	/* Wait for readable data. */
@@ -565,8 +547,8 @@ static void io_activity(struct user_state* u, Connection* shell_conn,
 		process_terminal(u, term_conn);
 	if (FD_ISSET(vgd->fd, &rset))
 		process_vgd(u, vgd);
-	if (FD_ISSET(sandbox_conn->fd_in, &rset))
-		process_sandbox(u, vgd, sandbox_conn);
+	if (FD_ISSET(u->sandbox.fd_in, &rset))
+		process_sandbox(u, vgd);
 }
 
 
@@ -588,51 +570,80 @@ static void process_shell(struct user_state* u, Connection* cnct) {
 }
 
 
-// TODO param-io must use 4 bytes instead of 2 bytes for size
-static void process_sandbox(struct user_state* u, struct vgd_stuff* vgd,
-		Connection* cnct) {
+static gssize sandbox_read(int fd, gchar* buf, gsize len) {
+	gssize nread;
 
-	if (!connection_read(cnct))
-		clean_fail(NULL);
+	switch (hardened_read(fd, buf, len, &nread)) {
+		case IOR_OK:
+			break;
+		case IOR_ERROR:
+			g_critical("Sandbox read error: %s", g_strerror(errno));
+			clean_fail(NULL);
+			/*break;*/
+		case IOR_EOF:
+			action_queue(A_EXIT);
+			return -1;
+			/*break;*/
+		default:
+			g_return_val_if_reached(-1);
+	}
+
+	return nread;
+}
+
+
+static void process_sandbox(struct user_state* u, struct vgd_stuff* vgd) {
+
+	g_return_if_fail(u != NULL);
+	g_return_if_fail(vgd != NULL);
+
+	static gchar buf[BUFSIZ];
+	gssize nread;
+
+	if ((nread = sandbox_read(u->sandbox.fd_in, buf, sizeof(buf))) < 0)
+		return;
+
+//	FILE* temp;
+//	temp = fopen("/tmp/sandbox.txt", "a");
+//	fwrite(cnct->buf, 1, cnct->filled, temp);
+//	fclose(temp);
 
 	if (vgd->vgexpand_called) {
 		gchar* start = NULL;
 		gchar* end = NULL;
 		gsize len;
-		vgd->expanded = g_byte_array_set_size(vgd->expanded, 0);
+		vgd->expanded = g_string_set_size(vgd->expanded, 0);
 
 		/* Locate the start of the expand data */
 		while (TRUE) {
-			start = g_strstr_len(cnct->buf, cnct->filled, "\002");
+			start = g_strstr_len(buf, nread, "\002");
 			if (start)
 				break;
-			cnct->filled = 0;
-			if (!connection_read(cnct))
-				clean_fail(NULL);
+			if ((nread = sandbox_read(u->sandbox.fd_in, buf, sizeof(buf))) < 0)
+				return;
 		}
 		start++;
-		len = cnct->buf + cnct->filled - start;
-		cnct->filled = 0;
+		len = buf + nread - start;
 
 		/* Find the end of the data and copy everything along the way. */
 		while (TRUE) {
 			end = g_strstr_len(start, len, "\003");
 			if (end)
 				break;
-			vgd->expanded = g_byte_array_append(vgd->expanded, start, len);
-			if (!connection_read(cnct))
-				clean_fail(NULL);
-			start = cnct->buf;
-			len = cnct->filled;
-			cnct->filled = 0;
+			vgd->expanded = g_string_append_len(vgd->expanded, start, len);
+			if ((nread = sandbox_read(u->sandbox.fd_in, buf, sizeof(buf))) < 0)
+				return;
+			start = buf;
+			len = nread;
 		}
-
-		vgd->expanded = g_byte_array_append(vgd->expanded, start,
+		vgd->expanded = g_string_append_len(vgd->expanded, start,
 				end - start);
+
+		/* Now we have the whole output of vgexpand -- let's send it off. */
+		put_param_wrapped(vgd->fd, P_VGEXPAND_DATA, vgd->expanded->str);
+
 		vgd->vgexpand_called = FALSE;
 	}
-	else
-		cnct->filled = 0;
 }
 
 
@@ -906,13 +917,38 @@ static void send_term_size(gint shell_fd) {
 }
 
 
+/* Emits commands of the following form to the sandbox shell:
+		cd "<pwd>" && vgexpand <opts> -m "<mask>" -- <cmd> ; cd / */
 static void call_vgexpand(struct user_state* u, struct vgd_stuff* vgd) {
 
-	gchar* string = g_strconcat("cd \"", u->cmd.pwd, "\" && /home/steve/vg/vgexpand/vgexpand -- * ; cd /\n", NULL);
+	gchar* cmd_sane;
+	gchar* mask_sane;
+	gchar* expand_command;
 
-	if (write_all(u->sandbox.fd_out, string, strlen(string)) == IOR_ERROR)
+	cmd_sane = sanitize(u->cmd.data);
+
+	mask_sane = sanitize(u->cmd.mask_final);
+	/* A blank mask may as well be "*" */
+	if (strlen(mask_sane) == 0) {
+		g_free(mask_sane);
+		mask_sane = g_strdup("*");
+	}
+
+	expand_command = g_strconcat("cd \"", u->cmd.pwd,
+			"\" && vgexpand -m \"", mask_sane, "\" -- ", cmd_sane,
+			" ; cd /\n", NULL);
+
+	if (write_all(u->sandbox.fd_out, expand_command, strlen(expand_command))
+			== IOR_ERROR)
 		disable_vgseer(vgd);
 
+	put_param_wrapped(vgd->fd, P_CMD, cmd_sane);
+	/* TODO: only send mask if it's changed. */
+	put_param_wrapped(vgd->fd, P_MASK, mask_sane);
+
+	g_free(expand_command);
+	g_free(mask_sane);
+	g_free(cmd_sane);
 	vgd->vgexpand_called = TRUE;
 }
 
@@ -1009,6 +1045,20 @@ static gboolean setup_zsh(gchar* init_loc) {
 	}
 
 	return TRUE;
+}
+
+
+/* Fail if put_param() doesn't work out. */
+static void put_param_wrapped(gint fd, enum parameter param, gchar* value) {
+	g_return_if_fail(param >= 0 && param < P_COUNT);
+	g_return_if_fail(fd >= 0);
+
+	if (vgseer_enabled && param != P_NONE && value != NULL) {
+		if (!put_param(fd, param, value)) {
+			g_critical("Couldn't send parameter");
+			clean_fail(NULL);
+		}
+	}
 }
 
 

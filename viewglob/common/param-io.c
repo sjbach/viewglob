@@ -28,6 +28,11 @@
 #include <netinet/in.h>
 #include <string.h>
 
+/* On my busiest machine, the vgexpand output for /usr/bin, /usr/include, and
+   /usr/lib all at once is 85K.  So 100K should be a good max for now.
+   Probably in the future it would be better to have a growing buffer. */
+#define BUFFER_SIZE 102400
+
 /* Order must correspond to enum parameter type. */
 static gchar* params[P_COUNT] = {
 	"none",
@@ -60,19 +65,20 @@ gboolean get_param(int fd, enum parameter* param, gchar** value) {
 	g_return_val_if_fail(param != NULL, FALSE);
 	g_return_val_if_fail(value != NULL, FALSE);
 
-	static gchar buf[1024];
-	guint16 bytes;
+	static gchar buf[BUFFER_SIZE];
+	guint32 bytes;
 
 	/* Find out how many bytes we're going to need to read. */
 	switch (read_all(fd, &bytes, sizeof(bytes))) {
 		case IOR_OK:
-			bytes = ntohs(bytes);
+			bytes = ntohl(bytes);
 			break;
 		case IOR_EOF:
 			goto eof_reached;
 			/*break;*/
 		case IOR_ERROR:
-			g_warning("Error while reading data length: %s", g_strerror(errno));
+			g_warning("Error while reading data length: %s",
+					g_strerror(errno));
 			return FALSE;
 			/*break;*/
 		default:
@@ -142,7 +148,7 @@ gboolean put_param(int fd, enum parameter param, gchar* value) {
 	g_return_val_if_fail(value != NULL, FALSE);
 
 	gchar* string;
-	guint16 bytes;
+	guint32 bytes;
 	gsize len;
 
 	/* Make the string. */
@@ -150,11 +156,11 @@ gboolean put_param(int fd, enum parameter param, gchar* value) {
 	len = strlen(string);
 
 	/* Make sure the length is okay, and convert to network format. */
-	if (len > G_MAXUINT16) {
-		g_warning("String length is greater than %u", G_MAXUINT16);
+	if (len > BUFFER_SIZE) {
+		g_warning("String length is greater than %u", BUFFER_SIZE);
 		return FALSE;
 	}
-	bytes = htons((guint16)len);
+	bytes = htonl((guint32)len);
 
 	/* Use writev() to try to avoid Nagle effect */
 	struct iovec iov[2];

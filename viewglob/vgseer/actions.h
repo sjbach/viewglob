@@ -36,8 +36,7 @@ enum _Action {
 	A_SEND_DOWN,     /* Tell display to move down one line. */
 	A_SEND_PGUP,     /* Tell display to move up one page. */
 	A_SEND_PGDOWN,   /* Tell display to move down one page. */
-	A_NEW_MASK,      /* The new mask as it's being typed. */
-	A_MASK_FINAL,    /* The new mask is done. */
+	A_NEW_MASK,      /* A new mask as it's being typed. */
 	A_TOGGLE,        /* Enable/disable the display. */
 	A_REFOCUS,       /* Bring the focus back to the terminal and display. */
 	A_DISABLE,       /* Disable viewglob. */

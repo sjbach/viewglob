@@ -37,6 +37,7 @@ struct cmdline {
 
 	gchar* pwd;
 	GString* mask;    /* The new mask as it's being built. */
+	GString* mask_final;
 };
 
 

@@ -302,7 +302,7 @@ static void process_client(struct state* s, struct vgseer_client* v) {
 			break;
 
 		case P_VGEXPAND_DATA:
-			g_message("(%d) Received vgexpand_data: %s", v->fd, value);
+			g_message("(%d) Received vgexpand_data:\n%s", v->fd, value);
 			break;
 
 		case P_EOF:

@@ -53,35 +53,29 @@ Action action_queue(Action o) {
 	static gboolean do_exit = FALSE;
 
 	static gboolean new_mask = FALSE;
-	static gboolean mask_final = FALSE;
 
 	//FIXME replace with glib queue
 
 	switch (o) {
 
-		case (A_SEND_CMD):
+		case A_SEND_CMD:
 			send_lost = FALSE;
+			new_mask = FALSE;
 			send_cmd = TRUE;
 			break;
 
-		case (A_SEND_PWD):
+		case A_SEND_PWD:
 			send_cmd = FALSE;
 			send_pwd = TRUE;
 			break;
 
-		case (A_SEND_LOST):
+		case A_SEND_LOST:
 			send_cmd = FALSE;
 			send_lost = TRUE;
 			break;
 
 		case A_NEW_MASK:
 			new_mask = TRUE;
-			mask_final = FALSE;
-			break;
-
-		case A_MASK_FINAL:
-			mask_final = TRUE;
-			new_mask = FALSE;
 			break;
 
 		case A_SEND_UP:
@@ -93,15 +87,15 @@ Action action_queue(Action o) {
 			al_enqueue(o);
 			break;
 
-		case (A_DISABLE):
+		case A_DISABLE:
 			disable = TRUE;
 			break;
 
-		case (A_EXIT):
+		case A_EXIT:
 			do_exit = TRUE;
 			break;
 
-		case (A_DEQUEUE):
+		case A_DEQUEUE:
 			if (do_exit)
 				result = A_EXIT;
 			else if (disable) {
@@ -119,10 +113,6 @@ Action action_queue(Action o) {
 			else if (send_cmd) {
 				send_cmd = FALSE;
 				result = A_SEND_CMD;
-			}
-			else if (mask_final) {
-				mask_final = FALSE;
-				result = A_MASK_FINAL;
 			}
 			else if (new_mask) {
 				new_mask = FALSE;

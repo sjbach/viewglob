@@ -36,6 +36,7 @@ void cmd_init(struct cmdline* cmd) {
 
 	cmd->pwd = NULL;
 	cmd->mask = g_string_new(NULL);
+	cmd->mask_final = g_string_new(NULL);
 }
 
 

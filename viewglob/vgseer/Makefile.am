@@ -5,11 +5,11 @@ INCLUDES = -I$(COMMON)
 
 pkglib_PROGRAMS = vgseer
 
-vgseer_SOURCES = vgseer.c children.c cmdline.c sequences.c \
-               tc_setraw.c connection.c actions.c     \
+vgseer_SOURCES = vgseer.c children.c cmdline.c sequences.c tc_setraw.c \
+                 connection.c actions.c sanitize.c \
                $(COMMON)/ptytty.c $(COMMON)/hardened-io.c \
                $(COMMON)/param-io.c $(COMMON)/shell.c
 
-noinst_HEADERS = children.h cmdline.h sequences.h \
+noinst_HEADERS = children.h cmdline.h sequences.h sanitize.h \
                  tc_setraw.h actions.h connection.h
 

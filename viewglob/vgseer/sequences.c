@@ -919,9 +919,13 @@ static MatchEffect seq_viewglob_all(Connection* b, struct cmdline* cmd) {
 			cmd_mask_del(cmd);
 		}
 		else {
-			if (c == '\015')   /* Only Enter will submit. */
-				action_queue(A_MASK_FINAL);
-			if (c != '\015')
+			if (c == '\015') {  /* Only Enter will submit. */
+				/* When the mask is committed, we need to reglob. */
+				cmd->mask_final = g_string_assign(cmd->mask_final,
+						cmd->mask->str);
+				action_queue(A_SEND_CMD);
+			}
+			else
 				cmd_mask_clear(cmd);
 			in_mask = FALSE;
 			b->pl = PL_TERMINAL;
@@ -993,7 +997,7 @@ static MatchEffect seq_viewglob_all(Connection* b, struct cmdline* cmd) {
 				break;
 
 			case '\012':  /* Nav vi down */
-			case '\016':  /* Nav emacs down FIXME */
+			case '\016':  /* Nav emacs down */
 				in_navigation = TRUE;
 				action_queue(A_SEND_DOWN);
 				eat_segment(b);
@@ -1022,7 +1026,6 @@ static MatchEffect seq_viewglob_all(Connection* b, struct cmdline* cmd) {
 				eat_segment(b);
 				break;
 
-
 			case '\t':    /* Refocus */
 				action_queue(A_REFOCUS);
 				eat_segment(b);
@@ -1031,7 +1034,9 @@ static MatchEffect seq_viewglob_all(Connection* b, struct cmdline* cmd) {
 
 			case '\015':  /* Clear mask */
 				cmd_mask_clear(cmd);
-				action_queue(A_MASK_FINAL);
+				cmd->mask_final = g_string_assign(cmd->mask_final,
+						cmd->mask->str);
+				action_queue(A_SEND_CMD);
 				eat_segment(b);
 				b->pl = PL_TERMINAL;
 				break;

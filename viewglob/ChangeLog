@@ -1,3 +1,14 @@
+2005-03-28 17:55  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* sanitize.h, sanitize.c: moved back to vgseer
+	* param-io.c: value length is 4 bytes instead of 2
+	* vgexpand.c: output filename on stat error
+	* vgseer/Makefile.am: sanitize.c, sanitize.h
+	* actions.c, actions.h: A_MASK_FINAL incorporated into A_SEND_CMD
+	* cmdline.c, cmdline.h: remember current mask also
+	* sequences.c: reglob on mask clear
+	* vgseer.c: send glob output to vgd
+
 2005-03-27 14:03  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* vgexpand.c, vgexpand.h:

@@ -28,32 +28,9 @@
 
 G_BEGIN_DECLS
 
-enum quote_type {
-	QT_DUMMY,
-	QT_SINGLE,
-	QT_DOUBLE,
-	QT_EXTGLOB_PAREN,
-};
 
+gchar* sanitize(GString* string);
 
-struct quote_list {
-	enum quote_type qt;
-	struct quote_list* next;
-};
-
-
-struct sane_cmd {
-	gboolean last_char_backslash;
-	gboolean last_char_exclamation;
-	gboolean last_char_dollar;
-	gboolean skip_word;
-	struct quote_list* ql;
-	char* command;
-	int pos;
-};
-
-
-char*  make_sane_cmd(char* full_command, int length);
 
 G_END_DECLS
 

@@ -85,7 +85,6 @@ static gboolean compare_by_inode(dev_t dev_id1, ino_t inode1, dev_t dev_id2,
 static gint cmp_ls(gconstpointer a, gconstpointer b);
 static gint cmp_win(gconstpointer a, gconstpointer b);
 
-
 /* Order in which to list the directories. */
 enum sort_order ordering = SO_DESCENDING;
 
@@ -567,7 +566,8 @@ static Directory* make_new_dir(gchar* dir_name, dev_t dev_id, ino_t inode) {
 		   followed.  May wish to switch at some point. */
 		full_path = g_strconcat(dir_name, "/", entry->d_name, NULL);
 		if (lstat(full_path, &file_stat) == -1) {
-			g_warning("Could not stat file: %s", g_strerror(errno));
+			g_warning("Could not stat file \"%s\": %s", file_name,
+					g_strerror(errno));
 			type = FT_REGULAR;   /* We don't want to just skip this; assume
 			                        it's regular. */
 		}
