@@ -776,7 +776,6 @@ static gboolean scan_for_newline(const Connection* b) {
 	gsize i;
 
 	for (i = 0; i < b->filled; i++) {
-//		g_print("%c (%d)\n", *(b->buf + i), *(b->buf + i));
 		switch ( *(b->buf + i) ) {
 			case '\n':     /* Newline. */
 			case '\t':     /* Horizontal tab (for tab completion with
@@ -922,6 +921,10 @@ static void send_term_size(gint shell_fd) {
 		cd "<pwd>" && vgexpand <opts> -m "<mask>" -- <cmd> ; cd / */
 static void call_vgexpand(struct user_state* u, struct vgd_stuff* vgd) {
 
+	static GString* mask_prev = NULL;
+	if (!mask_prev)
+		mask_prev = g_string_new(NULL);
+
 	gchar* cmd_sane;
 	gchar* mask_sane;
 	gchar* expand_command;
@@ -942,15 +945,20 @@ static void call_vgexpand(struct user_state* u, struct vgd_stuff* vgd) {
 	if (write_all(u->sandbox.fd_out, expand_command, strlen(expand_command))
 			== IOR_ERROR)
 		disable_vgseer(vgd);
+	vgd->vgexpand_called = TRUE;
 
+	/* Send the command line. */
 	put_param_wrapped(vgd->fd, P_CMD, cmd_sane);
-	/* TODO: only send mask if it's changed. */
-	put_param_wrapped(vgd->fd, P_MASK, mask_sane);
+	
+	/* Only send the mask if it's changed. */
+	if (!STREQ(mask_prev->str, mask_sane)) {
+		put_param_wrapped(vgd->fd, P_MASK, mask_sane);
+		mask_prev = g_string_assign(mask_prev, mask_sane);
+	}
 
 	g_free(expand_command);
 	g_free(mask_sane);
 	g_free(cmd_sane);
-	vgd->vgexpand_called = TRUE;
 }
 
 
