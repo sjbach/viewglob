@@ -44,11 +44,6 @@
 #  endif
 #endif
 
-struct mask {
-	gchar* pattern;
-	gboolean dirs_only;
-};
-
 static gint  parse_args(gint argc, gchar** argv, gchar** mask_str);
 static void  report_version(void);
 static void  compile_data(gint argc, gchar** argv);
@@ -382,7 +377,7 @@ static Directory* reverse_list(Directory* head) {
 
 gboolean print_traverse(gpointer key, gpointer value, gpointer data) {
 
-	static const gchar types[FILE_TYPE_COUNT] = {
+	static const gchar types[FT_COUNT] = {
 		/*FT_REGULAR*/    'r',
 		/*FT_EXECUTABLE*/ 'e',
 		/*FT_DIRECTORY*/  'd',
@@ -393,7 +388,7 @@ gboolean print_traverse(gpointer key, gpointer value, gpointer data) {
 		/*FT_SYMLINK*/    'y',
 	};
 
-	static const gchar selections[SELECTION_COUNT] = {
+	static const gchar selections[S_COUNT] = {
 		/*S_YES*/    '*',
 		/*S_NO*/     '-',
 		/*S_MAYBE*/  '~',

@@ -28,13 +28,17 @@
 
 G_BEGIN_DECLS
 
+
 /* A file has two stages of being selected:
      YES:   the file has been explicitly named or expanded from a file glob.
 	 MAYBE: the beginning of the file has been named (or expanded). */
-#define SELECTION_COUNT 3
-enum selection { S_YES, S_NO, S_MAYBE };
+enum selection {
+	S_YES,
+	S_NO,
+	S_MAYBE,
+	S_COUNT,
+};
 
-#define FILE_TYPE_COUNT 8
 enum file_type {
 	FT_REGULAR,
 	FT_EXECUTABLE,
@@ -44,6 +48,7 @@ enum file_type {
 	FT_FIFO,
 	FT_SOCKET,
 	FT_SYMLINK,
+	FT_COUNT,
 };
 
 /* Order in which to list the directories:
@@ -76,6 +81,11 @@ struct _Directory {
 	Directory* next_dir;
 	gchar* lookup;       /* Piggyback filename for mark_traverse. */
 	gsize  lookup_len;
+};
+
+struct mask {
+	gchar* pattern;
+	gboolean dirs_only;
 };
 
 
