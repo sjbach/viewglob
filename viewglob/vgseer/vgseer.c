@@ -25,6 +25,7 @@
 #include "hardened_io.h"
 #include "actions.h"
 #include "connection.h"
+#include "sequences.h"
 #include "vgseer.h"
 
 #include <stdio.h>

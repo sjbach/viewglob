@@ -24,10 +24,45 @@
 #  include "config.h"
 #endif
 
-#include "circular.h"
-#include "sequences.h"
-
 G_BEGIN_DECLS
+
+/* Status of a match attempt. */
+typedef enum _MatchStatus MatchStatus;
+enum _MatchStatus {
+	MS_NO_MATCH     = 1 << 0,
+	MS_IN_PROGRESS  = 1 << 1,
+	MS_MATCH        = 1 << 2,
+};
+
+
+enum process_level {
+	PL_TERMINAL,     /* For the terminal. */
+	PL_AT_PROMPT,    /* When user is typing away. */
+	PL_EXECUTING,    /* When a command is executing. */
+	PL_AT_RPROMPT,   /* When the zsh RPROMPT is being printed. */
+};
+
+
+typedef struct _Connection Connection;
+struct _Connection {
+	char* name;
+	int fd_in;
+	int fd_out;
+	char* buf;              /* Read/write buffer. */
+	size_t size;
+	size_t filled;          /* The amount of the buffer that is actually
+	                           filled. */
+	size_t pos;             /* The offset of the segment being examined. */
+	size_t seglen;          /* Length of the examined segment. */
+	enum process_level pl;  /* Processing level of the buffer. */
+	MatchStatus status;     /* Result of the last check_seqs() attempt. */
+	char* holdover;         /* Segment leftover from the last read. */
+	gboolean ho_written;    /* The holdover was written already (and thus
+	                           should be skipped. */
+	size_t skip;            /* Number of bytes to skip writing (already
+	                           written). */
+};
+
 
 void connection_init(Connection* cnct, char* name, int fd_in, int fd_out,
 		size_t buflen, enum process_level pl);

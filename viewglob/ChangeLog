@@ -1,3 +1,7 @@
+2005-03-15 14:10  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* circular.h: removed
+
 2005-03-15 01:20  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* vgseer.c, init-viewglob.zshrc:

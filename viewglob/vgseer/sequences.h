@@ -25,7 +25,6 @@
 #endif
 
 #include "common.h"
-#include "circular.h"
 #include "vgseer.h"
 #include "connection.h"
 
