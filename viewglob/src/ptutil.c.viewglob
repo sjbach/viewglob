@@ -23,6 +23,8 @@
 #include "ptutil.viewglob.h"
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <string.h>
+#include <stdlib.h>
 
 /*[NONPORTABILITY_SYMBOLS]*/
 #if defined(SOLARIS) /* add to this as necessary */
