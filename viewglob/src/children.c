@@ -46,13 +46,15 @@ extern FILE* df;
 static bool create_fifo(char* name);
 static bool waitpid_wrapped(pid_t pid);
 static bool wait_for_data(int master_fd);
+ 
 
+/* Make five attempts at creating a fifo with the given name. */
 static bool create_fifo(char* name) {
 	int i;
 	bool ok = true;
 
-	/* Try five times to create the fifo, deleting if present. */
 	for (i = 0; i < 5; i++) {
+
 		/* Only read/writable by this user. */
 		if (mkfifo(name, S_IRUSR | S_IWUSR) == -1) {
 			if (errno == EEXIST) {
@@ -77,6 +79,7 @@ static bool create_fifo(char* name) {
 }
 
 
+/* Wrapper to interpret both 0 and -1 waitpid() returns as errors. */
 static bool waitpid_wrapped(pid_t pid) {
 	bool result = true;
 
@@ -113,12 +116,13 @@ void args_add(struct args* a, char* new_arg) {
 		temp = NULL;
 
 	a->argv = XREALLOC(char*, a->argv, a->arg_count + 1);
-	a->argv = realloc(a->argv, sizeof(char*) * (a->arg_count + 1));
 	*(a->argv + a->arg_count) = temp;
 	a->arg_count++;
 }
 
 
+/* Initialize communication fifos and the argument array for the display fork.
+   Should only be called once, whereas display_fork() can be called multiple times. */
 bool display_init(struct display* d) {
 	pid_t pid;
 	char* pid_str;
@@ -221,6 +225,8 @@ bool display_running(struct display* d) {
 }
 
 
+/* Terminate display's process and close communication fifos.  Should be called for
+   each forked display. */
 bool display_terminate(struct display* d) {
 	bool ok = true;
 
@@ -271,6 +277,8 @@ bool display_terminate(struct display* d) {
 }
 
 
+/* Remove fifos and clear the display struct.  Should only be called
+   when there will be no more display forks. */
 bool display_cleanup(struct display* d) {
 	bool ok = true;
 
@@ -441,6 +449,7 @@ bool pty_child_terminate(struct pty_child* c) {
 
 	return ok;
 }
+
 
 static bool wait_for_data(int master_fd) {
 	fd_set fd_set_write;
