@@ -27,14 +27,13 @@
 #include "common.h"
 #include "file_types.h"
 #include "lscolors.h"
-#include <string.h>     /* For strcpy(). */
+#include <string.h>
 #include <glib.h>
 #include <pango/pango.h>
+#include <gdk/gdk.h>
 #include <math.h>
 
 #define STREQ(a, b) (strcmp ((a), (b)) == 0)
-
-TermTextAttr type_ttas[FILE_TYPES_NUM];
 
 /* Null is a valid character in a color indicator (think about Epson
    printers, for example) so we have to use a length/buffer string
@@ -43,12 +42,6 @@ struct bin_str {
 	size_t len;				/* Number of bytes */
 	const char *string;		/* Pointer to the same */
 	GString* gstr;			/* Progress. */
-};
-
-/* Reorganized these to correspond with FileType in file_types.h. */
-static const char *const indicator_name[]= {
-	"fi", "ex", "di", "bd", "cd", "pi", "so", "ln", "lc",
-    "rc", "ec", "no", "mi", "or", "do", NULL
 };
 
 struct color_ext_type
@@ -71,9 +64,33 @@ static TermTextAttr* scan_exts_for_equivalency(TermTextAttr* tta);
 static void parse_codes(struct bin_str* s, TermTextAttr* attr);
 static PangoAttrList* create_pango_list(TermTextAttr* tta, gint size_modifier);
 
+/* Terminal colours map to the following. */
+static struct color_mapping {
+	guint16 r;
+	guint16 g;
+	guint16 b;
+} map[] = {
+	{ 0x0000, 0x0000, 0x0000 }, /* TCC_NONE (not used) */
+	{ 0x0000, 0x0000, 0x0000 }, /* TCC_BLACK */
+	{ 0x9e9e, 0x1818, 0x2828 }, /* TCC_RED */
+	{ 0xaeae, 0xcece, 0x9191 }, /* TCC_GREEN */
+	{ 0xffff, 0xf7f7, 0x9696 }, /* TCC_YELLOW */
+	{ 0x4141, 0x8686, 0xbebe }, /* TCC_BLUE */
+	{ 0x9696, 0x3c3c, 0x5959 }, /* TCC_MAGENTA */
+	{ 0x7171, 0xbebe, 0xbebe }, /* TCC_CYAN */
+	{ 0xffff, 0xffff, 0xffff }, /* TCC_WHITE */
+};
 
 /* Buffer for color sequences */
 static char *color_buf;
+
+static TermTextAttr type_ttas[FILE_TYPES_NUM];
+
+/* Reorganized these to correspond with FileType in file_types.h. */
+static const char *const indicator_name[]= {
+	"fi", "ex", "di", "bd", "cd", "pi", "so", "ln", "lc",
+    "rc", "ec", "no", "mi", "or", "do", NULL
+};
 
 /* Reorganized to correspond with FileType in file_types.h. */
 #define LEN_STR_PAIR(s) sizeof (s) - 1, s, NULL
@@ -679,22 +696,6 @@ static PangoAttrList* create_pango_list(TermTextAttr* tta, gint size_modifier) {
 	gboolean list_set = FALSE;
 	gdouble scale_factor;
 
-	static struct color_mapping {
-		guint16 r;
-		guint16 g;
-		guint16 b;
-	} map[] = {
-		{ 0x0000, 0x0000, 0x0000 },	/* TCC_NONE (not used) */
-		{ 0x0000, 0x0000, 0x0000 },	/* TCC_BLACK */
-		{ 0x9e9e, 0x1818, 0x2828 },	/* TCC_RED */
-		{ 0xaeae, 0xcece, 0x9191 }, /* TCC_GREEN */
-		{ 0xffff, 0xf7f7, 0x9696 }, /* TCC_YELLOW */
-		{ 0x4141, 0x8686, 0xbebe }, /* TCC_BLUE */
-		{ 0x9696, 0x3c3c, 0x5959 }, /* TCC_MAGENTA */
-		{ 0x7171, 0xbebe, 0xbebe }, /* TCC_CYAN */
-		{ 0xffff, 0xffff, 0xffff }, /* TCC_WHITE */
-	};
-
 	/* First set the font size. */
 	if (size_modifier != 0) {
 		if (size_modifier > 0)
@@ -708,17 +709,9 @@ static PangoAttrList* create_pango_list(TermTextAttr* tta, gint size_modifier) {
 		list_set = TRUE;
 	}
 
-	/* Foreground colour */
-	if (tta->fg > TCC_NONE && tta->fg <= TCC_WHITE) {
-		p_attr = pango_attr_foreground_new(
-				map[tta->fg].r,
-				map[tta->fg].g,
-				map[tta->fg].b);
-		p_attr->start_index = 0;
-		p_attr->end_index = G_MAXINT;
-		pango_attr_list_insert(p_list, p_attr);
-		list_set = TRUE;
-	}
+	/* Foreground colour is not set through Pango so that
+	   its color can change when active or selected
+	   (see label_set_attributes()). */
 
 	/* Background colour */
 	if (tta->bg > TCC_NONE && tta->bg <= TCC_WHITE) {
@@ -768,19 +761,35 @@ static PangoAttrList* create_pango_list(TermTextAttr* tta, gint size_modifier) {
 /* Get a PangoAttrList for this label, based on its name and type.  */
 void label_set_attributes(gchar* name, FileType type, GtkLabel* label) {
 
-	PangoAttrList* p_list = type_ttas[type].p_list;
+	PangoAttrList* p_list;
+	TermTextAttr* tta;
+
+	tta = &type_ttas[type];
+
+	p_list = tta->p_list;
 	if (type == FT_REGULAR) {
 		struct color_ext_type* iter;
 		for (iter = color_ext_list; iter; iter = iter->next) {
 			if (g_str_has_suffix(name, iter->ext.gstr->str)) {
-				p_list = iter->tta.p_list;
+				tta = &iter->tta;
+				p_list = tta->p_list;
 				break;
+			}
 		}
 	}
 
-
-	}
 	if (p_list)
 		gtk_label_set_attributes(label, p_list);
+
+	/* Foreground colour */
+	if (tta->fg > TCC_NONE && tta->fg <= TCC_WHITE) {
+		GdkColor color;
+		color.red = map[tta->fg].r;
+		color.green = map[tta->fg].g;
+		color.blue = map[tta->fg].b;
+
+		gtk_widget_modify_fg(GTK_WIDGET(label), GTK_STATE_NORMAL, &color);
+		gtk_widget_modify_fg(GTK_WIDGET(label), GTK_STATE_ACTIVE, &color);
+	}
 }
 
