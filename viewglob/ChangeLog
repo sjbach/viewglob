@@ -1,3 +1,9 @@
+2004-09-07 19:15  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* seer.c, sequences.c:
+	  - Fixing outputting of spaces
+	  - Further implementing of keyboard navigation.
+
 2004-09-07 17:45  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* buffer.c, buffer.h, circular.h: added

@@ -65,6 +65,14 @@ static MatchEffect seq_rprompt_separator_start(Buffer* b);
 static MatchEffect seq_rprompt_separator_end(Buffer* b);
 static MatchEffect seq_zsh_completion_done(Buffer* b);
 static MatchEffect seq_new_pwd(Buffer* b);
+
+static MatchEffect seq_nav_up(Buffer* b);
+static MatchEffect seq_nav_down(Buffer* b);
+static MatchEffect seq_nav_pgup(Buffer* b);
+static MatchEffect seq_nav_pgdown(Buffer* b);
+static MatchEffect seq_nav_ctrl_g(Buffer* b);
+/*static MatchEffect seq_nav_catch_all(Buffer* b);*/
+
 static MatchEffect seq_term_cmd_wrapped(Buffer* b);
 static MatchEffect seq_term_backspace(Buffer* b);
 static MatchEffect seq_term_cursor_forward(Buffer* b);
@@ -78,15 +86,18 @@ static MatchEffect seq_term_carriage_return(Buffer* b);
 static MatchEffect seq_term_newline(Buffer* b);
 
 /* In sequences: 
-     - The ENQ control character (005) stands for any sequence of digits (or none).
-     - The ACK control character (006) stands for any sequence of printable characters (or none).
-     - The EOT control character (004) stands for any non-linefeed, non-carriage return character. */
+  - The ENQ control character (005) stands for any sequence of digits (or none).
+  - The ACK control character (006) stands for any sequence of printable characters (or none).
+  - The EOT control character (004) stands for any non-linefeed, non-carriage return character.
+  - The ETX control character (003) stands for any single character. */
 #define DIGIT_C '\005'
 #define PRINTABLE_C '\006'
 #define DIGIT_S "\005"
 #define PRINTABLE_S "\006"
 #define NOT_LF_C '\004'
 #define NOT_LF_S "\004"
+/*#define ANY_C '\003'*/
+/*#define ANY_S "\003"*/
 
 /* viewglob escape sequences.
    Note: if these are changed, the init-viewglob.*rc files must be updated. */
@@ -94,6 +105,22 @@ static char* const PS1_SEPARATOR_SEQ = "\033[0;30m\033[0m\033[1;37m\033[0m";
 static char* const RPROMPT_SEPARATOR_START_SEQ = "\033[0;34m\033[0m\033[0;31m\033[0m";
 static char* const RPROMPT_SEPARATOR_END_SEQ = "\033[0;34m\033[0m\033[0;31m\033[0m" "\033[" DIGIT_S "D";
 static char* const NEW_PWD_SEQ = "\033P" PRINTABLE_S "\033\\";
+
+/* viewglob navigation sequences. */
+static char* const NAV_VI_UP_SEQ = "\007k";
+static char* const NAV_VI_DOWN_SEQ = "\007j";
+static char* const NAV_VI_PGUP_SEQ = "\007b";
+static char* const NAV_VI_PGDOWN_SEQ = "\007f";
+static char* const NAV_EMACS_UP_SEQ = "\007p";
+static char* const NAV_EMACS_DOWN_SEQ = "\007n";
+static char* const NAV_EMACS_PGUP_SEQ = "\007u";
+static char* const NAV_EMACS_PGDOWN_SEQ = "\007d";
+static char* const NAV_KEYBOARD_UP_SEQ = "\007\033[A";
+static char* const NAV_KEYBOARD_DOWN_SEQ = "\007\033[B";
+static char* const NAV_KEYBOARD_PGUP_SEQ = "\007\033[5~";
+static char* const NAV_KEYBOARD_PGDOWN_SEQ = "\007\033[6~";
+static char* const NAV_CTRL_G_SEQ = "\007\007";
+/*static char* const NAV_CATCH_ALL_SEQ = "\007" ANY_S "";*/
 
 /* I've observed this always comes at the end of a list of tab completions in zsh. */
 static char* const ZSH_COMPLETION_DONE_SEQ = "\033[0m\033[27m\033[24m\015\033[" DIGIT_S "C";
@@ -197,7 +224,7 @@ int find_next_cret(int pos) {
 /* Initialize all of the sequences.  Some of them are duplicated
    in different groups instead of referenced, which should be fixed. */
 void init_seqs(enum shell_type shell) {
-
+	int i;
 	seq_groups = XMALLOC(SeqGroup, NUM_PROCESS_LEVELS);
 
 	if (shell == ST_BASH)
@@ -207,8 +234,86 @@ void init_seqs(enum shell_type shell) {
 	else
 		viewglob_error("Unexpected shell type");
 
+	seq_groups[PL_TERMINAL].n = 13;
+	seq_groups[PL_TERMINAL].seqs = XMALLOC(Sequence, 13);
+	for (i = 0; i < seq_groups[PL_TERMINAL].n; i++) {
+		seq_groups[PL_TERMINAL].seqs[i].pos = 0;
+		seq_groups[PL_TERMINAL].seqs[i].enabled = false;
+	}
+
+	strcpy(seq_groups[PL_TERMINAL].seqs[0].name, "Nav vi up");
+	seq_groups[PL_TERMINAL].seqs[0].seq = NAV_VI_UP_SEQ;
+	seq_groups[PL_TERMINAL].seqs[0].length = strlen(NAV_VI_UP_SEQ);
+	seq_groups[PL_TERMINAL].seqs[0].func = seq_nav_up;
+
+	strcpy(seq_groups[PL_TERMINAL].seqs[1].name, "Nav vi down");
+	seq_groups[PL_TERMINAL].seqs[1].seq = NAV_VI_DOWN_SEQ;
+	seq_groups[PL_TERMINAL].seqs[1].length = strlen(NAV_VI_DOWN_SEQ);
+	seq_groups[PL_TERMINAL].seqs[1].func = seq_nav_down;
+
+	strcpy(seq_groups[PL_TERMINAL].seqs[2].name, "Nav vi pgup");
+	seq_groups[PL_TERMINAL].seqs[2].seq = NAV_VI_PGUP_SEQ;
+	seq_groups[PL_TERMINAL].seqs[2].length = strlen(NAV_VI_PGUP_SEQ);
+	seq_groups[PL_TERMINAL].seqs[2].func = seq_nav_pgup;
+
+	strcpy(seq_groups[PL_TERMINAL].seqs[3].name, "Nav vi pgdown");
+	seq_groups[PL_TERMINAL].seqs[3].seq = NAV_VI_PGDOWN_SEQ;
+	seq_groups[PL_TERMINAL].seqs[3].length = strlen(NAV_VI_PGDOWN_SEQ);
+	seq_groups[PL_TERMINAL].seqs[3].func = seq_nav_pgdown;
+
+	strcpy(seq_groups[PL_TERMINAL].seqs[4].name, "Nav emacs up");
+	seq_groups[PL_TERMINAL].seqs[4].seq = NAV_EMACS_UP_SEQ;
+	seq_groups[PL_TERMINAL].seqs[4].length = strlen(NAV_EMACS_UP_SEQ);
+	seq_groups[PL_TERMINAL].seqs[4].func = seq_nav_up;
+
+	strcpy(seq_groups[PL_TERMINAL].seqs[5].name, "Nav emacs down");
+	seq_groups[PL_TERMINAL].seqs[5].seq = NAV_EMACS_DOWN_SEQ;
+	seq_groups[PL_TERMINAL].seqs[5].length = strlen(NAV_EMACS_DOWN_SEQ);
+	seq_groups[PL_TERMINAL].seqs[5].func = seq_nav_down;
+
+	strcpy(seq_groups[PL_TERMINAL].seqs[6].name, "Nav emacs pgup");
+	seq_groups[PL_TERMINAL].seqs[6].seq = NAV_EMACS_PGUP_SEQ;
+	seq_groups[PL_TERMINAL].seqs[6].length = strlen(NAV_EMACS_PGUP_SEQ);
+	seq_groups[PL_TERMINAL].seqs[6].func = seq_nav_pgup;
+
+	strcpy(seq_groups[PL_TERMINAL].seqs[7].name, "Nav emacs pgdown");
+	seq_groups[PL_TERMINAL].seqs[7].seq = NAV_EMACS_PGDOWN_SEQ;
+	seq_groups[PL_TERMINAL].seqs[7].length = strlen(NAV_EMACS_PGDOWN_SEQ);
+	seq_groups[PL_TERMINAL].seqs[7].func = seq_nav_pgdown;
+
+	strcpy(seq_groups[PL_TERMINAL].seqs[8].name, "Nav keyboard up");
+	seq_groups[PL_TERMINAL].seqs[8].seq = NAV_KEYBOARD_UP_SEQ;
+	seq_groups[PL_TERMINAL].seqs[8].length = strlen(NAV_KEYBOARD_UP_SEQ);
+	seq_groups[PL_TERMINAL].seqs[8].func = seq_nav_up;
+
+	strcpy(seq_groups[PL_TERMINAL].seqs[9].name, "Nav keyboard down");
+	seq_groups[PL_TERMINAL].seqs[9].seq = NAV_KEYBOARD_DOWN_SEQ;
+	seq_groups[PL_TERMINAL].seqs[9].length = strlen(NAV_KEYBOARD_DOWN_SEQ);
+	seq_groups[PL_TERMINAL].seqs[9].func = seq_nav_down;
+
+	strcpy(seq_groups[PL_TERMINAL].seqs[10].name, "Nav keyboard pgup");
+	seq_groups[PL_TERMINAL].seqs[10].seq = NAV_KEYBOARD_PGUP_SEQ;
+	seq_groups[PL_TERMINAL].seqs[10].length = strlen(NAV_KEYBOARD_PGUP_SEQ);
+	seq_groups[PL_TERMINAL].seqs[10].func = seq_nav_pgup;
+
+	strcpy(seq_groups[PL_TERMINAL].seqs[11].name, "Nav keyboard pgdown");
+	seq_groups[PL_TERMINAL].seqs[11].seq = NAV_KEYBOARD_PGDOWN_SEQ;
+	seq_groups[PL_TERMINAL].seqs[11].length = strlen(NAV_KEYBOARD_PGDOWN_SEQ);
+	seq_groups[PL_TERMINAL].seqs[11].func = seq_nav_pgdown;
+
+	strcpy(seq_groups[PL_TERMINAL].seqs[12].name, "Nav ctrl g");
+	seq_groups[PL_TERMINAL].seqs[12].seq = NAV_CTRL_G_SEQ;
+	seq_groups[PL_TERMINAL].seqs[12].length = strlen(NAV_CTRL_G_SEQ);
+	seq_groups[PL_TERMINAL].seqs[12].func = seq_nav_ctrl_g;
+
+	/*
+	strcpy(seq_groups[PL_TERMINAL].seqs[13].name, "Nav catch all");
+	seq_groups[PL_TERMINAL].seqs[13].seq = NAV_CATCH_ALL_SEQ;
+	seq_groups[PL_TERMINAL].seqs[13].length = strlen(NAV_CATCH_ALL_SEQ);
+	seq_groups[PL_TERMINAL].seqs[13].func = seq_nav_catch_all;
+	*/
+
 #if DEBUG_ON
-	int i;
 	for (i = 0; i < seq_groups[PL_AT_PROMPT].n; i++)
 		DEBUG((df,"%s (%d)\n", seq_groups[PL_AT_PROMPT].seqs[i].name, seq_groups[PL_AT_PROMPT].seqs[i].length));
 #endif
@@ -536,6 +641,13 @@ static MatchStatus check_seq(char c, Sequence* sq) {
 				sq->pos++;
 			}
 			break;
+
+#if 0
+		case ANY_C:
+			/* Anything goes. */
+			sq->pos++;
+			break;
+#endif
 
 		default:
 			if (sq->seq[sq->pos] == c)
@@ -943,4 +1055,58 @@ static MatchEffect seq_term_newline(Buffer* b) {
 	pass_segment(b);
 	return effect;
 }
+
+
+static MatchEffect seq_nav_up(Buffer* b) {
+	DEBUG((df, "seq_nav_up!\n"));
+	printf("(up)");
+	fflush(stdout);
+	eat_segment(b);
+	return ME_NO_EFFECT;
+}
+
+
+static MatchEffect seq_nav_down(Buffer* b) {
+	DEBUG((df, "seq_nav_down!\n"));
+	printf("(down)");
+	fflush(stdout);
+	eat_segment(b);
+	return ME_NO_EFFECT;
+}
+
+
+static MatchEffect seq_nav_pgup(Buffer* b) {
+	DEBUG((df, "seq_nav_pgup!\n"));
+	printf("(pgup)");
+	fflush(stdout);
+	eat_segment(b);
+	return ME_NO_EFFECT;
+}
+
+
+static MatchEffect seq_nav_pgdown(Buffer* b) {
+	DEBUG((df, "seq_nav_pgdown!\n"));
+	printf("(pgdown)");
+	fflush(stdout);
+	eat_segment(b);
+	return ME_NO_EFFECT;
+}
+
+
+static MatchEffect seq_nav_ctrl_g(Buffer* b) {
+	DEBUG((df, "seq_nav_ctrlg!\n"));
+	b->n--;
+	b->pos++;
+	eat_segment(b);
+	return ME_NO_EFFECT;
+}
+
+
+/*
+static MatchEffect seq_nav_catch_all(Buffer* b) {
+	DEBUG((df, "seq_nav_catch_all!\n"));
+	eat_segment(b);
+	return ME_NO_EFFECT;
+}
+*/
 

@@ -472,6 +472,12 @@ static bool user_activity(void) {
 			DEBUG((df, "\n===============\n"));
 		#endif
 
+		/* Process the buffer. */
+		if (viewglob_enabled) {
+			ok = process_input(&termb);
+			if (!ok) goto done;
+		}
+
 		/* Look for a newline.  If one is found, then a match of a newline/carriage
 		   return in the shell's output (which extends past the end of the command-
 		   line) will be interpreted as command execution.  Otherwise, they'll be
@@ -622,9 +628,19 @@ static bool process_input(Buffer* b) {
 	}
 
 	if (IN_PROGRESS(b->status)) {
-		/* We'll have to store the sequence thus far as holdover. */
-		DEBUG((df, "n = %d, pos = %d, filled = %d\n", b->n, b->pos, b->filled));
-		create_holdover(b);
+		if (b->pl == PL_AT_PROMPT) {
+			/* We're at the prompt, so we can't make a holdover for the next read because the user's
+			   actions may depend on this output.  This is an unfortunate kludge. */
+			DEBUG((df, "pre-emptive write of segment (because of PL_AT_PROMPT)\n"));
+			for (; b->pos < b->filled; b->pos++)
+				cmd_overwrite_char(b->buf[b->pos], true);
+			action_queue(A_SEND_CMD);
+		}
+		else {
+			/* We'll store the sequence thus far as holdover. */
+			DEBUG((df, "n = %d, pos = %d, filled = %d\n", b->n, b->pos, b->filled));
+			create_holdover(b);
+		}
 	}
 
 	return true;
