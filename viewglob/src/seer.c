@@ -17,9 +17,7 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#if HAVE_CONFIG_H
-#  include "config.h"
-#endif
+#include "config.h"
 
 #include "common.h"
 #include "viewglob-error.h"
@@ -332,8 +330,8 @@ static void parse_args(int argc, char** argv) {
 
 
 static void report_version(void) {
-	printf("seer %s\n", SEER_VERSION);
-	printf("Released %s\n", SEER_RELEASE_DATE);
+	printf("seer %s\n", VERSION);
+	printf("Released %s\n", VG_RELEASE_DATE);
 	return;
 }
 

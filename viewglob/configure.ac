@@ -1,7 +1,10 @@
 dnl Process this file with autoconf to produce a configure script.
 AC_INIT([viewglob], [0.8.4])
-AM_CONFIG_HEADER([config.h])
 AM_INIT_AUTOMAKE
+AM_CONFIG_HEADER([config.h])
+RELEASE_DATE="September 2, 2004"
+
+AC_DEFINE_UNQUOTED([VG_RELEASE_DATE], ["$RELEASE_DATE"] , [Date of release])
 
 dnl Checks for programs.
 AC_PROG_CC
@@ -39,6 +42,11 @@ if test "x$BASH_FULL_PATH" = xnope; then
 	AC_MSG_ERROR([viewglob requires bash])
 fi
 AC_SUBST(BASH_FULL_PATH)
+
+dnl So the shell scripts can get 'em.
+AC_SUBST(PACKAGE_NAME)
+AC_SUBST(PACKAGE_VERSION)
+AC_SUBST(RELEASE_DATE)
 
 AC_CONFIG_FILES([Makefile src/Makefile gviewglob/Makefile])
 AC_OUTPUT

@@ -6,6 +6,9 @@ viewglob: Makefile
 	rm -f viewglob.tmp
 	sed -e 's,@datadir\@,$(pkgdatadir),g' \
 		-e 's,@BASH_FULL_PATH\@,$(BASH_FULL_PATH),g' \
+		-e 's,@PACKAGE_NAME\@,$(PACKAGE_NAME),g' \
+		-e 's,@PACKAGE_VERSION\@,$(PACKAGE_VERSION),g' \
+		-e 's/@RELEASE_DATE\@/$(RELEASE_DATE)/g' \
 		viewglob.in > viewglob.tmp
 	chmod a+x viewglob.tmp
 	mv viewglob.tmp viewglob

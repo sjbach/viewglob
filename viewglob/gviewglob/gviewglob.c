@@ -769,8 +769,8 @@ static gboolean parse_args(int argc, char** argv) {
 
 
 static void report_version(void) {
-	g_print("gviewglob %s\n", GVIEWGLOB_VERSION);
-	g_print("Released %s\n", GVIEWGLOB_RELEASE_DATE);
+	g_print("gviewglob %s\n", VERSION);
+	g_print("Released %s\n", VG_RELEASE_DATE);
 	return;
 }
 

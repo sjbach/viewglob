@@ -25,9 +25,6 @@
 #include "file_box.h"
 #include "dlisting.h"
 
-#define GVIEWGLOB_VERSION "0.8.4"
-#define GVIEWGLOB_RELEASE_DATE "August 31, 2004"
-
 G_BEGIN_DECLS
 
 struct viewable_preferences {

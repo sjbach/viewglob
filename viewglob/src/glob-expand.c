@@ -17,9 +17,7 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#if HAVE_CONFIG_H
-#  include "config.h"
-#endif
+#include "config.h"
 
 #include "common.h"
 #include "viewglob-error.h"
@@ -142,8 +140,8 @@ static int parse_args(int argc, char** argv) {
 
 
 static void report_version(void) {
-	printf("glob-expand %s\n", GLOB_EXPAND_VERSION);
-	printf("Released %s\n", GLOB_EXPAND_RELEASE_DATE);
+	printf("glob-expand %s\n", VERSION);
+	printf("Released %s\n", VG_RELEASE_DATE);
 	exit(EXIT_SUCCESS);
 }
 
