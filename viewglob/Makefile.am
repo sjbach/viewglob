@@ -1,7 +1,7 @@
 AUTOMAKE_OPTIONS = gnu
 
-#SUBDIRS = shell vgd vgdisplay vgping vgseer glob-expand
-SUBDIRS = vgseer vgdisplay glob-expand shell 
+#SUBDIRS = shell vgd vgdisplay vgping vgseer vgexpand
+SUBDIRS = vgseer vgdisplay vgexpand shell 
 man_MANS = viewglob.1
 EXTRA_DIST = COPYING2 HACKING $(man_MANS)
 

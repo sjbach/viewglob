@@ -1,3 +1,13 @@
+2005-03-15 15:48  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* Makefile.am, configure.ac: renamed glob-expand to vgexpand.
+	* glob-expand/Makefile.am, glob-expand/glob-expand.c,
+	  glob-expand/glob-expand.h, glob-expand/viewglob-error.c,
+	  glob-expand/viewglob-error.h, glob-expand/xmalloc.c:
+	  Removed
+	* vgexpand/Makefile.am, vgexpand/vgexpand.c, vgexpand/vgexpand.h:
+	  Added -- ported partially to GLib.
+
 2005-03-15 14:10  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* circular.h: removed

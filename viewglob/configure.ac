@@ -151,6 +151,6 @@ dnl =====================================================================
 
 
 #AC_CONFIG_FILES([Makefile src/Makefile gviewglob/Makefile])
-AC_CONFIG_FILES([Makefile glob-expand/Makefile vgdisplay/Makefile shell/Makefile vgseer/Makefile common/Makefile])
+AC_CONFIG_FILES([Makefile vgexpand/Makefile vgdisplay/Makefile shell/Makefile vgseer/Makefile common/Makefile])
 AC_OUTPUT
 
