@@ -114,10 +114,8 @@ bool hardened_write(int fd, char* buff, size_t length) {
 					}
 					continue;
 				}
-				else {
-					viewglob_error("Write failed in hardened_write");
+				else
 					return false;
-				}
 			}
 			else
 				break;

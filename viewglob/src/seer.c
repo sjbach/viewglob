@@ -387,7 +387,7 @@ static bool user_activity(void) {
 	if (FD_ISSET(STDIN_FILENO, &fdset_read)) {
 
 		/* Read in from terminal. */
-		if (hardened_read(STDIN_FILENO, buff, sizeof buff, &nread) == false) {
+		if (!hardened_read(STDIN_FILENO, buff, sizeof buff, &nread)) {
 			if (errno == EIO)
 				goto done;
 			else {
@@ -428,7 +428,7 @@ static bool user_activity(void) {
 	if (FD_ISSET(u.s.fd, &fdset_read)) {
 
 		/* Read in from the shell. */
-		if (hardened_read(u.s.fd, buff, sizeof buff, &nread) == false) {
+		if (!hardened_read(u.s.fd, buff, sizeof buff, &nread)) {
 			if (errno == EIO) {
 				DEBUG((df, "~~2~~"));
 				action_queue(A_EXIT);
@@ -684,6 +684,7 @@ static void send_sane_cmd(struct display* d) {
 	/* Write the sanitized command-line to the cmd_fifo. */
 	DEBUG((df, "\n^^^%s^^^\n", sane_cmd_delimited));
 	if ( ! hardened_write(d->cmd_fifo_fd, sane_cmd_delimited, strlen(sane_cmd_delimited)) ) {
+		fprintf(stderr, "(viewglob disabled)");
 		viewglob_enabled = false;
 		goto done;
 	}
@@ -706,8 +707,10 @@ static void send_sane_cmd(struct display* d) {
 
 	/* Write the glob command to the sandbox shell. */
 	DEBUG((df, "\n[[[%s]]]\n", x.glob_cmd));
-	if ( ! hardened_write(x.s.fd, x.glob_cmd, strlen(x.glob_cmd)) )
+	if ( ! hardened_write(x.s.fd, x.glob_cmd, strlen(x.glob_cmd)) ) {
+		fprintf(stderr, "(viewglob disabled)");
 		viewglob_enabled = false;
+	}
 
 done:
 	XFREE(sane_cmd_delimited);

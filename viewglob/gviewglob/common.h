@@ -24,6 +24,8 @@
 #  include "config.h"
 #endif
 
+#define DEFAULT_FILE_DISPLAY_LIMIT 500
+
 #define DEBUG_ON 1
 
 #if DEBUG_ON

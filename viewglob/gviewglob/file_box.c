@@ -139,7 +139,7 @@ static void file_box_init(FileBox *fbox) {
 	fbox->show_hidden_files = FALSE;
 	fbox->n_files = 0;
 	fbox->file_max = 32767;
-	fbox->file_display_limit = 500;
+	fbox->file_display_limit = DEFAULT_FILE_DISPLAY_LIMIT;
 	fbox->fi_slist = NULL;
 }
 

@@ -1,3 +1,10 @@
+2004-08-22 14:10  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* hardened_io.c, seer.c: improved a commonly seen error message.
+	* gviewglob.c, gviewglob.h, file_box.c, dlisting.c, gviewglob/common.h
+	  viewglob.in:
+	  Changed the default file display limit from 300 to 500.
+
 2004-08-20 21:35  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* dlisting.c, dlisting.h: cleanup.

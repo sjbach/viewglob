@@ -28,8 +28,6 @@
 #define GVIEWGLOB_VERSION "0.8.1"
 #define GVIEWGLOB_RELEASE_DATE "August 11, 2004"
 
-#define DEFAULT_FILE_DISPLAY_LIMIT 500
-
 G_BEGIN_DECLS
 
 struct viewable_preferences {

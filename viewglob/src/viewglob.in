@@ -243,7 +243,7 @@ fi
 [[ -z "$VG_DISPLAY" ]] && VG_DISPLAY="$VG_DIR/gviewglob"
 [[ -z "$VG_EXECUTABLE" ]] && VG_EXECUTABLE=bash
 [[ -z "$VG_COMPARE_MODE" ]] && VG_COMPARE_MODE=inode
-[[ -z "$VG_SHOW_MAX" ]] && VG_SHOW_MAX=200
+[[ -z "$VG_SHOW_MAX" ]] && VG_SHOW_MAX=500
 [[ -z "$VG_SORT_STYLE" ]] && VG_SORT_STYLE=ls
 
 if [ $VG_COMPARE_MODE = name ]; then
