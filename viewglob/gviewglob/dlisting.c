@@ -204,19 +204,6 @@ DListing* dlisting_new(const GString* name, gint rank, const GString* selected_c
 	return new_dl;
 }
 
-/* FIXME this should be part of exhibit.c maybe. */
-void dlisting_unmark_all(GSList* dl_slist) {
-	DListing* dl;
-
-	while (dl_slist) {
-		dl = dl_slist->data;
-		/*DEBUG((df, "unmarking %s\n", dl->name->str));*/
-		dl->marked = FALSE;
-		dl_slist = g_slist_next(dl_slist);
-	}
-}
-
-
 void dlisting_mark(DListing* d, gint new_rank) {
 	d->marked = TRUE;
 	d->old_rank = d->rank;

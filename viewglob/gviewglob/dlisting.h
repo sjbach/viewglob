@@ -47,7 +47,6 @@ struct _DListing {
 
 
 DListing*  dlisting_new(const GString* name, gint rank, const GString* selected_count, const GString* total_count, const GString* hidden_count, gint width);
-void       dlisting_unmark_all(GSList* dl_slist);
 void       dlisting_mark(DListing* d, gint rank);
 void       dlisting_update_file_counts(DListing* dl, const GString* selected_count, const GString* total_count, const GString* hidden_count);
 void       dlisting_reset_file_count_label(DListing* dl);
