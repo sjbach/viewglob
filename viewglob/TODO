@@ -1,8 +1,6 @@
-- install to /usr/lib instead of /usr/share
 - resizing problem (at / )
 
 Andy Bastien:
-- hide/show viewglob display with Ctrl-G <space>
 - rerunning viewglob after closing the display pops in a new display
 - double clicking file name pastes it into terminal
 	- user-defined formatting
@@ -16,7 +14,6 @@ seer:
 
 	Future:
 	- many terminals linking to the same display, with the display showing the info of the focused terminal only?
-	- commands from terminal to navigate display window.
 
 gviewglob:
 	- if knowingly out of sync, send message to display to put up X icon and say "(viewglob will catch up on the next command)"
