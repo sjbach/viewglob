@@ -10,7 +10,7 @@
 
 */
 
-#include "vgseer-common.h"
+#include "common.h"
 #include "tc_setraw.h"
 #include <termios.h>
 

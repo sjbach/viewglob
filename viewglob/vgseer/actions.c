@@ -19,7 +19,7 @@
 
 #include "config.h"
 
-#include "vgseer-common.h"
+#include "common.h"
 #include "viewglob-error.h"
 #include "actions.h"
 
@@ -32,11 +32,6 @@ struct action_list {
 /* Prototypes. */
 static void    al_push(Action a);
 static Action  al_pop(void);
-
-
-#if DEBUG_ON
-extern FILE* df;
-#endif
 
 
 /* This is kind-of a queue.  If o is A_SEND_CMD, A_SEND_PWD, or A_EXIT,

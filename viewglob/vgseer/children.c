@@ -21,10 +21,11 @@
 #  include "config.h"
 #endif
 
-#include "vgseer-common.h"
+#include "common.h"
 #include "viewglob-error.h"
 #include "children.h"
 #include "ptytty.h"
+#include <stdio.h>
 #include <sys/stat.h>
 #include <signal.h>
 #include <fcntl.h>
@@ -39,10 +40,6 @@
 #  define WIFEXITED(stat_val) (((stat_val) & 255) == 0)
 #endif
 
-
-#if DEBUG_ON
-extern FILE* df;
-#endif
 
 static gboolean create_fifo(gchar* name);
 static gboolean waitpid_wrapped(pid_t pid);

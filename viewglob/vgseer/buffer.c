@@ -19,15 +19,11 @@
 
 #include "config.h"
 
-#include "vgseer-common.h"
+#include "common.h"
 #include "viewglob-error.h"
 #include "buffer.h"
 
 #include <string.h>
-
-#if DEBUG_ON
-extern FILE* df;
-#endif
 
 
 void prepend_holdover(Buffer* b) {

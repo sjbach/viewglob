@@ -19,9 +19,9 @@
 
 #include "config.h"
 
-#include "vgseer-common.h"
+#include "common.h"
 #include "viewglob-error.h"
-#include "seer.h"
+#include "vgseer.h"
 #include "actions.h"
 #include "buffer.h"
 #include "sequences.h"
@@ -159,10 +159,6 @@ static gchar* const TERM_DELETE_CHARS_SEQ = "\033[" DIGIT_S "P";
 static gchar* const TERM_INSERT_BLANKS_SEQ = "\033[" DIGIT_S "@";
 static gchar* const TERM_BELL_SEQ = "\007";
 
-
-#if DEBUG_ON
-extern FILE* df;
-#endif
 
 extern struct user_shell u;
 

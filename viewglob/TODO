@@ -5,6 +5,11 @@
 - dlisting of current directory in display different colour?
 - Use a different key sequence than Ctrl-G (easier to type)?
 
+- Instead of:
+	# Source the user's run-control file.
+	[ -f ~/.zshrc ] && . ~/.zshrc
+   Have vgseer (or whatever) change ZDOTDIR to VG_ZDOTDIR (and then set ZDOTDIR), and then use $VG_ZDOTDIR/.zshrc instead of ~/.zshrc
+
 seer:
 	- screen compatibility
 	- integration with bash-completion, if viable

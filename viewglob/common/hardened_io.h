@@ -26,17 +26,17 @@
 
 #include "common.h"
 
-BEGIN_C_DECLS
+G_BEGIN_DECLS
 
-int open_warning(char* file_name, int flags, mode_t mode);
-void close_warning(int fd, char* file_name);
+gint open_warning(char* file_name, gint flags, mode_t mode);
+void close_warning(gint fd, char* file_name);
 
-bool hardened_write(int, char*, size_t length);
-bool hardened_read(int fd, void* buf, size_t count, ssize_t* nread);
-bool hardened_select(int fd, fd_set* readfds, fd_set* writefds);
+gboolean hardened_write(gint, char*, size_t length);
+gboolean hardened_read(gint fd, void* buf, size_t count, ssize_t* nread);
+gboolean hardened_select(gint fd, fd_set* readfds, fd_set* writefds);
 
-bool send_term_size(int shell_fd);
+gboolean send_term_size(gint shell_fd);
 
-END_C_DECLS
+G_END_DECLS
 
 #endif /* !HARDENED_IO_H */

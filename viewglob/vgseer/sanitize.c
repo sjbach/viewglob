@@ -19,14 +19,8 @@
 
 #include "config.h"
 
-#include "vgseer-common.h"
+#include "common.h"
 #include "sanitize.h"
-
-/*#define DEBUG(blah)	do { } while(0)*/
-
-#if DEBUG_ON
-extern FILE* df;
-#endif
 
 static void   sane_add_char(struct sane_cmd* s, char c);
 static void   sane_delete_current_word(struct sane_cmd* s);

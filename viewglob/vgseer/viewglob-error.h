@@ -33,7 +33,7 @@
 #  include "config.h"
 #endif
 
-#include "vgseer-common.h"
+#include "common.h"
 
 G_BEGIN_DECLS
 

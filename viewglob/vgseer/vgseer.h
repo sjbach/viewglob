@@ -24,7 +24,7 @@
 #  include "config.h"
 #endif
 
-#include "vgseer-common.h"
+#include "common.h"
 #include "sequences.h"
 #include "cmdline.h"
 #include "children.h"

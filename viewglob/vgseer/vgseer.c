@@ -19,7 +19,7 @@
 
 #include "config.h"
 
-#include "vgseer-common.h"
+#include "common.h"
 #include "viewglob-error.h"
 
 #include "tc_setraw.h"
@@ -27,8 +27,9 @@
 #include "sanitize.h"
 #include "actions.h"
 #include "buffer.h"
-#include "seer.h"
+#include "vgseer.h"
 
+#include <stdio.h>
 #include <signal.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -428,9 +429,11 @@ static gboolean user_activity(void) {
 
 		/* Read in from terminal. */
 		if (!hardened_read(STDIN_FILENO, term_b.buf, term_b.size, &term_b.filled)) {
-			if (errno == EIO)
+			if (errno == EIO) {
+				g_printerr("Hit FIXME spot!\n");
 				//FIXME?  why no ok = FALSE?
 				goto done;
+			}
 			else {
 				viewglob_error("Read problem from terminal");
 				ok = FALSE;

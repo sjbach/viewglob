@@ -19,9 +19,9 @@
 
 #include "config.h"
 
-#include "vgseer-common.h"
+#include "common.h"
 #include "viewglob-error.h"
-#include "seer.h"
+#include "vgseer.h"
 #include "sequences.h"
 #include "actions.h"
 #include "cmdline.h"
@@ -33,10 +33,6 @@ struct overwrite_queue {
 	gboolean preserve_cret;
 	struct overwrite_queue* next;
 }* oq = NULL;
-
-#if DEBUG_ON
-extern FILE *df;
-#endif
 
 extern struct user_shell u;
 

@@ -22,7 +22,7 @@
 #endif
 
 #include "common.h"
-#include "seer.h"
+#include "vgseer.h"
 #include "viewglob-error.h"
 #include "hardened_io.h"
 
@@ -39,15 +39,11 @@
 
 extern struct user_shell u;
 
-#if DEBUG_ON
-extern FILE* df;
-#endif
-
 
 /* Attempt to open the given file with the given flags and mode.
    Emit warning if it doesn't work out. */
-int open_warning(char* file_name, int flags, mode_t mode) {
-	int fd = -1;
+gint open_warning(gchar* file_name, gint flags, mode_t mode) {
+	gint fd = -1;
 	if (file_name) {
 		if ( (fd = open(file_name, flags, mode)) == -1) {
 			viewglob_warning("Could not open file");
@@ -58,7 +54,7 @@ int open_warning(char* file_name, int flags, mode_t mode) {
 }
 
 /* Attempt to close the given file.  Emit warning on failure. */
-void close_warning(int fd, char* file_name) {
+void close_warning(gint fd, gchar* file_name) {
 	if ( fd != -1 && close(fd) == -1) {
 		viewglob_warning("Could not close file");
 		if (file_name)
@@ -67,27 +63,27 @@ void close_warning(int fd, char* file_name) {
 }
 
 /* If read is interrupted by a signal, try again.  Emit error on failure. */
-bool hardened_read(int fd, void* buf, size_t count, ssize_t* nread) {
-	bool ok = true;
+gboolean hardened_read(gint fd, void* buf, size_t count, ssize_t* nread) {
+	gboolean ok = TRUE;
 
-	while (true) {
+	while (TRUE) {
 		errno = 0;
 		if ( (*(nread) = read(fd, buf, count)) == -1 ) {
 			if (errno == EINTR) {
 				if (u.term_size_changed) { 
 					/* Received SIGWINCH. */
 					if (send_term_size(u.s.fd))
-						u.term_size_changed = false;
+						u.term_size_changed = FALSE;
 					else {
 						viewglob_error("Resizing term failed");
-						ok = false;
+						ok = FALSE;
 						break;
 					}
 				}
 				continue;
 			}
 			else {
-				ok = false;
+				ok = FALSE;
 				break;
 			}
 		}
@@ -101,28 +97,28 @@ bool hardened_read(int fd, void* buf, size_t count, ssize_t* nread) {
 
 /* Write all length bytes of buff to fd, even if it requires several tries.
    Retry after signal interrupts.  Emit error on failure. */
-bool hardened_write(int fd, char* buff, size_t length) {
+gboolean hardened_write(gint fd, gchar* buff, size_t length) {
 	ssize_t nwritten;
 	size_t offset = 0;
 
 	while (length > 0) {
-		while (true) {
+		while (TRUE) {
 			errno = 0;
 			if ( (nwritten = write(fd, buff + offset, length)) == -1 ) {
 				if (errno == EINTR) {
 					if (u.term_size_changed) { 
 						/* Received SIGWINCH. */
 						if (send_term_size(u.s.fd))
-							u.term_size_changed = false;
+							u.term_size_changed = FALSE;
 						else {
 							viewglob_error("Resizing term failed");
-							return false;
+							return FALSE;
 						}
 					}
 					continue;
 				}
 				else
-					return false;
+					return FALSE;
 			}
 			else
 				break;
@@ -131,50 +127,50 @@ bool hardened_write(int fd, char* buff, size_t length) {
 		offset += nwritten;
 	}
 
-	return true;
+	return TRUE;
 }
 
 
 /* If select is interrupted by a signal, try again. */
-bool hardened_select(int n, fd_set* readfds, fd_set* writefds) {
+gboolean hardened_select(gint n, fd_set* readfds, fd_set* writefds) {
 
-	while (true) {
+	while (TRUE) {
 		if (select(n, readfds, writefds, NULL, NULL) == -1) {
 			if (errno == EINTR) {
 				if (u.term_size_changed) { 
 					/* Received SIGWINCH. */
 					if (send_term_size(u.s.fd))
-						u.term_size_changed = false;
+						u.term_size_changed = FALSE;
 					else {
 						viewglob_error("Resizing term failed");
-						return false;
+						return FALSE;
 					}
 				}
 				continue;
 			}
 			else {
 				viewglob_error("Select failed in hardened_select");
-				return false;
+				return FALSE;
 			}
 		}
 		else
 			break;
 	}
-	return true;
+	return TRUE;
 }
 
 
 /* Send the terminal size to the given terminal. */
 /* This really shouldn't be here, but it's convenient. */
-bool send_term_size(int shell_fd) {
+gboolean send_term_size(gint shell_fd) {
 	struct winsize size;
 	DEBUG((df, "in send_term_size\n"));
 	if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &size) == -1)
-		return false;
+		return FALSE;
 	else if (ioctl(shell_fd, TIOCSWINSZ, &size) == -1)
-		return false;
+		return FALSE;
 	else
-		return true;
+		return TRUE;
 }
 
 

@@ -31,8 +31,9 @@
 #  include "config.h"
 #endif
 
-#include "vgseer-common.h"
+#include "common.h"
 #include "viewglob-error.h"
+#include <stdio.h>
 #include <string.h>
 
 gchar *program_name = NULL;

@@ -24,7 +24,7 @@
 #  include "config.h"
 #endif
 
-#include "vgseer-common.h"
+#include "common.h"
 #include <X11/Xlib.h>
 
 G_BEGIN_DECLS

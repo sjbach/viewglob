@@ -21,7 +21,7 @@
 */
 
 /*
-   Much of the following is taken from the book GNU Auotconf, Automake,
+   Much of the following was taken from the book GNU Auotconf, Automake,
    and Libtool by Gary V. Vaughan, Ben Elliston, Tom Tromey, and Ian
    Lance Taylor.  The website is here:
        http://sources.redhat.com/autobook/
@@ -34,45 +34,19 @@
 #  include "config.h"
 #endif
 
-#include <stdio.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <glib.h>
 
 #define DEBUG_ON 0
 
-#if HAVE_STDBOOL_H
-#  include <stdbool.h>
-#else
-#  if ! HAVE__BOOL
-#    ifdef __cplusplus
-typedef bool _Bool;
-#    else
-typedef unsigned char _Bool;
-#    endif
-#  endif
-#  define bool _Bool
-#  define false 0
-#  define true 1
-#  define __bool_true_false_are_defined 1
-#endif
-
-
 #if HAVE_ERRNO_H
 #  include <errno.h>
-#endif /*HAVE_ERRNO_H*/
+#endif
 #ifndef errno
 extern int errno;
 #endif
-
-#ifdef __cplusplus
-#  define BEGIN_C_DECLS extern "C" {
-#  define END_C_DECLS   }
-#else /* !__cplusplus */
-#  define BEGIN_C_DECLS
-#  define END_C_DECLS
-#endif /* __cplusplus */
-
 
 #ifndef EXIT_SUCCESS
 #  define EXIT_SUCCESS  0
@@ -81,19 +55,9 @@ extern int errno;
 
 #define PERM_FILE	(S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)
 
-/*
-#define XCALLOC(type, num)                                  \
-        ((type *) xcalloc ((num), sizeof(type)))
-*/
-#define XMALLOC(type, num)                                  \
-        ((type *) xmalloc ((num) * sizeof(type)))
-#define XREALLOC(type, p, num)                              \
-        ((type *) xrealloc ((p), (num) * sizeof(type)))
-#define XFREE(stale)                            do {        \
-        if (stale) { free (stale);  stale = 0; }            \
-                                                } while (0)
-
 #if DEBUG_ON
+#include <stdio.h>
+extern FILE* df;
 #define DEBUG(blah)	do {					\
 						fprintf blah;	\
 						fflush(df);			\
@@ -101,11 +65,5 @@ extern int errno;
 #else
 #define DEBUG(blah)	do { } while(0)
 #endif
-
-#define MAX(a, b)  (((a) > (b)) ? (a) : (b))
-
-/* extern void *xcalloc    (size_t num, size_t size); */
-extern void *xmalloc    (size_t num);
-extern void *xrealloc   (void *p, size_t num);
 
 #endif /* !COMMON_H */
