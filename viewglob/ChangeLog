@@ -1,6 +1,7 @@
 2005-03-05 17:20  Stephen Bach <sjbach@users.sourceforge.net>
 
-	* viewglob.in, seer.c, x11-stuff.c, x11-stuff.h: few final bug fixes
+	* viewglob.in, seer.c, x11-stuff.c, x11-stuff.h, src/Makefile.am:
+	  Few final bug fixes.
 	* NEWS, README, README.ms, configure.ac, viewglob.1: fixing date
 
 2005-03-05 00:48  Stephen Bach <sjbach@users.sourceforge.net>

@@ -1,4 +1,5 @@
-LDADD = @X_LIBS@ -lX11
+LDADD = @X_PRE_LIBS@ @X_LIBS@ -lX11 @X_EXTRA_LIBS@
+AM_CPPFLAGS = @X_CFLAGS@
 
 # Only the viewglob/gviewglob script should be in the path.
 # It calls the other programs.
