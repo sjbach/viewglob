@@ -26,8 +26,9 @@
 #include <gtk/gtk.h>
 #include <gdk/gdk.h>
 #include <glib.h>
-#include <string.h>       /* for strcmp */
-#include <unistd.h>       /* For getopt */
+#include <string.h>       /* For strcmp. */
+#include <unistd.h>       /* For getopt. */
+#include <stdio.h>        /* For BUFSIZ. */
 #include "file_box.h"
 #include "gviewglob.h"
 
@@ -47,6 +48,7 @@ static FileSelection map_selection_state(const GString* string) {
 		case '*':
 			return FS_YES;
 		default:
+			g_warning("Unexpected selection state \"%c\".", *(string->str));
 			return FS_NO;
 	}
 }
@@ -72,7 +74,7 @@ static FileType map_file_type(const GString* string) {
 		case 's':
 			return FT_SOCKET;
 		default:
-			//g_printerr("Unexpected file type\n");  /* FIXME */
+			g_warning("Unexpected file type \"%c\".", *(string->str));
 			return FT_REGULAR;
 	}
 }
@@ -152,7 +154,7 @@ static gboolean win_delete_event(GtkWidget* widget, GdkEvent* event, gpointer da
 
 
 static gboolean get_glob_data(GIOChannel* source, GIOCondition condition, gpointer data) {
-	static gchar buff[2048];   /* TODO BUFSIZ */
+	static gchar buff[BUFSIZ];
 	gsize bytes_read;
 
 	if (receive_data(source, buff, sizeof buff, &bytes_read)) {
@@ -167,7 +169,7 @@ static gboolean get_glob_data(GIOChannel* source, GIOCondition condition, gpoint
 
 
 static gboolean get_cmd_data(GIOChannel* source, GIOCondition condition, gpointer data) {
-	static gchar buff[2048];   /* TODO BUFSIZ */
+	static gchar buff[BUFSIZ];
 	gsize bytes_read;
 
 	if (receive_data(source, buff, sizeof buff, &bytes_read)) {
@@ -213,7 +215,7 @@ static gboolean receive_data(GIOChannel* source, gchar* buff, gsize size, gsize*
 				continue;
 
 			default:
-				DEBUG((df, "Unexpected result from g_io_channel_read_chars\n"));
+				g_warning("Unexpected result from g_io_channel_read_chars.");
 				in_loop = data_read = FALSE;
 				break;
 		}
@@ -322,7 +324,7 @@ static void process_glob_data(const gchar* buff, gsize bytes, Exhibit* e) {
 			case RS_DONE:
 				DEBUG((df, ":::"));
 				dir_rank = 0;
-				dlisting_unmark_all(e->dl_slist);
+				exhibit_unmark_all(e);
 				rs = RS_SELECTED_COUNT;
 				break;
 
@@ -507,6 +509,17 @@ static void exhibit_cull(Exhibit* e) {
 }
 
 
+static void exhibit_unmark_all(Exhibit* e) {
+	GSList* iter;
+	DListing* dl;
+
+	for (iter = e->dl_slist; iter; iter = g_slist_next(iter)) {
+		dl = iter->data;
+		dl->marked = FALSE;
+	}
+}
+
+
 #define ICON_SIZE 12
 static void set_icons(Exhibit* e) {
 #include "icons.h"
@@ -533,7 +546,6 @@ static void set_icons(Exhibit* e) {
 	icon_info = gtk_icon_theme_lookup_icon(current_theme, "gnome-fs-regular", ICON_SIZE, GTK_ICON_LOOKUP_USE_BUILTIN);
 	if (icon_info) {
 		/* Use whatever the user has. */
-		/* (I should be checking for an error here FIXME) */
 		file_box_set_icon(FT_REGULAR, gtk_icon_info_load_icon(icon_info, NULL));
 		gtk_icon_info_free(icon_info);
 	}
@@ -546,7 +558,6 @@ static void set_icons(Exhibit* e) {
 	icon_info = gtk_icon_theme_lookup_icon(current_theme, "gnome-fs-executable", ICON_SIZE, GTK_ICON_LOOKUP_USE_BUILTIN);
 	if (icon_info) {
 		/* Use whatever the user has. */
-		/* (I should be checking for an error here FIXME) */
 		file_box_set_icon(FT_EXECUTABLE, gtk_icon_info_load_icon(icon_info, NULL));
 		gtk_icon_info_free(icon_info);
 	}
@@ -559,7 +570,6 @@ static void set_icons(Exhibit* e) {
 	icon_info = gtk_icon_theme_lookup_icon(current_theme, "gnome-fs-directory", ICON_SIZE, GTK_ICON_LOOKUP_USE_BUILTIN);
 	if (icon_info) {
 		/* Use whatever the user has. */
-		/* (I should be checking for an error here FIXME) */
 		file_box_set_icon(FT_DIRECTORY, gtk_icon_info_load_icon(icon_info, NULL));
 		gtk_icon_info_free(icon_info);
 	}
@@ -572,7 +582,6 @@ static void set_icons(Exhibit* e) {
 	icon_info = gtk_icon_theme_lookup_icon(current_theme, "gnome-fs-blockdev", ICON_SIZE, GTK_ICON_LOOKUP_USE_BUILTIN);
 	if (icon_info) {
 		/* Use whatever the user has. */
-		/* (I should be checking for an error here FIXME) */
 		file_box_set_icon(FT_BLOCKDEV, gtk_icon_info_load_icon(icon_info, NULL));
 		gtk_icon_info_free(icon_info);
 	}
@@ -585,7 +594,6 @@ static void set_icons(Exhibit* e) {
 	icon_info = gtk_icon_theme_lookup_icon(current_theme, "gnome-fs-chardev", ICON_SIZE, GTK_ICON_LOOKUP_USE_BUILTIN);
 	if (icon_info) {
 		/* Use whatever the user has. */
-		/* (I should be checking for an error here FIXME) */
 		file_box_set_icon(FT_CHARDEV, gtk_icon_info_load_icon(icon_info, NULL));
 		gtk_icon_info_free(icon_info);
 	}
@@ -598,7 +606,6 @@ static void set_icons(Exhibit* e) {
 	icon_info = gtk_icon_theme_lookup_icon(current_theme, "gnome-fs-fifo", ICON_SIZE, GTK_ICON_LOOKUP_USE_BUILTIN);
 	if (icon_info) {
 		/* Use whatever the user has. */
-		/* (I should be checking for an error here FIXME) */
 		file_box_set_icon(FT_FIFO, gtk_icon_info_load_icon(icon_info, NULL));
 		gtk_icon_info_free(icon_info);
 	}
@@ -611,7 +618,6 @@ static void set_icons(Exhibit* e) {
 	icon_info = gtk_icon_theme_lookup_icon(current_theme, "gnome-dev-symlink", ICON_SIZE, GTK_ICON_LOOKUP_USE_BUILTIN);
 	if (icon_info) {
 		/* Use whatever the user has. */
-		/* (I should be checking for an error here FIXME) */
 		file_box_set_icon(FT_SYMLINK, gtk_icon_info_load_icon(icon_info, NULL));
 		gtk_icon_info_free(icon_info);
 	}
@@ -624,7 +630,6 @@ static void set_icons(Exhibit* e) {
 	icon_info = gtk_icon_theme_lookup_icon(current_theme, "gnome-fs-socket", ICON_SIZE, GTK_ICON_LOOKUP_USE_BUILTIN);
 	if (icon_info) {
 		/* Use whatever the user has. */
-		/* (I should be checking for an error here FIXME) */
 		file_box_set_icon(FT_SOCKET, gtk_icon_info_load_icon(icon_info, NULL));
 		gtk_icon_info_free(icon_info);
 	}
@@ -729,7 +734,7 @@ static gboolean parse_args(int argc, char** argv) {
 				d_temp = atol(optarg);
 				DEBUG((df, "d_temp: %ld\n", d_temp));
 				if (d_temp < 0)
-					v.file_display_limit = 300;
+					v.file_display_limit = DEFAULT_FILE_DISPLAY_LIMIT;
 				else
 					v.file_display_limit = d_temp;
 				break;
@@ -786,7 +791,7 @@ int main(int argc, char *argv[]) {
 	/* Option defaults. */
 	v.show_icons = TRUE;
 	v.show_hidden_files = FALSE;
-	v.file_display_limit = 300;   /* TODO change to 500? */
+	v.file_display_limit = DEFAULT_FILE_DISPLAY_LIMIT;
 	v.glob_fifo = v.cmd_fifo = NULL;
 	if (! parse_args(argc, argv) )
 		return 0;

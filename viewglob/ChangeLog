@@ -1,4 +1,12 @@
+2004-08-20 19:35  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* dlisting.c, dlisting.h: migrated some code.
+	* gviewglob.c, gviewglob.h:
+	  - Use BUFSIZ for the get_*_data functions.
+	  - Increased default file display limit to 500.
+
 2004-08-20 18:28  Stephen Bach <sjbach@users.sourceforge.net>
+
 	* gnome-dev-symlink.png, gnome-fs-blockdev.png, gnome-fs-chardev.png,
 	  gnome-fs-executable.png gnome-fs-fifo.png, gnome-fs-socket.png:
 	  Added.

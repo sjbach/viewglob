@@ -28,6 +28,8 @@
 #define GVIEWGLOB_VERSION "0.8.1"
 #define GVIEWGLOB_RELEASE_DATE "August 11, 2004"
 
+#define DEFAULT_FILE_DISPLAY_LIMIT 500
+
 G_BEGIN_DECLS
 
 struct viewable_preferences {
@@ -91,8 +93,9 @@ static void      report_version(void);
 static void process_cmd_data(const gchar* buff, gsize bytes, Exhibit* e);
 static void process_glob_data(const gchar* buff, gsize bytes, Exhibit* e);
 
-static void exhibit_rearrange_and_show(Exhibit* e);
+static void exhibit_unmark_all(Exhibit* e);
 static void exhibit_cull(Exhibit* e);
+static void exhibit_rearrange_and_show(Exhibit* e);
 
 static FileSelection  map_selection_state(const GString* string);
 static FileType       map_file_type(const GString* string);
