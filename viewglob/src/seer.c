@@ -116,6 +116,11 @@ int main(int argc, char* argv[]) {
 		args_add(&(u.s.a), opts.init_loc);
 		args_add(&(x.s.a), "--init-file");
 		args_add(&(x.s.a), opts.init_loc);
+		/* In my FreeBSD installation, unless bash is executed explicitly as
+		   interactive, it causes issues when exiting the program.  Adding this flag
+		   doesn't hurt, so why not. */
+		args_add(&(u.s.a), "-i");
+		args_add(&(x.s.a), "-i");
 	}
 	else if (opts.shell_type == ST_ZSH) {
 		/* Zsh requires the init file be named ".zshrc", and its location determined

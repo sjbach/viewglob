@@ -1,3 +1,14 @@
+2004-09-22 18:55  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* children.c:
+	  In FreeBSD I was seeing SIGBUS when running display_terminate.
+	  Putting the kill/wait before closing the fifos solved the issue.
+	* seer.c:
+	  Another fix for FreeBSD that has been an issue since the beginning
+	  but I just now noticed it -- unless bash is called explicitly with
+	  -i to turn on interactive, one of the shells doesn't get killed
+	  upon exit.
+
 2004-09-21 14:56  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* children.c: wait for zombie processes

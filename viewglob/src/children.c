@@ -223,6 +223,22 @@ bool display_running(struct display* d) {
 bool display_terminate(struct display* d) {
 	bool ok = true;
 
+	/* Terminate and wait the child's process. */
+	if (d->pid != -1) {
+		switch (kill(d->pid, SIGTERM)) {
+			case ESRCH:
+				viewglob_warning("Display already closed");
+			case 0:
+				ok &= waitpid_wrapped(d->pid);
+				d->pid = -1;
+				break;
+			default:
+				viewglob_error("Could not close display");
+				ok = false;
+				break;
+		}
+	}
+
 	/* Close the fifos, if open. */
 	if (d->glob_fifo_fd != -1) {
 		if (close(d->glob_fifo_fd) != -1)
@@ -246,23 +262,6 @@ bool display_terminate(struct display* d) {
 		else {
 			viewglob_error("Could not close feedback fifo");
 			ok = false;
-		}
-	}
-
-
-	/* Terminate and wait the child's process. */
-	if (d->pid != -1) {
-		switch (kill(d->pid, SIGTERM)) {
-			case ESRCH:
-				viewglob_warning("Display already closed");
-			case 0:
-				ok &= waitpid_wrapped(d->pid);
-				d->pid = -1;
-				break;
-			default:
-				viewglob_error("Could not close display");
-				ok = false;
-				break;
 		}
 	}
 
