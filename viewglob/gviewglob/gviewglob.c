@@ -1,5 +1,5 @@
 /*
-	Copyright (C) 2004 Stephen Bach
+	Copyright (C) 2004, 2005 Stephen Bach
 	This file is part of the viewglob package.
 
 	viewglob is free software; you can redistribute it and/or modify
@@ -397,7 +397,7 @@ static void process_glob_data(const gchar* buff, gsize bytes, Exhibit* e) {
 
 					if (dir_rank == 1) {
 						/* Put pwd into the window title. */
-						char* title = g_strconcat("gviewglob - ", string->str, NULL);
+						char* title = g_strconcat("gviewglob ", string->str, NULL);
 						gtk_window_set_title(GTK_WINDOW(e->window), title);
 						g_free(title);
 					}
