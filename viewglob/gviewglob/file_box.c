@@ -26,7 +26,6 @@
 extern FILE* df;
 #endif
 
-
 /* --- properties --- */
 enum {
   PROP_0,
@@ -140,10 +139,9 @@ static void file_box_init(FileBox *fbox) {
 	fbox->show_hidden_files = FALSE;
 	fbox->n_files = 0;
 	fbox->file_max = 32767;
-	fbox->file_display_limit = 300;
+	fbox->file_display_limit = 500;
 	fbox->fi_slist = NULL;
 }
-
 
 
 GtkWidget* file_box_new (void) {
@@ -262,6 +260,9 @@ void file_box_set_file_display_limit(FileBox* fbox, guint limit) {
 
 	fbox->file_display_limit = limit;
 
+
+	/*gtk_widget_hide(GTK_WIDGET(fbox));*/
+
 	/* Cycle through REVEAL fitems and re-display them up to the new limit.
 	   (fitems over that limit will be truncated). */
 	for (fi_iter = fbox->fi_slist; fi_iter; fi_iter = g_slist_next(fi_iter)) {
@@ -269,6 +270,8 @@ void file_box_set_file_display_limit(FileBox* fbox, guint limit) {
 		if (fi->disp_cat == FDC_REVEAL)
 			fitem_display(fi, fbox);
 	}
+
+	/*gtk_widget_show(GTK_WIDGET(fbox));*/
 }
 
 
@@ -336,6 +339,7 @@ static void fitem_display(FItem* fi, FileBox* fbox) {
 					/* Build widgets and pack it in. */
 					fitem_build_widgets(fi);
 					wrap_box_pack_pos(WRAP_BOX(fbox), fi->widget, file_box_get_display_pos(fbox, fi));
+
 				}
 				fbox->n_displayed_files++;
 			}
@@ -395,7 +399,7 @@ static guint file_box_get_display_pos(FileBox* fbox, FItem* fitem) {
 
 
 /* Unmark all the FItems.  This is called just before reading in a new bunch of data. */
-void file_box_unmark_all(FileBox* fbox) {
+void file_box_begin_read(FileBox* fbox) {
 	g_return_if_fail(IS_FILE_BOX(fbox));
 
 	GSList* fi_iter;
@@ -413,7 +417,7 @@ void file_box_unmark_all(FileBox* fbox) {
 
 
 /* Delete all fitems which are not marked. */
-void file_box_cull(FileBox* fbox) {
+void file_box_flush(FileBox* fbox) {
 	g_return_if_fail(IS_FILE_BOX(fbox));
 
 	GSList* fi_iter;
@@ -433,8 +437,6 @@ void file_box_cull(FileBox* fbox) {
 			fitem_free(fi, TRUE);
 			continue;
 		}
-		//else if (fi->widget)
-		//	gtk_widget_show(fi->widget);
 		fi_iter = g_slist_next(fi_iter);
 	}
 }

@@ -366,7 +366,7 @@ static void process_glob_data(const gchar* buff, gsize bytes, Exhibit* e) {
 						dlisting_mark(dl, dir_rank);
 
 						/* We'll be reading these next, at which point they'll be remarked. */
-						file_box_unmark_all(FILE_BOX(dl->file_box));
+						file_box_begin_read(FILE_BOX(dl->file_box));
 					}
 					else {
 						/* It's a new DListing. */
@@ -374,7 +374,6 @@ static void process_glob_data(const gchar* buff, gsize bytes, Exhibit* e) {
 						dl = dlisting_new(string, dir_rank, selected_count, total_count, hidden_count, e->optimal_width);
 						e->dl_slist = g_slist_append(e->dl_slist, dl);
 					}
-
 					g_string_free(selected_count, TRUE);
 					g_string_free(total_count, TRUE);
 					g_string_free(hidden_count, TRUE);
@@ -466,8 +465,8 @@ static void exhibit_rearrange_and_show(Exhibit* e) {
 		dl = search_result->data;
 		/* DEBUG((df, " - %s\n", dl->name->str)); */
 
-		/* Remove files from this DListing that we didn't see. */
-		file_box_cull(FILE_BOX(dl->file_box));
+		/* Commit the updates to the file box. */
+		file_box_flush(FILE_BOX(dl->file_box));
 
 		/* Ordering */
 		if (dlisting_is_new(dl)) {
@@ -703,7 +702,7 @@ static gboolean configure_event(GtkWidget* window, GdkEventConfigure* event, Exh
 
 static gboolean parse_args(int argc, char** argv) {
 	gboolean in_loop = TRUE;
-	glong d_temp;
+	gint max;
 
 	opterr = 0;
 	while (in_loop) {
@@ -731,12 +730,12 @@ static gboolean parse_args(int argc, char** argv) {
 				break;
 			case 'n':
 				/* Maximum files to display. */
-				d_temp = atol(optarg);
-				DEBUG((df, "d_temp: %ld\n", d_temp));
-				if (d_temp < 0)
+				max = atoi(optarg);
+				DEBUG((df, "max: %ld\n", max));
+				if (max < 0)
 					v.file_display_limit = DEFAULT_FILE_DISPLAY_LIMIT;
 				else
-					v.file_display_limit = d_temp;
+					v.file_display_limit = max;
 				break;
 			case 's':
 				/* File sorting style. */
@@ -850,7 +849,7 @@ int main(int argc, char *argv[]) {
 		glob_channel = g_io_channel_unix_new(0);
 	}
 	if (!glob_channel) {
-		g_print("error opening glob channel\n");
+		g_error("Could not open glob channel.");
 		return 1;
 	}
 	g_io_channel_set_encoding(glob_channel, NULL, NULL);
@@ -861,7 +860,7 @@ int main(int argc, char *argv[]) {
 	if (v.cmd_fifo) {
 		cmd_channel = g_io_channel_new_file(v.cmd_fifo, "r", NULL);
 		if (!cmd_channel) {
-			g_printerr("error opening cmd channel\n");
+			g_error("Could not open cmd channel.");
 			return 2;
 		}
 		g_io_channel_set_encoding(cmd_channel, NULL, NULL);
@@ -869,8 +868,11 @@ int main(int argc, char *argv[]) {
 		g_io_add_watch(cmd_channel, G_IO_IN, get_cmd_data, &e);
 	}
 
+	/*gdk_window_set_debug_updates(TRUE);*/
+
 	/* And we're off... */
 	gtk_widget_show(window);
+
 	gtk_main();
 
 #if DEBUG_ON

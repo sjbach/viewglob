@@ -21,7 +21,7 @@
 #define FILE_BOX_H
 
 #include <gtk/gtk.h>
-#include <wrap_box.h>
+#include "wrap_box.h"
 
 G_BEGIN_DECLS
 
@@ -98,7 +98,7 @@ struct _FItem {
 	FileSelection        selection;
 
 	FileDisplayCategory  disp_cat;
-	gboolean             marked;      /* An FItem is "marked" if it's been seen after an unmark_all. */
+	gboolean             marked;      /* An FItem is "marked" if it's been seen after a begin_read. */
 };
 
 
@@ -114,8 +114,8 @@ void        file_box_set_icon(FileType type, GdkPixbuf* icon);
 gboolean    file_box_get_show_hidden_files(FileBox* fbox);
 guint       file_box_get_file_display_limit(FileBox* fbox);
 void        file_box_add(FileBox* fbox, GString* name, FileType type, FileSelection selection);
-void        file_box_unmark_all(FileBox* fbox);
-void        file_box_cull(FileBox* fbox);
+void        file_box_begin_read(FileBox* fbox);
+void        file_box_flush(FileBox* fbox);
 
 
 G_END_DECLS
