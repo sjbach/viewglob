@@ -1,3 +1,10 @@
+2004-09-19 17:40  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* sequences.c, cmdline.c:
+	  Fixed an error in parse_digits introduced in 0.9 which was causing
+	  obvious command line tracking issues (this should've been found
+	  before release).
+
 2004-09-18 23:09  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* README, README.ms: viewglob has been run on OS X
@@ -43,22 +50,23 @@
 2004-09-08 23:58  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* init-viewglob.bashrc, init-viewglob.zshrc, viewglob.in:
-	  - Really disable saving of history in the zsh sandbox shell (the man page
-	    seems to be wrong about setopt norcs).
-	  - Sandbox shells can only call programs in the viewglob directory (from
-	    the path).
+	  - Really disable saving of history in the zsh sandbox shell (the man
+	    page seems to be wrong about setopt norcs).
+	  - Sandbox shells can only call programs in the viewglob directory
+	    (from the path).
 
 2004-09-08 16:54  Stephen Bach <sjbach@users.sourceforge.net>
 
-	* actions.c, buffer.c, buffer.h, circular.h, cmdline.c, cmdline.h, seer.c,
-	  sequences.c:
-	  More changes to get back to the level of functionality pre-reorganization.
+	* actions.c, buffer.c, buffer.h, circular.h, cmdline.c, cmdline.h,
+	  seer.c, sequences.c:
+	  More changes to get back to the level of functionality
+	  pre-reorganization.
 
 2004-09-08 01:47  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* gviewglob.c, gviewglob.h, actions.c, seer.c, sequences.c:
-	  Finished keyboard navigation for now.  Can use Ctrl-"key" in addition to
-	  just "key" (it's easier to type).
+	  Finished keyboard navigation for now.  Can use Ctrl-"key" in addition 
+	  to just "key" (it's easier to type).
 
 2004-09-07 20:27  Stephen Bach <sjbach@users.sourceforge.net>
 
@@ -75,12 +83,13 @@
 	* buffer.c, buffer.h, circular.h: added
 	* src/Makefile.am, actions.c, actions.h, cmdline.c, cmdline.h, seer.c,
 	  seer.h, sequences.c, sequences.h:
-	  Large code reorganization -- it's much cleaner and makes more sense now.
+	  Large code reorganization -- it's much cleaner and makes more sense
+	  now.
 
 2004-09-05 20:43  Stephen Bach <sjbach@users.sourceforge.net>
 
-	* gviewglob.c, gviewglob.h, src/Makefile.am, cmdline.c, sanitize.c, seer.c,
-	  seer.h, sequences.c, actions.h, actions.c:
+	* gviewglob.c, gviewglob.h, src/Makefile.am, cmdline.c, sanitize.c,
+	  seer.c, seer.h, sequences.c, actions.h, actions.c:
 	  Getting ready to implement terminal navigation of the display.
 
 2004-09-05 16:18  Stephen Bach <sjbach@users.sourceforge.net>
@@ -100,9 +109,10 @@
 
 2004-09-05 00:39  Stephen Bach <sjbach@users.sourceforge.net>
 
-	* configure.ac, gviewglob.c, gviewglob.h, src/Makefile.am, glob-expand.c,
-	  glob-expand.h, seer.c, seer.h, viewglob.in:
-	  Now the version and release date only needs to be changed in one place.
+	* configure.ac, gviewglob.c, gviewglob.h, src/Makefile.am,
+	  glob-expand.c, glob-expand.h, seer.c, seer.h, viewglob.in:
+	  Now the version and release date only needs to be changed in one
+	  place.
 	* gviewglob/Makefile.am: icons.h built less incrementally.
 
 2004-09-04 22:40  Stephen Bach <sjbach@users.sourceforge.net>
@@ -115,7 +125,8 @@
 
 2004-09-04 21:06  Stephen Bach <sjbach@users.sourceforge.net>
 
-	* gviewglob.c, ptutil.c.diff, ptutil.c.viewglob, sequences.c, sequences.h:
+	* gviewglob.c, ptutil.c.diff, ptutil.c.viewglob, sequences.c,
+	  sequences.h:
 	  Integrating a patch from Kevin B. McCarty which fixes several build
 	  warnings.
 	* init-viewglob.bashrc, init-viewglob.zshrc: adding GPL notice.
@@ -162,7 +173,8 @@
 
 2004-08-30 21:03  Stephen Bach <sjbach@users.sourceforge.net>
 
-	* file_box.c, file_box.h, gviewglob.c, gviewglob.h, wrap_box.c, wrap_box.h:
+	* file_box.c, file_box.h, gviewglob.c, gviewglob.h, wrap_box.c,
+	  wrap_box.h:
 	  - No more reliance on a constant 34 width for the scrollbar.
 	  - Fixed huge bug with wrap box size requisitions.
 
@@ -184,10 +196,11 @@
 2004-08-25 19:25  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* glob-expand.c:
-	  If a file argument has a trailing '/', it is also treated as a directory,
-	  i.e. it will show a listing for that directory if valid.  This way you
-	  can see the contents of a directory in gviewglob without referencing
-	  a file in that directory first.  Idea submitted by Pavel Tavoda.
+	  If a file argument has a trailing '/', it is also treated as a
+	  directory, i.e. it will show a listing for that directory if valid.
+	  This way you can see the contents of a directory in gviewglob without
+	  referencing a file in that directory first.  Idea submitted by Pavel
+	  Tavoda.
 
 2004-08-25 17:30  Stephen Bach <sjbach@users.sourceforge.net>
 
@@ -206,18 +219,19 @@
 
 2004-08-23 00:00  Stephen Bach <sjbach@users.sourceforge.net>
 
-	* AUTHORS, NEWS, README, README.ms, configure.ac, viewglob.1, gviewglob.h,
-	  glob-expand.h, seer.h, viewglob.in:
+	* AUTHORS, NEWS, README, README.ms, configure.ac, viewglob.1,
+	  gviewglob.h, glob-expand.h, seer.h, viewglob.in:
 	  Updates for release 0.8.2.
 
 2004-08-22 23:10  Stephen Bach <sjbach@users.sourceforge.net>
 
-	* dlisting.c: put some space to the left of the directory heading labels.
+	* dlisting.c:
+	  Put some space to the left of the directory heading labels.
 
 2004-08-22 22:45  Stephen Bach <sjbach@users.sourceforge.net>
 
-	* gviewglob/Makefile.am, dlisting.c, file_box.c, file_box.h, gviewglob.c,
-	  gviewglob.h, wrap_box.c, wrap_box.h:
+	* gviewglob/Makefile.am, dlisting.c, file_box.c, file_box.h,
+	  gviewglob.c, gviewglob.h, wrap_box.c, wrap_box.h:
 	  Fixing more build warnings.
 
 2004-08-22 21:30  Stephen Bach <sjbach@users.sourceforge.net>
@@ -267,9 +281,9 @@
 	* gnome-fs-directory.png, gnome-fs-regular.png: changed default icons.
 	* Makefile.am, file_box.c, file_box.h, gviewglob.c, glob-expand.c,
 	  glob-expand.h:
-	  Added detection capability and icons for the rest of the basic Unix file
-	  types: block file, character file, fifo, symlink, and socket.  Also
-	  executable regular files.
+	  Added detection capability and icons for the rest of the basic Unix
+	  file types: block file, character file, fifo, symlink, and socket.
+	  Also executable regular files.
 
 2004-08-20 01:12  Stephen Bach <sjbach@users.sourceforge.net>
 
@@ -285,7 +299,8 @@
 2004-08-19 22:06  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* fitem.c, fitem.h: incorporated into file_box.{c,h} and removed.
-	* file_box.c, file_box.h, dlisting.c, dlisting.h, gviewglob.c, gviewglob.h:
+	* file_box.c, file_box.h, dlisting.c, dlisting.h, gviewglob.c,
+	  gviewglob.h:
 	  - Code reorganization mostly completed.
 	  - Files are always displayed if they're selected, even if they're over
 	    the limit or hidden.
@@ -295,7 +310,8 @@
 	* viewglob.in:
 	  Ignore comments and newlines in config file, and report bad options.
 	* file_box.c, file_box.h: added.
-	* dlisting.c, dlisting.h, gviewglob.c, gviewglob.h, wrapbox.c, wrapbox.h:
+	* dlisting.c, dlisting.h, gviewglob.c, gviewglob.h, wrapbox.c,
+	  wrapbox.h:
 	  Beginning large code reorganization.
 
 2004-08-11 14:46  Stephen Bach <sjbach@users.sourceforge.net>
@@ -313,7 +329,8 @@
 
 2004-08-11 14:11  Stephen Bach <sjbach@users.sourceforge.net>
 
-	* glob-expand.c, glob-expand.h, seer.c, seer.h, gviewglob.c, gviewglob.h:
+	* glob-expand.c, glob-expand.h, seer.c, seer.h, gviewglob.c,
+	  gviewglob.h:
 	  Now report versions with -V flag.
 
 2004-08-11 13:00  Stephen Bach <sjbach@users.sourceforge.net>
@@ -321,16 +338,16 @@
 	* dlisting.c: more hspacing between FItems in WrapBoxes.
 	* gviewglob.c: more vspacing between DListings.
 	* seer.c, seer.h, children.c, children.h, gviewglob.c, gviewglob.h:
-	  Using separate fifos for glob and cmd data so that they don't bleed into
-	  each other.
+	  Using separate fifos for glob and cmd data so that they don't bleed
+	  into each other.
 
 2004-08-10 18:10  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* seer.c, seer.h, misc.c: graceful exit on SIGTERM.
 	* sanitize.c: fixed processing error with \ and ' '.
 	* gviewglob.c:
-	  Use GtkEntry instead of GtkTextView for cmdline widget to prevent forced
-	  window resizing.
+	  Use GtkEntry instead of GtkTextView for cmdline widget to prevent
+	  forced window resizing.
 
 2004-08-08 13:56  Stephen Bach <sjbach@users.sourceforge.net>
 

@@ -182,6 +182,7 @@ bool cmd_wipe_in_line(enum direction dir) {
 
 	switch (dir) {
 		case D_RIGHT:	/* Clear to right (in this line) */
+			DEBUG((df, "(right)\n"));
 			cret_pos_r = find_next_cret(u.cmd.pos);
 			if (cret_pos_r == -1) {
 				/* Erase everything to the right -- no ^Ms to take into account. */
@@ -201,6 +202,7 @@ bool cmd_wipe_in_line(enum direction dir) {
 			DEBUG((df, "D_LEFT seen in cmd_wipe_in_line\n"));
 			break;
 		case D_ALL:	/* Clear all (in this line). */
+			DEBUG((df, "(all)\n"));
 
 			/* Find the ^M to the right. */
 			cret_pos_r = find_next_cret(u.cmd.pos);
@@ -216,6 +218,9 @@ bool cmd_wipe_in_line(enum direction dir) {
 			u.cmd.pos = cret_pos_l;
 			cmd_del_chars(cret_pos_r - cret_pos_l);
 
+			break;
+		default:
+			viewglob_warning("Unexpected direction in cmd_wipe_in_line");
 			break;
 	}
 	action_queue(A_SEND_CMD);

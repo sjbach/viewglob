@@ -51,7 +51,7 @@ struct _SeqGroup {
 
 
 /* Sequence parsing functions. */
-static int    parse_digits(const char* string);
+static int    parse_digits(const char* string, size_t len);
 static char*  parse_printables(const char* string, const char* sequence);
 
 static void init_bash_seqs(void);
@@ -164,13 +164,20 @@ static enum shell_type shell;
 
 /* Grab the first set of digits from the string
    and convert into an integer. */
-static int parse_digits(const char* string) {
+static int parse_digits(const char* string, size_t len) {
 	int i;
-	for (i = 0; string[i] != '\0'; i++)
-		if (isdigit(string[i]))
+	bool digits = false;
+	for (i = 0; string[i] != '\0' && i < len && !digits; i++) {
+		if (isdigit(string[i])) {
+			digits = true;
 			break;
+		}
+	}
 
-	return atoi(string + i);
+	if (digits)
+		return atoi(string + i);
+	else
+		return 0;
 }
 
 
@@ -894,7 +901,7 @@ static MatchEffect seq_term_cursor_forward(Buffer* b) {
 	MatchEffect effect = ME_NO_EFFECT;
 	int n;
 	
-	n = parse_digits(b->buf + b->pos);
+	n = parse_digits(b->buf + b->pos, b->n);
 	if (n == 0) {
 		/* Default is 1. */
 		n = 1;
@@ -926,7 +933,7 @@ static MatchEffect seq_term_cursor_backward(Buffer* b) {
 	MatchEffect effect = ME_NO_EFFECT;
 	int n;
 	
-	n = parse_digits(b->buf + b->pos);
+	n = parse_digits(b->buf + b->pos, b->n);
 	if (n == 0) {
 		/* Default is 1. */
 		n = 1;
@@ -946,7 +953,7 @@ static MatchEffect seq_term_delete_chars(Buffer* b) {
 	MatchEffect effect = ME_NO_EFFECT;
 	int n;
 	
-	n = parse_digits(b->buf + b->pos);
+	n = parse_digits(b->buf + b->pos, b->n);
 	if (n == 0) {
 		/* Default is 1. */
 		n = 1;
@@ -963,7 +970,7 @@ static MatchEffect seq_term_insert_blanks(Buffer* b) {
 	MatchEffect effect = ME_NO_EFFECT;
 	int n;
 
-	n = parse_digits(b->buf + b->pos);
+	n = parse_digits(b->buf + b->pos, b->n);
 	if (n == 0) {
 		/* Default is 1. */
 		n = 1;
@@ -985,7 +992,7 @@ static MatchEffect seq_term_erase_in_line(Buffer* b) {
 	int n;
 	
 	/* Default is 0. */
-	n = parse_digits(b->buf + b->pos);
+	n = parse_digits(b->buf + b->pos, b->n);
 
 	if (!cmd_wipe_in_line(n))
 		effect = ME_ERROR;
@@ -1009,7 +1016,7 @@ static MatchEffect seq_term_cursor_up(Buffer* b) {
 	int last_cret, next_cret, offset;
 	int pos;
 
-	n = parse_digits(b->buf + b->pos);
+	n = parse_digits(b->buf + b->pos, b->n);
 	if (n == 0) {
 		/* Default is 1. */
 		n = 1;
