@@ -1,3 +1,8 @@
+2004-08-11 14:46  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* Makefile.am: adding gviewglob/common.h.
+	* configure.ac: updating version.
+
 2004-08-11 14:21  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* viewglob.1: added info about the context menu.
