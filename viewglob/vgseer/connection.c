@@ -28,22 +28,18 @@
 
 #include <string.h>
 
-static gchar* connection_types[CT_COUNT] = {
-	"user shell",
-	"terminal",
-};
 
 /* Initialize the given Connection. */
-void connection_init(Connection* cnct, enum connection_type type, int fd_in,
-		int fd_out, gchar* buf, gsize buflen, enum process_level pl) {
+void connection_init(Connection* cnct, gchar* name, int fd_in, int fd_out,
+		gchar* buf, gsize buflen, enum process_level pl) {
 
 	g_return_if_fail(cnct != NULL);
-	g_return_if_fail(type >= 0 && type < CT_COUNT);
+	g_return_if_fail(name != NULL);
 	g_return_if_fail(fd_in >= 0);
 	g_return_if_fail(fd_out >= 0);
 	g_return_if_fail(buf != NULL);
 
-	cnct->type = type;
+	cnct->name = name;
 	cnct->fd_in = fd_in;
 	cnct->fd_out = fd_out;
 	cnct->buf = buf;
@@ -68,14 +64,6 @@ void connection_free(Connection* cnct) {
 		g_free(cnct->holdover);
 		cnct->holdover = NULL;
 	}
-}
-
-
-gchar* connection_type_str(enum connection_type type) {
-
-	g_return_val_if_fail(type >= 0 && type < CT_COUNT, "(error)");
-
-	return connection_types[type];
 }
 
 
@@ -169,6 +157,7 @@ void pass_segment(Connection* b) {
 gboolean connection_read(Connection* cnct) {
 
 	g_return_val_if_fail(cnct != NULL, FALSE);
+	g_return_val_if_fail(cnct->filled < cnct->size, FALSE);
 
 	gssize nread;
 	gboolean ok = TRUE;
@@ -181,12 +170,13 @@ gboolean connection_read(Connection* cnct) {
 
 		case IOR_ERROR:
 			if (errno == EIO) {
+				g_return_val_if_reached(FALSE);
 				/* Assume EIO is a gentle error. */
 				action_queue(A_EXIT);
 			}
 			else {
-				g_critical("Read problem from %s: %s",
-						connection_type_str(cnct->type), g_strerror(errno));
+				g_critical("Read problem from %s: %s", cnct->name,
+						g_strerror(errno));
 				ok = FALSE;
 			}
 			break;
@@ -218,8 +208,8 @@ gboolean connection_write(Connection* cnct) {
 				break;
 
 			case IOR_ERROR:
-				g_critical("Problem writing for %s: %s",
-						connection_type_str(cnct->type), g_strerror(errno));
+				g_critical("Problem writing for %s: %s", cnct->name,
+						g_strerror(errno));
 				ok = FALSE;
 				break;
 

@@ -62,7 +62,8 @@
 /* Structure for the state of the user's shell. */
 struct user_state {
 	struct cmdline cmd;
-	struct pty_child proc;
+	struct child shell;
+	struct child sandbox;
 	enum shell_type type;
 };
 
@@ -71,6 +72,9 @@ struct vgd_stuff {
 	int fd;
 	Connection* shell_conn;
 	Connection* term_conn;
+	Connection* sandbox_conn;
+	GByteArray* expanded;
+	gboolean vgexpand_called;
 };
 
 /* Program argument options. */
@@ -86,20 +90,27 @@ struct options {
 static void     sigwinch_handler(gint signum);
 static gboolean handle_signals(void);
 static void     handler(gint signum);
-static void     clean_fail(struct pty_child* new_lamb);
+static void     clean_fail(struct child* new_lamb);
 static gsize    strlen_safe(const gchar* string);
 
+/* Setup. */
+static gboolean fork_shell(struct child* child, enum shell_type type,
+		gboolean sandbox, gchar* init_loc);
+static gboolean setup_zsh(gchar* init_loc);
+static gboolean putenv_wrapped(gchar* string);
+
 /* Program flow. */
-static gboolean fork_shell(struct user_state* u, gchar* init_loc);
 static void     main_loop(struct user_state* u, gint vgd_fd);
 static void     io_activity(struct user_state* u, Connection* shell_conn,
-		Connection* term_conn, struct vgd_stuff* vgd);
+		Connection* term_conn, Connection* sandbox_conn,
+		struct vgd_stuff* vgd);
 static gboolean action_loop(struct user_state* u, struct vgd_stuff* vgd);
 static void     child_wait(struct user_state* u);
-static void     process_shell(Connection* cnct, struct user_state* u);
-static void     process_sandbox(Connection* cnct, struct user_state* u);
-static void     process_terminal(Connection* cnct, struct user_state* u);
-static void     process_vgd(struct vgd_stuff* vgd, struct user_state* u);
+static void     process_shell(struct user_state* u, Connection* cnct);
+static void     process_sandbox(struct user_state* u, struct vgd_stuff* vgd,
+		Connection* cnct);
+static void     process_terminal(struct user_state* u, Connection* cnct);
+static void     process_vgd(struct user_state* u, struct vgd_stuff* vgd);
 static gboolean scan_for_newline(const Connection* b);
 static void     scan_sequences(Connection* b, struct user_state* u);
 
@@ -109,6 +120,7 @@ static gint     connect_to_vgd(gchar* server, gint port,
 static gboolean set_term_title(gint fd, gchar* title);
 static gchar*   escape_filename(gchar* name, struct user_state* u,
 		enum process_level pl, gchar* holdover);
+static void    call_vgexpand(struct user_state* u, struct vgd_stuff* vgd);
 
 static void parse_args(gint argc, gchar** argv, struct options* opts);
 static void report_version(void);
@@ -139,21 +151,21 @@ gint main(gint argc, gchar** argv) {
 	g_free(basename);
 
 	/* Initialize the shell and display structs. */
-	u.proc.pid = -1;
-	u.proc.fd = -1;
-	args_init(&(u.proc.a));
+	child_init(&u.shell);
+	child_init(&u.sandbox);
 
 	/* Fill in the opts struct. */
 	parse_args(argc, argv, &opts);
-	u.proc.exec_name = opts.executable;
+	u.shell.exec_name = u.sandbox.exec_name = opts.executable;
 	u.type = opts.shell;
 
-	/* Create the shell. */
-	if (!fork_shell(&u, opts.init_loc))
+	/* Create the shells. */
+	if (!fork_shell(&u.shell, u.type, FALSE, opts.init_loc))
 		clean_fail(NULL);
-
-	/* If we terminate unexpectedly, we must kill this child shell too. */
-	clean_fail(&u.proc);
+	clean_fail(&u.shell);
+	if (!fork_shell(&u.sandbox, u.type, TRUE, opts.init_loc))
+		clean_fail(NULL);
+	clean_fail(&u.sandbox);
 
 	/* Connect to vgd and negotiate setup. */
 	vgd_fd = connect_to_vgd("127.0.0.1", 16108, &u, opts.expand_params);
@@ -166,7 +178,7 @@ gint main(gint argc, gchar** argv) {
 		clean_fail(NULL);
 	}
 
-	send_term_size(u.proc.fd);
+	send_term_size(u.shell.fd_out);
 	if (!tc_setraw()) {
 		g_critical("Could not set raw terminal mode: %s", g_strerror(errno));
 		clean_fail(NULL);
@@ -184,7 +196,9 @@ gint main(gint argc, gchar** argv) {
 				g_strerror(errno));
 	}
 
-	gboolean ok = pty_child_terminate(&u.proc);
+	gboolean ok;
+	ok =  child_terminate(&u.shell);
+	ok &= child_terminate(&u.sandbox);
 	g_print("[Exiting viewglob]\n");
 	return (ok ? EXIT_SUCCESS : EXIT_FAILURE);
 }
@@ -352,13 +366,18 @@ static void main_loop(struct user_state* u, gint vgd_fd) {
 
 	/* Terminal reads from stdin and writes to the shell. */
 	Connection term_conn;
-	connection_init(&term_conn, CT_TERMINAL, STDIN_FILENO, u->proc.fd,
+	connection_init(&term_conn, "terminal", STDIN_FILENO, u->shell.fd_out,
 			common_buf, sizeof(common_buf), PL_TERMINAL);
 
-	/* Shell reads from shell and writes to stdout. */
+	/* Reads from shell and writes to stdout. */
 	Connection shell_conn;
-	connection_init(&shell_conn, CT_USER_SHELL, u->proc.fd, STDOUT_FILENO,
+	connection_init(&shell_conn, "shell", u->shell.fd_in, STDOUT_FILENO,
 			common_buf, sizeof(common_buf), PL_EXECUTING);
+
+	/* Reads from sandbox and writes to sandbox. */
+	Connection sandbox_conn;
+	connection_init(&sandbox_conn, "sandbox", u->sandbox.fd_in,
+			u->sandbox.fd_out, common_buf, sizeof(common_buf), PL_EXECUTING);
 
 	/* When dealing with vgd we have to access data from a bunch of
 	   different places. */
@@ -366,14 +385,17 @@ static void main_loop(struct user_state* u, gint vgd_fd) {
 	vgd.fd = vgd_fd;
 	vgd.term_conn = &term_conn;
 	vgd.shell_conn = &shell_conn;
+	vgd.sandbox_conn = &sandbox_conn;
+	vgd.expanded = g_byte_array_sized_new(sizeof(common_buf));
+	vgd.vgexpand_called = FALSE;
 
 	gboolean in_loop = TRUE;
 	while (in_loop) {
 
-		io_activity(u, &shell_conn, &term_conn, &vgd);
+		io_activity(u, &shell_conn, &term_conn, &sandbox_conn, &vgd);
 
 		if (term_size_changed)
-			send_term_size(u->proc.fd);
+			send_term_size(u->shell.fd_out);
 
 		child_wait(u);
 
@@ -406,6 +428,7 @@ static gboolean action_loop(struct user_state* u, struct vgd_stuff* vgd) {
 				break;
 
 			case A_SEND_CMD:
+				call_vgexpand(u, vgd);
 				param = P_CMD;
 				value = u->cmd.data->str;
 				break;
@@ -491,12 +514,12 @@ static gboolean action_loop(struct user_state* u, struct vgd_stuff* vgd) {
    can stay open. */
 static void child_wait(struct user_state* u) {
 
-	switch (waitpid(u->proc.pid, NULL, WNOHANG)) {
+	switch (waitpid(u->shell.pid, NULL, WNOHANG)) {
 		case 0:
 			break;
 		case -1:
 		default:
-			u->proc.pid = -1;    /* So we don't try to kill it in cleanup. */
+			u->shell.pid = -1;    /* So we don't try to kill it in cleanup. */
 			action_queue(A_EXIT);
 			break;
 	}
@@ -505,44 +528,49 @@ static void child_wait(struct user_state* u) {
 
 /* Wait for input and then do something about it. */
 static void io_activity(struct user_state* u, Connection* shell_conn,
-		Connection* term_conn, struct vgd_stuff* vgd) {
+		Connection* term_conn, Connection* sandbox_conn,
+		struct vgd_stuff* vgd) {
 
 	g_return_if_fail(u != NULL);
 	g_return_if_fail(shell_conn != NULL);
 	g_return_if_fail(term_conn != NULL);
+	g_return_if_fail(sandbox_conn != NULL);
 	g_return_if_fail(vgd != NULL);
 
 	fd_set rset;
 	gint max_fd = -1;
 
 	/* Setup polling. */
+	// TODO kill sandbox shell on fail
 	FD_ZERO(&rset);
 	FD_SET(shell_conn->fd_in, &rset);
 	FD_SET(term_conn->fd_in, &rset);
 	max_fd = MAX(shell_conn->fd_in, term_conn->fd_in);
-	if (vgseer_enabled && vgd->fd != -1) {
+	if (vgseer_enabled) {
+		FD_SET(sandbox_conn->fd_in, &rset);
 		FD_SET(vgd->fd, &rset);
-		max_fd = MAX(max_fd, vgd->fd);
+		max_fd = MAX(MAX(max_fd, vgd->fd), sandbox_conn->fd_in);
 	}
 
 	/* Wait for readable data. */
-	//FIXME set a limit to see what happens
+	//FIXME set a time limit to see what happens
 	if (hardened_select(max_fd + 1, &rset, -1) == -1) {
 		g_critical("Problem while waiting for input: %s", g_strerror(errno));
 		clean_fail(NULL);
 	}
 
 	if (FD_ISSET(shell_conn->fd_in, &rset))
-		process_shell(shell_conn, u);
+		process_shell(u, shell_conn);
 	if (FD_ISSET(term_conn->fd_in, &rset))
-		process_terminal(term_conn, u);
+		process_terminal(u, term_conn);
 	if (FD_ISSET(vgd->fd, &rset))
-		process_vgd(vgd, u);
-	// FIXME remote shell
+		process_vgd(u, vgd);
+	if (FD_ISSET(sandbox_conn->fd_in, &rset))
+		process_sandbox(u, vgd, sandbox_conn);
 }
 
 
-static void process_shell(Connection* cnct, struct user_state* u) {
+static void process_shell(struct user_state* u, Connection* cnct) {
 
 	/* Prepend holdover from last shell read. */
 	prepend_holdover(cnct);
@@ -560,12 +588,55 @@ static void process_shell(Connection* cnct, struct user_state* u) {
 }
 
 
-static void process_sandbox(Connection* cnct, struct user_state* u) {
-	g_return_if_reached();
+// TODO param-io must use 4 bytes instead of 2 bytes for size
+static void process_sandbox(struct user_state* u, struct vgd_stuff* vgd,
+		Connection* cnct) {
+
+	if (!connection_read(cnct))
+		clean_fail(NULL);
+
+	if (vgd->vgexpand_called) {
+		gchar* start = NULL;
+		gchar* end = NULL;
+		gsize len;
+		vgd->expanded = g_byte_array_set_size(vgd->expanded, 0);
+
+		/* Locate the start of the expand data */
+		while (TRUE) {
+			start = g_strstr_len(cnct->buf, cnct->filled, "\002");
+			if (start)
+				break;
+			cnct->filled = 0;
+			if (!connection_read(cnct))
+				clean_fail(NULL);
+		}
+		start++;
+		len = cnct->buf + cnct->filled - start;
+		cnct->filled = 0;
+
+		/* Find the end of the data and copy everything along the way. */
+		while (TRUE) {
+			end = g_strstr_len(start, len, "\003");
+			if (end)
+				break;
+			vgd->expanded = g_byte_array_append(vgd->expanded, start, len);
+			if (!connection_read(cnct))
+				clean_fail(NULL);
+			start = cnct->buf;
+			len = cnct->filled;
+			cnct->filled = 0;
+		}
+
+		vgd->expanded = g_byte_array_append(vgd->expanded, start,
+				end - start);
+		vgd->vgexpand_called = FALSE;
+	}
+	else
+		cnct->filled = 0;
 }
 
 
-static void process_terminal(Connection* cnct, struct user_state* u) {
+static void process_terminal(struct user_state* u, Connection* cnct) {
 
 	/* Prepend holdover from last terminal read. */
 	prepend_holdover(cnct);
@@ -593,7 +664,7 @@ static void process_terminal(Connection* cnct, struct user_state* u) {
 }
 
 
-static void process_vgd(struct vgd_stuff* vgd, struct user_state* u) {
+static void process_vgd(struct user_state* u, struct vgd_stuff* vgd) {
 
 	g_return_if_fail(vgd != NULL);
 	g_return_if_fail(u != NULL);
@@ -835,66 +906,109 @@ static void send_term_size(gint shell_fd) {
 }
 
 
-static gboolean fork_shell(struct user_state* u, gchar* init_loc) {
+static void call_vgexpand(struct user_state* u, struct vgd_stuff* vgd) {
 
-	g_return_val_if_fail(u != NULL, FALSE);
+	gchar* string = g_strconcat("cd \"", u->cmd.pwd, "\" && /home/steve/vg/vgexpand/vgexpand -- * ; cd /\n", NULL);
+
+	if (write_all(u->sandbox.fd_out, string, strlen(string)) == IOR_ERROR)
+		disable_vgseer(vgd);
+
+	vgd->vgexpand_called = TRUE;
+}
+
+
+static gboolean fork_shell(struct child* child, enum shell_type type,
+		gboolean sandbox, gchar* init_loc) {
+
+	g_return_val_if_fail(child != NULL, FALSE);
 	g_return_val_if_fail(init_loc != NULL, FALSE);
 
-	gchar* zdotdir;
-	gboolean ok = TRUE;
-
-	/* Get ready for the user shell child fork. */
-	switch (u->type) {
+	/* Get ready for the child fork. */
+	switch (type) {
 		case ST_BASH:
 			/* Bash is simple. */
-			args_add(&(u->proc.a), "--init-file");
-			args_add(&(u->proc.a), init_loc);
+			args_add(&child->args, "--init-file");
+			args_add(&child->args, init_loc);
 			/* In my FreeBSD installation, unless bash is executed explicitly
 			   as interactive, it causes issues when exiting the program.
 			   Adding this flag doesn't hurt, so why not. */
-			args_add(&(u->proc.a), "-i");
+			args_add(&child->args, "-i");
 			break;
 
 		case ST_ZSH:
-			/* Zsh requires the init file be named ".zshrc", and its location
-			   determined by the ZDOTDIR environment variable.  First check
-			   to see if the user has already specified a ZDOTDIR. */
-			zdotdir = getenv("ZDOTDIR");
-			if (zdotdir) {
-				/* Save it as VG_ZDOTDIR so we can specify our own. */
-				zdotdir = g_strconcat("VG_ZDOTDIR=", zdotdir, NULL);
-				if (putenv(zdotdir) != 0) {
-					g_critical("Could not modify the environment: %s",
-							g_strerror(errno));
-					ok = FALSE;
-					break;
-				}
-			}
-
-			/* Use the location passed on the command line. */
-			zdotdir = g_strconcat("ZDOTDIR=", init_loc, NULL);
-			if (putenv(zdotdir) != 0) {
-				g_critical("Could not modify the environment: %s",
-						g_strerror(errno));
-				ok = FALSE;
-				break;
+			if (!setup_zsh(init_loc))
+				return FALSE;
+			if (sandbox) {
+				/* Disable the line editor.  This can be overridden, so we
+				   also disable it in the rc file. */
+				args_add(&child->args, "+Z");
 			}
 			break;
 
 		default:
 			g_critical("Unknown shell mode");
-			ok = FALSE;
-			break;
+			return FALSE;
+			/*break;*/
 	}
 
-	/* Fork a shell for the user. */
-	if (ok && !pty_child_fork(&(u->proc),
-				NEW_PTY_FD, NEW_PTY_FD, NEW_PTY_FD)) {
-		g_critical("Could not create user shell");
-		ok = FALSE;
+	if (sandbox) {
+		if (!putenv_wrapped("VG_SANDBOX=yep") || !child_fork(child))
+			return FALSE;
+	}
+	else {
+		if (!putenv_wrapped("VG_SANDBOX=") ||
+				!pty_child_fork(child, NEW_PTY_FD, NEW_PTY_FD, NEW_PTY_FD))
+			return FALSE;
 	}
 
-	return ok;
+	return TRUE;
+}
+
+
+/* Print error if it doesn't work out. */
+static gboolean putenv_wrapped(gchar* string) {
+
+	g_return_val_if_fail(string != NULL, FALSE);
+
+	if (putenv(string) != 0) {
+		g_critical("Could not modify the environment: %s",
+				g_strerror(errno));
+		return FALSE;
+	}
+	return TRUE;
+}
+
+
+/* Setup the environment for a favourable fork & exec into zsh. */
+static gboolean setup_zsh(gchar* init_loc) {
+
+	g_return_val_if_fail(init_loc != NULL, FALSE);
+	g_return_val_if_fail(strlen(init_loc) > 0, FALSE);
+
+	/* We must only do this once. */
+	static gboolean visited = FALSE;
+
+	if (!visited) {
+		/* Zsh requires the init file be named ".zshrc", and its location
+		   determined by the ZDOTDIR environment variable.  First check
+		   to see if the user has already specified a ZDOTDIR. */
+		gchar* zdotdir = getenv("ZDOTDIR");
+		if (zdotdir) {
+			/* Save it as VG_ZDOTDIR so we can specify our own. */
+			zdotdir = g_strconcat("VG_ZDOTDIR=", zdotdir, NULL);
+			if (!putenv_wrapped(zdotdir))
+				return FALSE;
+		}
+
+		/* Use the location passed on the command line. */
+		zdotdir = g_strconcat("ZDOTDIR=", init_loc, NULL);
+		if (!putenv_wrapped(zdotdir))
+			return FALSE;
+
+		visited = TRUE;
+	}
+
+	return TRUE;
 }
 
 
@@ -958,14 +1072,21 @@ fail:
 
 
 /* Exit with failure, but try to cleanup first. */
-static void clean_fail(struct pty_child* new_lamb) {
-	static struct pty_child* shell_stored;
+static void clean_fail(struct child* new_lamb) {
+	static struct child* stored1 = NULL;
+	static struct child* stored2 = NULL;
 
-	if (new_lamb)
-		shell_stored = new_lamb;
+	if (new_lamb) {
+		if (!stored1)
+			stored1 = new_lamb;
+		else if (!stored2)
+			stored2 = new_lamb;
+	}
 	else {
-		if (shell_stored)
-			(void) pty_child_terminate(shell_stored);
+		if (stored1)
+			(void) child_terminate(stored1);
+		if (stored2)
+			(void) child_terminate(stored2);
 		(void) tc_restore();
 		printf("[Exiting Viewglob]\n");
 		_exit(EXIT_FAILURE);

@@ -1,19 +1,19 @@
 /*
 	Copyright (C) 2004, 2005 Stephen Bach
-	This file is part of the viewglob package.
+	This file is part of the Viewglob package.
 
-	viewglob is free software; you can redistribute it and/or modify
+	Viewglob is free software; you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
 	the Free Software Foundation; either version 2 of the License, or
 	(at your option) any later version.
 
-	viewglob is distributed in the hope that it will be useful,
+	Viewglob is distributed in the hope that it will be useful,
 	but WITHOUT ANY WARRANTY; without even the implied warranty of
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 	GNU General Public License for more details.
 
 	You should have received a copy of the GNU General Public License
-	along with viewglob; if not, write to the Free Software
+	along with Viewglob; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
@@ -93,7 +93,7 @@ static gboolean waitpid_wrapped(pid_t pid) {
 
 
 /* Initialize the argument array struct. */
-void args_init(struct args* a) {
+void args_init(struct arguments* a) {
 	a->argv = g_new(gchar*, 1);
 	*(a->argv) = NULL;
 	a->arg_count = 1;
@@ -101,7 +101,7 @@ void args_init(struct args* a) {
 
 
 /* Add a new argument to this argument struct. */
-void args_add(struct args* a, gchar* new_arg) {
+void args_add(struct arguments* a, gchar* new_arg) {
 	gchar* temp;
 
 	if (new_arg) {
@@ -124,7 +124,7 @@ gboolean display_init(struct display* d) {
 	gchar* pid_str;
 	gboolean ok = TRUE;
 
-	d->a.argv[0] = d->name;
+	d->args.argv[0] = d->name;
 	d->xid = 0;              /* We'll get this from the display when it's started. */
 
 	/* Get the current pid and turn it into a string. */
@@ -161,15 +161,15 @@ gboolean display_init(struct display* d) {
 		return FALSE;
 
 	/* Add the fifo's to the arguments. */
-	args_add(&(d->a), "-g");
-	args_add(&(d->a), d->glob_fifo_name);
-	args_add(&(d->a), "-c");
-	args_add(&(d->a), d->cmd_fifo_name);
-	args_add(&(d->a), "-f");
-	args_add(&(d->a), d->feedback_fifo_name);
+	args_add(&(d->args), "-g");
+	args_add(&(d->args), d->glob_fifo_name);
+	args_add(&(d->args), "-c");
+	args_add(&(d->args), d->cmd_fifo_name);
+	args_add(&(d->args), "-f");
+	args_add(&(d->args), d->feedback_fifo_name);
 
 	/* Delimit the args with NULL. */
-	args_add(&(d->a), NULL);
+	args_add(&(d->args), NULL);
 
 	return ok;
 }
@@ -187,7 +187,7 @@ gboolean display_fork(struct display* d) {
 
 		case 0:
 			/* Open the display. */
-			execvp(d->a.argv[0], d->a.argv);
+			execvp(d->args.argv[0], d->args.argv);
 
 			g_critical("Display exec failed: %s", g_strerror(errno));
 			g_critical("If viewglob does not exit, you should do so manually");
@@ -314,60 +314,134 @@ gboolean display_cleanup(struct display* d) {
 }
 
 
-/* Fork a new child with a pty. */
-gboolean pty_child_fork(struct pty_child* c, gint new_stdin_fd, gint new_stdout_fd, gint new_stderr_fd) {
+void child_init(struct child* c) {
+	c->exec_name = NULL;
+	args_init(&c->args);
+	c->pid = -1;
+	c->fd_in = -1;
+	c->fd_out = -1;
+}
 
-	gint pty_slave_fd = -1;
-	gint pty_master_fd = -1;
-	const gchar* pty_slave_name = NULL;
 
-	gboolean ok = TRUE;
+/* Fork a child with a read pipe and a write pipe. */
+gboolean child_fork(struct child* c) {
 
-	c->a.argv[0] = c->exec_name;
+	gint pfdout[2];
+	gint pfdin[2];
+
+	c->args.argv[0] = c->exec_name;
 
 	/* Delimit the args with NULL. */
-	args_add(&(c->a), NULL);
+	args_add(&(c->args), NULL);
 
-	/* Setup a pty for the new shell. */
-	/* get master (pty) */
-	if ((pty_master_fd = rxvt_get_pty(&pty_slave_fd, &pty_slave_name)) < 0) {
-		g_critical("Could not open master side of pty");
+	if (pipe(pfdout) == -1 || pipe(pfdin) == -1) {
+		g_critical("Could not create pipes: %s", g_strerror(errno));
 		c->pid = -1;
-		c->fd = -1;
+		c->fd_in = -1;
+		c->fd_out = -1;
 		return FALSE;
 	}
 
-	/* Turn on non-blocking -- this is used in rxvt, but I can't see why,
-	   so I've disabled it. */
-	/*fcntl(pty_master_fd, F_SETFL, O_NDELAY);*/
-
-	/* This will be the interface with the new shell. */
-	c->fd = pty_master_fd;
-
-	switch ( c->pid = fork() ) {
+	switch (c->pid = fork()) {
 		case -1:
 			g_critical("Could not fork process: %s", g_strerror(errno));
 			return FALSE;
 			/*break;*/
 
 		case 0:
+			if (setsid() == -1)
+				g_warning("setsid(): %s", g_strerror(errno));
 
-			/* get slave (tty) */
+			if (dup2(pfdout[0], STDIN_FILENO) == -1 ||
+					dup2(pfdin[1], STDOUT_FILENO) == -1) {
+				g_critical("Could not replace streams in child process: %s",
+						g_strerror(errno));
+				goto child_fail;
+			}
+			(void) close(pfdout[0]); // FIXME check errors
+			(void) close(pfdout[1]);
+			(void) close(pfdin[0]);
+			(void) close(pfdin[1]);
+
+			execvp(c->exec_name, c->args.argv);
+
+			child_fail:
+			g_critical("Exec failed: %s", g_strerror(errno));
+			g_critical("If vgseer does not exit, you should do so manually");
+			_exit(EXIT_FAILURE);
+			break;
+	}
+
+	(void) close(pfdout[0]);
+	(void) close(pfdin[1]);
+	c->fd_out = pfdout[1];
+	c->fd_in = pfdin[0];
+
+	if (!wait_for_data(c->fd_out)) {
+		g_critical("Did not receive go-ahead from child shell");
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+
+/* Fork a new child with a pty. */
+gboolean pty_child_fork(struct child* c, gint new_stdin_fd,
+		gint new_stdout_fd, gint new_stderr_fd) {
+
+	gint pty_slave_fd = -1;
+	gint pty_master_fd = -1;
+	const gchar* pty_slave_name = NULL;
+
+	c->args.argv[0] = c->exec_name;
+
+	/* Delimit the args with NULL. */
+	args_add(&(c->args), NULL);
+
+	/* Setup a pty for the new shell. */
+	/* Get master (pty) */
+	if ((pty_master_fd = rxvt_get_pty(&pty_slave_fd, &pty_slave_name)) < 0) {
+		g_critical("Could not open master side of pty");
+		c->pid = -1;
+		c->fd_in = -1;
+		c->fd_out = -1;
+		return FALSE;
+	}
+
+	/* Turn on non-blocking -- probably not necessary since we're in raw
+	   terminal mode. */
+	fcntl(pty_master_fd, F_SETFL, O_NDELAY);
+
+	/* This will be the interface with the new shell. */
+	c->fd_in = pty_master_fd;
+	c->fd_out = pty_master_fd;
+
+	switch (c->pid = fork()) {
+		case -1:
+			g_critical("Could not fork process: %s", g_strerror(errno));
+			return FALSE;
+			/*break;*/
+
+		case 0:
+			/* Get slave (tty) */
 			if (pty_slave_fd < 0) {
 				if ((pty_slave_fd = rxvt_get_tty(pty_slave_name)) < 0) {
 					(void) close(pty_master_fd);
-					g_critical("Could not open slave tty \"%s\"", pty_slave_name);
+					g_critical("Could not open slave tty \"%s\"",
+							pty_slave_name);
 					goto child_fail;
 				}
 			}
 			if (rxvt_control_tty(pty_slave_fd, pty_slave_name) < 0) {
-				g_critical("Could not obtain control of tty \"%s\"", pty_slave_name);
+				g_critical("Could not obtain control of tty \"%s\"",
+						pty_slave_name);
 				goto child_fail;
 			}
 
-			/* A parameter of NEW_PTY_FD means to use the slave side of the new pty. */
-			/* A parameter of CLOSE_FD means to just close that fd right out. */
-
+			/* A parameter of NEW_PTY_FD means to use the slave side of the
+			   new pty.  A parameter of CLOSE_FD means to just close that fd
+			   right out. */
 			if (new_stdin_fd == NEW_PTY_FD)
 				new_stdin_fd = pty_slave_fd;
 			if (new_stdout_fd == NEW_PTY_FD)
@@ -377,53 +451,55 @@ gboolean pty_child_fork(struct pty_child* c, gint new_stdin_fd, gint new_stdout_
 
 			if (new_stdin_fd == CLOSE_FD)
 				(void)close(STDIN_FILENO);
-			else if ( dup2(new_stdin_fd, STDIN_FILENO) == -1 ) {
-				g_critical("Could not replace stdin in child process: %s", g_strerror(errno));
+			else if (dup2(new_stdin_fd, STDIN_FILENO) == -1) {
+				g_critical("Could not replace stdin in child process: %s",
+						g_strerror(errno));
 				goto child_fail;
 			}
 
 			if (new_stdout_fd == CLOSE_FD)
 				(void)close(STDOUT_FILENO);
-			else if ( dup2(new_stdout_fd, STDOUT_FILENO) == -1 ) {
-				g_critical("Could not replace stdout in child process: %s", g_strerror(errno));
+			else if (dup2(new_stdout_fd, STDOUT_FILENO) == -1) {
+				g_critical("Could not replace stdout in child process: %s",
+						g_strerror(errno));
 				goto child_fail;
 			}
 
 			if (new_stderr_fd == CLOSE_FD)
 				(void)close(STDERR_FILENO);
-			else if ( dup2(new_stderr_fd, STDERR_FILENO) == -1 ) {
-				g_critical("Could not replace stderr in child process: %s", g_strerror(errno));
+			else if (dup2(new_stderr_fd, STDERR_FILENO) == -1) {
+				g_critical("Could not replace stderr in child process: %s",
+						g_strerror(errno));
 				goto child_fail;
 			}
 
 			(void)close(pty_slave_fd);
-			execvp(c->exec_name, c->a.argv);
+			execvp(c->exec_name, c->args.argv);
 
 			child_fail:
 			g_critical("Exec failed: %s", g_strerror(errno));
-			g_critical("If viewglob does not exit, you should do so manually");
+			g_critical("If vgseer does not exit, you should do so manually");
 			_exit(EXIT_FAILURE);
-
 			break;
 	}
 
-	if (!wait_for_data(c->fd)) {
+	if (!wait_for_data(c->fd_out)) {
 		g_critical("Did not receive go-ahead from child shell");
-		ok = FALSE;
+		return FALSE;
 	}
 
-	return ok;
+	return TRUE;
 }
 
 
-gboolean pty_child_terminate(struct pty_child* c) {
+gboolean child_terminate(struct child* c) {
 	gboolean ok = TRUE;
 
 	/* Close the pty to the sandbox shell (if valid). */
-	if ( (c->fd != -1) && (close(c->fd) == -1) ) {
-		g_critical("Could not close pty to child: %s", g_strerror(errno));
-		ok = FALSE;
-	}
+	if (c->fd_in != -1)
+		(void) close(c->fd_in);
+	if (c->fd_out != -1)
+		(void) close(c->fd_out);
 
 	/* Terminate and wait the child's process. */
 	if (c->pid != -1) {

@@ -21,6 +21,7 @@
 
 #include "common.h"
 #include "vgexpand.h"
+#include <stdio.h>
 #include <sys/stat.h>
 #include <string.h>
 #include <stdlib.h>
@@ -83,9 +84,6 @@ static size_t pwd_length;
 
 static Directory* dirs = NULL;
 
-#if DEBUG_ON
-FILE* df;
-#endif
 
 gint main(gint argc, gchar* argv[]) {
 	glong max_path;
@@ -95,10 +93,6 @@ gint main(gint argc, gchar* argv[]) {
 	gchar* basename = g_path_get_basename(argv[0]);
 	g_set_prgname(basename);
 	g_free(basename);
-
-#if DEBUG_ON
-	df = fopen("/tmp/out2.txt", "w");
-#endif
 
 	offset = parse_args(argc, argv);
 
@@ -124,11 +118,6 @@ gint main(gint argc, gchar* argv[]) {
 	compile_data(argc - offset, argv + offset);
 	home_to_tilde();
 	report();
-
-#if DEBUG_ON
-	if (fclose(df) != 0)
-		g_warning("Could not close debug file");
-#endif
 
 	return EXIT_SUCCESS;
 }
@@ -202,9 +191,6 @@ static void compile_data(gint argc, gchar** argv) {
 		normal_path = normalize_path(argv[i], TRUE);
 		new_dir_name = vg_dirname(normal_path);
 		new_file_name = vg_basename(normal_path);
-		DEBUG((df,"normal_path: %s\n", normal_path));
-		DEBUG((df,"new_dir_name: %s\n", new_dir_name));
-		DEBUG((df,"new_file_name: %s\n", new_file_name));
 
 		if (stat(new_dir_name, &dir_stat) == 0)
 			correlate(new_dir_name, new_file_name, dir_stat.st_dev, dir_stat.st_ino);
@@ -224,8 +210,6 @@ static void compile_data(gint argc, gchar** argv) {
 			   and if so we'll print its contents too. */
 			normal_path = normalize_path(argv[i], FALSE);
 			new_dir_name = vg_dirname(normal_path);
-			DEBUG((df,"\tnormal_path: %s\n", normal_path));
-			DEBUG((df,"\tnew_dir_name: %s\n", new_dir_name));
 
 			if (stat(new_dir_name, &dir_stat) == 0)
 				correlate(new_dir_name, NULL, dir_stat.st_dev, dir_stat.st_ino);
@@ -289,6 +273,9 @@ static gboolean has_trailing_slash(const gchar* path) {
 static void report(void) {
 	Directory* dir_iter;
 
+	/* Semaphore at beginning. */
+	printf("\002");
+
 	switch (ordering) {
 
 		case SO_ASCENDING:
@@ -313,7 +300,8 @@ static void report(void) {
 	for (dir_iter = dirs; dir_iter; dir_iter = dir_iter->next_dir)
 		print_dir(dir_iter);
 
-	printf("\n");   /* Always end output with a double \n. */
+	/* Semaphore at end. */
+	printf("\003");
 }
 
 
@@ -618,9 +606,6 @@ static gchar* vg_dirname(const gchar* path) {
 
 	/* Find the last / in the path. */
 	slash_pos = find_prev(path, path_length - 1, '/');
-	DEBUG((df, "from slash_pos: %s\n", path + slash_pos));
-	DEBUG((df, "full: %s (%d)\n", path, path_length));
-	DEBUG((df, "pwd: %s (%d)\n", pwd, pwd_length));
 
 	if (*path != '/') {
 		/* It's a relative path, so need to append pwd. */

@@ -10,6 +10,10 @@
 
 */
 
+#if HAVE_CONFIG_H
+#  include "config.h"
+#endif
+
 #include "common.h"
 #include "tc_setraw.h"
 #include <termios.h>
@@ -28,10 +32,10 @@ gboolean tc_setraw(void) {
 	/* treat undefined as error with errno = 0 */
 	errno = 0;
 	if ( (disable = fpathconf(STDIN_FILENO, _PC_VDISABLE)) == -1)
-		goto failure;
+		return FALSE;
 #endif
 	if (tcgetattr(STDIN_FILENO, &tbuf) == -1)
-		goto failure;
+		return FALSE;
 	have_attr = TRUE;
 	tbufsave = tbuf;
 	tbuf.c_cflag &= ~(CSIZE | PARENB);
@@ -44,22 +48,17 @@ gboolean tc_setraw(void) {
 	tbuf.c_cc[VMIN] = 1;
 	tbuf.c_cc[VTIME] = 0;
 	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &tbuf) == -1)
-		goto failure;
-	return TRUE;
+		return FALSE;
 
-failure:
-	return FALSE;
+	return TRUE;
 }
 
 
 gboolean tc_restore(void) {
 	if (have_attr) {
 		if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &tbufsave) == -1)
-			goto failure;
+			return FALSE;
 	}
 	return TRUE;
-
-failure:
-	return FALSE;
 }
 

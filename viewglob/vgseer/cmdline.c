@@ -240,8 +240,10 @@ void cmd_mask_add(struct cmdline* cmd, char c) {
 	g_return_if_fail(cmd != NULL);
 	g_return_if_fail(isprint(c));
 
-	cmd->mask = g_string_append_c(cmd->mask, c);
-	action_queue(A_NEW_MASK);
+	if (cmd->mask->len < 50) {
+		cmd->mask = g_string_append_c(cmd->mask, c);
+		action_queue(A_NEW_MASK);
+	}
 }
 
 

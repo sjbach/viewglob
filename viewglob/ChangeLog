@@ -1,3 +1,12 @@
+2005-03-26 18:51  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* init-viewglob.bashrc, init-viewglob.zshrc:
+	  Unset PS1 and PROMPT_COMMAND.
+	* vgexpand.c: begin and end semaphores added
+	* cmdline.c: limit mask to 50 characters for now
+	* children.c, children.h, connection.c, connection.h, vgseer.c:
+	  Added preliminary sandbox shell functionality.
+
 2005-03-25 19:05  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* common.h: added STRNEQ() macro

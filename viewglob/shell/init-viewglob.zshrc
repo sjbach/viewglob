@@ -60,6 +60,9 @@ if [ "$VG_SANDBOX" = yep ]; then
 	# Seriously, don't save the history.
 	unset HISTFILE
 
+	# No prompt (less junk to read)
+	unset PS1
+
 	# Only viewglob programs (glob-expand) in the path.
 	PATH="$VG_DIR"
 

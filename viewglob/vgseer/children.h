@@ -30,23 +30,24 @@
 G_BEGIN_DECLS
 
 
-struct args {
+struct arguments {
 	gchar** argv;
 	gint arg_count;
 };
 
 
-struct pty_child {
+struct child {
 	gchar* exec_name;
-	struct args a;
+	struct arguments args;
 	pid_t pid;
-	gint fd;
+	gint fd_in;
+	gint fd_out;
 };
 
 
 struct display {
 	gchar* name;
-	struct args a;
+	struct arguments args;
 	pid_t pid;
 	Window xid;
 	gchar* glob_fifo_name;
@@ -58,9 +59,11 @@ struct display {
 };
 
 #define NEW_PTY_FD -99
-#define CLOSE_FD -98
-gboolean pty_child_fork(struct pty_child* c, gint new_stdin_fd, gint new_stdout_fd, gint new_stderr_fd);
-gboolean pty_child_terminate(struct pty_child* c);
+#define CLOSE_FD   -98
+void     child_init(struct child* c);
+gboolean child_fork(struct child* c);
+gboolean pty_child_fork(struct child* c, gint new_stdin_fd, gint new_stdout_fd, gint new_stderr_fd);
+gboolean child_terminate(struct child* c);
 
 gboolean display_init(struct display* d);
 gboolean display_fork(struct display* d);
@@ -68,8 +71,8 @@ gboolean display_running(struct display* d);
 gboolean display_terminate(struct display* d);
 gboolean display_cleanup(struct display* d);
 
-void args_init(struct args* a);
-void args_add(struct args* a, gchar* new_arg);
+void args_init(struct arguments* a);
+void args_add(struct arguments* a, gchar* new_arg);
 
 
 G_END_DECLS
