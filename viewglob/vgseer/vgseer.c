@@ -20,13 +20,11 @@
 #include "config.h"
 
 #include "common.h"
-#include "viewglob-error.h"
 
 #include "tc_setraw.h"
 #include "hardened_io.h"
-#include "sanitize.h"
 #include "actions.h"
-#include "buffer.h"
+#include "connection.h"
 #include "vgseer.h"
 
 #include <stdio.h>
@@ -49,14 +47,18 @@
 FILE* df;
 #endif
 
-
-/* FIXME Maybe the daemon should sanitize the command line instead so someone can't write a malicious client */
 // FIXME also add viewglob_enabled here?
 struct user_state_info {
 	gchar* cli;
 	gchar* pwd;
 	gboolean cli_changed;
 	gboolean pwd_changed;
+};
+
+struct options {
+	enum shell_type shell;
+	gchar* executable;
+	gchar* init_loc;
 };
 
 /* --- Prototypes --- */
@@ -69,23 +71,22 @@ static void     handler(gint signum);
 static size_t   strlen_safe(const gchar* string);
 
 /* Program flow */
-static gboolean main_loop(void);
-static gboolean user_activity(void);
-static gboolean write_to_shell(Buffer* b);
-static gboolean scan_for_newline(const Buffer* b);
-static gboolean process_input(Buffer* b);
+static gboolean main_loop(enum shell_type shell);
+static gboolean io_activity(Connection** bufs);
+static gboolean scan_for_newline(const Connection* b);
+static gboolean process_input(Connection* b);
 
-static gboolean  is_key(Buffer* b);
-static gboolean  is_filename(Buffer* b);
-static gboolean  is_xid(Buffer* b);
-static gboolean  convert_to_filename(enum process_level pl, gchar* holdover, Buffer* src_b, Buffer* dest_b);
-static gboolean  convert_to_key(Buffer* src_b, Buffer* dest_b);
-static gboolean  convert_to_xid(Buffer* src_b, struct display* d);
+static gboolean is_key(Connection* b);
+static gboolean is_filename(Connection* b);
+static gboolean is_xid(Connection* b);
+static gboolean convert_to_filename(enum process_level pl, gchar* holdover, Connection* src_b, Connection* dest_b);
+static gboolean convert_to_key(Connection* src_b, Connection* dest_b);
+static gboolean convert_to_xid(Connection* src_b, struct display* d);
 
-static void send_sane_cmd(struct display* d);
+static void send_command(struct display* d);
 static void send_order(struct display* d, Action a);
 
-static void parse_args(gint argc, gchar** argv);
+static gboolean parse_args(gint argc, gchar** argv, struct options* opts);
 static void report_version(void);
 
 static void set_term_title(gint fd, gchar* title);
@@ -93,7 +94,6 @@ static void disable_viewglob(void);
 
 
 /* --- Globals --- */
-struct options opts;
 
 /* Almost everything revolves around this. */
 struct user_shell u;
@@ -101,20 +101,24 @@ struct user_shell u;
 /* This controls whether or not viewglob should actively do stuff.
    If the display is closed, viewglob will disable itself and try
    to just be a regular shell. */
-gboolean viewglob_enabled;
+gboolean viewglob_enabled = TRUE;
 
-gint main(int argc, char** argv) {
+/* Controls whether there are any situations where the filenames
+   received from the daemon should not be escaped. */
+gboolean smart_insert = TRUE;
+
+int main(int argc, char** argv) {
+
+	/* Program options. */
+	struct options opts = { ST_BASH, NULL, NULL };
 
 	gboolean ok = TRUE;
 
-	/* Initialize program options. */
-	opts.shell_type = ST_BASH;
-	opts.executable = NULL;
-	opts.init_loc = opts.expand_command = NULL;
-	opts.smart_insert = TRUE;
+	/* Set the program name. */
+	gchar* basename = g_path_get_basename(argv[0]);
+	g_set_prgname(basename);
+	g_free(basename);
 
-	set_program_name(argv[0]);
-	viewglob_enabled = TRUE;
 
 	/* Initialize the shell and display structs. */
 	u.s.pid = -1;
@@ -126,11 +130,14 @@ gint main(int argc, char** argv) {
 #endif
 
 	/* This fills in the opts struct. */
-	parse_args(argc, argv);
+	if (!parse_args(argc, argv, &opts)) {
+		ok = FALSE;
+		goto done;
+	}
 	u.s.name = opts.executable;
 
 	/* Get ready for the user shell child fork. */
-	switch (opts.shell_type) {
+	switch (opts.shell) {
 		case ST_BASH:
 			/* Bash is simple. */
 			args_add(&(u.s.a), "--init-file");
@@ -146,67 +153,68 @@ gint main(int argc, char** argv) {
 			   by the ZDOTDIR environment variable. */
 			gchar* zdotdir = g_strconcat("ZDOTDIR=", opts.init_loc, NULL);
 			if (putenv(zdotdir) != 0) {
-				viewglob_error("Could not modify the environment");
+				g_critical("Could not modify the environment");
 				ok = FALSE;
 				goto done;
 			}
 			g_free(zdotdir);
 			break;
 		default:
-			viewglob_error("Unknown shell mode");
+			g_critical("Unknown shell mode");
 			ok = FALSE;
 			goto done;
 	}
 
 	/* Setup a shell for the user. */
 	if ( !pty_child_fork(&(u.s), NEW_PTY_FD, NEW_PTY_FD, NEW_PTY_FD) ) {
-		viewglob_error("Could not create user shell");
+		g_critical("Could not create user shell");
 		ok = FALSE;
 		goto done;
 	}
 
 	if ( !handle_signals() ) {
-		viewglob_error("Could not set up signal handlers");
+		g_critical("Could not set up signal handlers");
 		ok = FALSE;
 		goto done;
 	}
 
 	/* Send the terminal size to the user's shell. */
 	if ( !send_term_size(u.s.fd) ) {
-		viewglob_error("Could not set terminal size");
+		g_critical("Could not set terminal size");
 		ok = FALSE;
 		goto done;
 	}
 
 	if ( !tc_setraw() ) {
-		viewglob_error("Could not set raw mode");
+		g_critical("Could not set raw terminal mode");
 		ok = FALSE;
 		goto done;
 	}
 
 	/* Enter main_loop. */
-	if ( !main_loop() ) {
-		viewglob_error("Problem during processing");
+	if ( !main_loop(opts.shell) ) {
+		g_critical("Problem during processing");
 		ok = FALSE;
 	}
 
 	/* Done -- Turn off terminal raw mode. */
 	if ( !tc_restore() )
-		viewglob_warning("Could not restore terminal attributes");
+		g_warning("Could not restore terminal attributes");
 
 #if DEBUG_ON
 	if (fclose(df) != 0)
-		viewglob_warning("Could not close debug file");
+		g_warning("Could not close debug file");
 #endif
 
 done:
 	ok &= pty_child_terminate(&(u.s));
-	printf("[Exiting viewglob]\n");
+	g_print("[Exiting viewglob]\n");
 	return (ok ? EXIT_SUCCESS : EXIT_FAILURE);
 }
 
 
-static void parse_args(gint argc, gchar** argv) {
+/* Parse program arguments. */
+static gboolean parse_args(gint argc, gchar** argv, struct options* opts) {
 	gboolean in_loop = TRUE;
 
 	opterr = 0;
@@ -216,31 +224,32 @@ static void parse_args(gint argc, gchar** argv) {
 				in_loop = FALSE;
 				break;
 			case '?':
-				viewglob_fatal("Unknown argument");
+				g_critical("Unknown option specified");
+				return FALSE;
 				break;
 			case 'c':
 				/* Set the shell mode. */
 				if (strcmp(optarg, "bash") == 0)
-					opts.shell_type = ST_BASH;
+					opts->shell = ST_BASH;
 				else if (strcmp(optarg, "zsh") == 0)
-					opts.shell_type = ST_ZSH;
-				else
-					viewglob_fatal("Unknown shell mode");
+					opts->shell = ST_ZSH;
+				else {
+					g_critical("Unknown shell mode \"%s\"", optarg);
+					return FALSE;
+				}
 				break;
 			case 'e':
 				/* Shell executable */
-				g_free(opts.executable);
-				opts.executable = g_new(gchar, strlen(optarg) + 1);
-				strcpy(opts.executable, optarg);
+				g_free(opts->executable);
+				opts->executable = g_strdup(optarg);
 				break;
 			case 'i':
 				/* Shell initialization command */
-				g_free(opts.init_loc);
-				opts.init_loc = g_new(gchar, strlen(optarg) + 1);
-				strcpy(opts.init_loc, optarg);
+				g_free(opts->init_loc);
+				opts->init_loc = g_strdup(optarg);
 				break;
 			case 'm':
-				opts.smart_insert = FALSE;
+				smart_insert = FALSE;
 				break;
 			case 'v':
 			case 'V':
@@ -249,23 +258,27 @@ static void parse_args(gint argc, gchar** argv) {
 				break;
 			case 'x':
 				/* Expand command (glob-expand) */
-				g_free(opts.expand_command);
-				opts.expand_command = g_new(gchar, strlen(optarg) + 1);
-				strcpy(opts.expand_command, optarg);
+				//g_free(opts->expand_command);
+				//opts->expand_command = g_strdup(optarg);
+				//FIXME
 				break;
 		}
 	}
 
-	if (!opts.executable)
-		viewglob_fatal("No shell executable specified");
-	else if (!opts.init_loc)
-		viewglob_fatal("No shell initialization command specified");
-	else if (!opts.expand_command)
-		viewglob_fatal("No shell expansion command specified");
+	if (!opts->executable) {
+		g_critical("No shell executable specified");
+		return FALSE;
+	}
+	else if (!opts->init_loc) {
+		g_critical("No shell initialization command specified");
+		return FALSE;
+	}
+	//else if (!opts->expand_command) {
+	//	g_critical("No shell expansion command specified");
+	//	return FALSE;
 
-	return;
+	return TRUE;
 }
-
 
 static void report_version(void) {
 	printf("seer %s\n", VERSION);
@@ -275,28 +288,54 @@ static void report_version(void) {
 
 
 /* Main program loop. */
-//static gboolean main_loop(struct display* disp) {
-static gboolean main_loop(void) {
+static gboolean main_loop(enum shell_type shell) {
 
 	Action a = A_NOP;
 	gboolean ok = TRUE;
 	gboolean in_loop = TRUE;
 
+	/* Setup the buffers. */
+	Connection term_connection =  {
+		"terminal",
+		-1, -1,
+		NULL, BUFSIZ, 0, 0, 0,
+		PL_TERMINAL, MS_NO_MATCH,
+		NULL, FALSE, 0 };
+
+	Connection shell_connection = {
+		"shell",
+		-1, -1,
+		NULL, BUFSIZ, 0, 0, 0,
+		PL_EXECUTING, MS_NO_MATCH,
+		NULL, FALSE, 0 };
+
+	term_connection.buf = g_malloc(term_connection.size);
+	shell_connection.buf = g_malloc(shell_connection.size);
+
+	/* Terminal reads from stdin and writes to the shell.
+	   Shell reads from shell and writes to stdout. */
+	term_connection.fd_in = STDIN_FILENO;
+	term_connection.fd_out = u.s.fd;
+	shell_connection.fd_in = u.s.fd;
+	shell_connection.fd_out = STDOUT_FILENO;
+
+	Connection* connections[3];
+	connections[0] = &term_connection;
+	connections[1] = &shell_connection;
+	connections[2] = NULL;
+
 	/* Initialize working command line and sequence buffer. */
 	if (!cmd_init()) {
-		viewglob_error("Could not allocate space for command line");
+		g_critical("Could not allocate space for command line");
 		return FALSE;
 	}
 
-// FIXME move buffer initialization to here
-// FIXME opts should be local to main()... shell_type could be a variable in u, which gets passe dot this function (and passed further from here)
-
 	/* Initialize the sequences. */
-	init_seqs(opts.shell_type);
+	init_seqs(shell);
 
 	while (in_loop) {
 
-		if ( !user_activity() ) {
+		if ( !io_activity(connections) ) {
 			ok = FALSE;
 			break;
 		}
@@ -320,7 +359,7 @@ static gboolean main_loop(void) {
 				case A_SEND_CMD:
 					DEBUG((df, "::send cmd::\n"));
 					//if (viewglob_enabled && display_running(disp))
-					//	send_sane_cmd(disp);
+					//	send_command(disp);
 					break;
 
 				case A_SEND_PWD:
@@ -362,7 +401,7 @@ static gboolean main_loop(void) {
 					break;
 
 				default:
-					viewglob_error("Received unexpected action");
+					g_critical("Received unexpected action");
 					ok = in_loop = FALSE;
 					break;
 			}
@@ -377,21 +416,14 @@ static gboolean main_loop(void) {
 /* Wait for input from the user's shell and the terminal.  If the
    terminal receives input, it's passed along pretty much untouched.  If
    the shell receives input, it's examined thoroughly with process_input. */
-static gboolean user_activity(void) {
-
-	static Buffer term_b =  { NULL, BUFSIZ, 0, 0, 0, PL_TERMINAL,  MS_NO_MATCH, NULL, FALSE, 0 };
-	static Buffer shell_b = { NULL, BUFSIZ, 0, 0, 0, PL_EXECUTING, MS_NO_MATCH, NULL, FALSE, 0 };
+static gboolean io_activity(Connection** connections) {
 
 	fd_set fdset_read;
-	gint max_fd;
 	gboolean data_converted;
+	gint i;
+	gint max_fd = -1;
 	gboolean ok = TRUE;
-
-	/* This only happens once. */
-	if (!term_b.buf && !shell_b.buf) {
-		term_b.buf = g_new(gchar, term_b.size);
-		shell_b.buf = g_new(gchar, shell_b.size);
-	}
+	Connection* cnt;
 
 	/* Check to see if the user shell has been closed.  This is necessary
 	   because for some reason if the shell opens an external program such
@@ -411,131 +443,76 @@ static gboolean user_activity(void) {
 			break;
 	}
 
-	/* Setup the polling. */
+	/* Iterate through the Connections and setup the polling. */
 	FD_ZERO(&fdset_read);
-	FD_SET(STDIN_FILENO, &fdset_read);    /* Terminal. */
-	FD_SET(u.s.fd, &fdset_read);          /* User shell. */
-	max_fd = MAX(STDIN_FILENO, u.s.fd);
+	for (i = 0; (cnt = connections[i]); i++) {
+		FD_SET(cnt->fd_in, &fdset_read);
+		max_fd = MAX(cnt->fd_in, max_fd);
+	}
 
-	/* Poll for output from the shell, terminal, and daemon. */
+	/* Poll for output from the buffers. */
 	if (!hardened_select(max_fd + 1, &fdset_read, NULL)) {
-		viewglob_error("Problem while waiting for input");
+		g_critical("Problem while waiting for input");
 		ok = FALSE;
 		goto done;
 	}
 
-	/* If data has been written by the terminal... */
-	if (FD_ISSET(STDIN_FILENO, &fdset_read)) {
+	for (i = 0; (cnt = connections[i]); i++) {
+		if (FD_ISSET(cnt->fd_in, &fdset_read)) {
 
-		/* Read in from terminal. */
-		if (!hardened_read(STDIN_FILENO, term_b.buf, term_b.size, &term_b.filled)) {
-			if (errno == EIO) {
-				g_printerr("Hit FIXME spot!\n");
-				//FIXME?  why no ok = FALSE?
-				goto done;
+			/* Read in from the connection. */
+			if (!hardened_read(cnt->fd_in, cnt->buf, cnt->size, &cnt->filled)) {
+				if (errno == EIO) {
+					DEBUG((df, "~~2~~"));
+					action_queue(A_EXIT);
+					goto done;
+				}
+				else {
+					g_critical("Read problem from %s", cnt->name);
+					ok = FALSE;
+					goto done;
+				}
 			}
-			else {
-				viewglob_error("Read problem from terminal");
-				ok = FALSE;
-				goto done;
-			}
-		}
-		else if (term_b.filled == 0) {
-			DEBUG((df, "~~1~~"));
-			action_queue(A_EXIT);
-			goto done;
-		}
-
-		ok = write_to_shell(&term_b);
-		if (!ok)
-			goto done;
-	}
-
-	/* If data has been written by the user's shell... */
-	if (FD_ISSET(u.s.fd, &fdset_read)) {
-
-		/* Read in from the shell. */
-		if (!hardened_read(u.s.fd, shell_b.buf, shell_b.size, &shell_b.filled)) {
-			if (errno == EIO) {
-				DEBUG((df, "~~2~~"));
+			else if (cnt->filled == 0) {
+				DEBUG((df, "~~1~~"));
 				action_queue(A_EXIT);
 				goto done;
 			}
-			else {
-				viewglob_error("Read problem from shell");
+
+			#if DEBUG_ON
+				size_t x;
+				DEBUG((df, "read %d bytes from the %s:\n===============\n", cnt->filled, cnt->name));
+				for (x = 0; x < cnt->filled; x++)
+					DEBUG((df, "%c", cnt->buf[x]));
+				DEBUG((df, "\n===============\n"));
+			#endif
+
+			/* Process the buffer. */
+			if (viewglob_enabled) {
+				ok = process_input(cnt);
+				if (!ok)
+					goto done;
+			}
+
+			/* Look for a newline.  If one is found, then a match of a newline/carriage
+			   return in the shell's output (which extends past the end of the command-
+			   line) will be interpreted as command execution.  Otherwise, they'll be
+			   interpreted as a command wrap.  This is a heuristic (I can't see a
+			   guaranteed way to relate shell input to output); in my testing, it works
+			   very well for a person typing at a shell (i.e. 1 char length buffers),
+			   but less well when text is pasted in (i.e. multichar length buffers).
+			   Ideas for improvement are welcome. */
+			if (viewglob_enabled && cnt->pl == PL_TERMINAL)
+				u.expect_newline = scan_for_newline(cnt);
+
+
+			/* Write out the full buffer. */
+			if (cnt->filled && !hardened_write(cnt->fd_out, cnt->buf + cnt->skip, cnt->filled - cnt->skip)) {
+				g_critical("Problem writing for %s", cnt->name);
 				ok = FALSE;
 				goto done;
 			}
 		}
-		else if (shell_b.filled == 0) {
-			DEBUG((df, "~~3~~"));
-			action_queue(A_EXIT);
-			goto done;
-		}
-
-		#if DEBUG_ON
-			size_t x;
-			DEBUG((df, "read %d bytes from the shell:\n===============\n", shell_b.filled));
-			for (x = 0; x < shell_b.filled; x++)
-				DEBUG((df, "%c", shell_b.buf[x]));
-			DEBUG((df, "\n===============\n"));
-		#endif
-
-		/* Process the buffer. */
-		if (viewglob_enabled) {
-			ok = process_input(&shell_b);
-			if (!ok) goto done;
-		}
-
-		/* Write out the full buffer. */
-		if (shell_b.filled && !hardened_write(STDOUT_FILENO, shell_b.buf + shell_b.skip, shell_b.filled - shell_b.skip)) {
-			viewglob_error("Problem writing to stdout");
-			ok = FALSE;
-			goto done;
-		}
-	}
-
-	done:
-	return ok;
-}
-
-/*FIXME
-  - add in and out fd variables to Buffer
-  */
-
-static gboolean write_to_shell(Buffer* b) {
-	gboolean ok = TRUE;
-
-	#if DEBUG_ON
-		size_t x;
-		DEBUG((df, "read %d bytes from the terminal:\n===============\n", b->filled));
-		for (x = 0; x < b->filled; x++)
-			DEBUG((df, "%c", b->buf[x]));
-		DEBUG((df, "\n===============\n"));
-	#endif
-
-	/* Process the buffer. */
-	if (viewglob_enabled) {
-		ok = process_input(b);
-		if (!ok) goto done;
-	}
-
-	/* Look for a newline.  If one is found, then a match of a newline/carriage
-	   return in the shell's output (which extends past the end of the command-
-	   line) will be interpreted as command execution.  Otherwise, they'll be
-	   interpreted as a command wrap.  This is a heuristic (I can't see a
-	   guaranteed way to relate shell input to output); in my testing, it works
-	   very well for a person typing at a shell (i.e. 1 char length buffers),
-	   but less well when text is pasted in (i.e. multichar length buffers).
-	   Ideas for improvement are welcome. */
-	if (viewglob_enabled)
-		u.expect_newline = scan_for_newline(b);
-
-	/* Write it out. */
-	if (!hardened_write(u.s.fd, b->buf + b->skip, b->filled - b->skip)) {
-		viewglob_error("Problem writing to shell");
-		ok = FALSE;
-		goto done;
 	}
 
 	done:
@@ -543,7 +520,7 @@ static gboolean write_to_shell(Buffer* b) {
 }
 
 
-static gboolean process_input(Buffer* b) {
+static gboolean process_input(Connection* b) {
 
 	if (b->holdover)
 		prepend_holdover(b);
@@ -570,6 +547,7 @@ static gboolean process_input(Buffer* b) {
 			DEBUG((df, ") |%d|\n", b->n));
 		#endif
 
+		//FIXME: return error value here!
 		check_seqs(b);
 
 		if (b->status & MS_MATCH) {
@@ -603,9 +581,8 @@ static gboolean process_input(Buffer* b) {
 }
 
 
-
 /* Look for characters which can break a line. */
-static gboolean scan_for_newline(const Buffer* b) {
+static gboolean scan_for_newline(const Connection* b) {
 	size_t i;
 
 	for (i = 0; i < b->filled; i++) {
@@ -628,14 +605,14 @@ static gboolean scan_for_newline(const Buffer* b) {
 
 /* Convert the data in src_b into an escaped filename (maybe) and copy it into dest_b. */
 //FIXME have the escaping be decided later (so we don't have to pass in pl)
-static gboolean convert_to_filename(enum process_level pl, gchar* holdover, Buffer* src_b, Buffer* dest_b) {
+static gboolean convert_to_filename(enum process_level pl, gchar* holdover, Connection* src_b, Connection* dest_b) {
 	size_t i, j;
 	gchar c;
 
 	i = strlen("file:");  /* Point to the first character after the ':'. */
 	j = 0;
 
-	if (pl == PL_AT_PROMPT && opts.smart_insert) {
+	if (pl == PL_AT_PROMPT && smart_insert) {
 		/* If there's no whitespace to the left, add a space at the beginning. */
 		if (!cmd_whitespace_to_left(holdover))
 			*(dest_b->buf + j++) = ' ';
@@ -671,7 +648,7 @@ static gboolean convert_to_filename(enum process_level pl, gchar* holdover, Buff
 			case '~':
 			case '\\':
 			case '!':
-				if (pl == PL_AT_PROMPT || !opts.smart_insert)
+				if (pl == PL_AT_PROMPT || !smart_insert)
 					*(dest_b->buf + j++) = '\\';
 			default:
 				*(dest_b->buf + j++) = c;
@@ -679,7 +656,7 @@ static gboolean convert_to_filename(enum process_level pl, gchar* holdover, Buff
 		}
 	}
 
-	if (pl == PL_AT_PROMPT && opts.smart_insert) {
+	if (pl == PL_AT_PROMPT && smart_insert) {
 		/* If there's no whitespace to the right, add a space at the end. */
 		if (!cmd_whitespace_to_right())
 			*(dest_b->buf + j++) = ' ';
@@ -691,7 +668,7 @@ static gboolean convert_to_filename(enum process_level pl, gchar* holdover, Buff
 
 
 /* Convert the data in src_b into a key and copy it into dest_b. */
-static gboolean convert_to_key(Buffer* src_b, Buffer* dest_b) {
+static gboolean convert_to_key(Connection* src_b, Connection* dest_b) {
 	*(dest_b->buf) = *(src_b->buf + strlen("key:"));
 	dest_b->filled = 1;
 
@@ -700,7 +677,7 @@ static gboolean convert_to_key(Buffer* src_b, Buffer* dest_b) {
 }
 
 
-static gboolean convert_to_xid(Buffer* src_b, struct display* d) {
+static gboolean convert_to_xid(Connection* src_b, struct display* d) {
 	gchar* xid_string;
 
 	xid_string = src_b->buf + strlen("xid:");
@@ -709,7 +686,7 @@ static gboolean convert_to_xid(Buffer* src_b, struct display* d) {
 }
 
 
-static gboolean is_filename(Buffer* b) {
+static gboolean is_filename(Connection* b) {
 	gboolean result;
 
 	if ( *(b->buf) != 'f' || b->filled < 7 )
@@ -721,7 +698,7 @@ static gboolean is_filename(Buffer* b) {
 }
 
 
-static gboolean is_key(Buffer* b) {
+static gboolean is_key(Connection* b) {
 	gboolean result;
 
 	if (*(b->buf) != 'k' || b->filled < 5)
@@ -733,7 +710,7 @@ static gboolean is_key(Buffer* b) {
 }
 
 
-static gboolean is_xid(Buffer* b) {
+static gboolean is_xid(Connection* b) {
 	gboolean result;
 
 	if (*(b->buf) != 'x' || b->filled < 5)
@@ -747,23 +724,11 @@ static gboolean is_xid(Buffer* b) {
 /* This function writes out stuff that looks like this:
    cmd:<sane_command>
    cd "<u.pwd>" && <glob-command> <sane_cmd> >> <glob fifo> ; cd / */
-static void send_sane_cmd(struct display* d) {
+static void send_command(struct display* d) {
 
-	gchar* sane_cmd;
-	gchar* sane_cmd_delimited;
+	//FIXME
+	DEBUG((df, "writing %s", u.cmd.command));
 
-	sane_cmd = make_sane_cmd(u.cmd.command, u.cmd.length);
-
-	/* sane_cmd_delimited gets sent directly to the display. */
-	sane_cmd_delimited = g_new(gchar, strlen("cmd:") + strlen(sane_cmd) + strlen("\n") + 1);
-	(void)strcpy(sane_cmd_delimited, "cmd:");
-	(void)strcat(sane_cmd_delimited, sane_cmd);
-	(void)strcat(sane_cmd_delimited, "\n");
-
-	DEBUG((df, "writing %s", sane_cmd_delimited));
-
-	g_free(sane_cmd_delimited);
-	g_free(sane_cmd);
 }
 
 
@@ -787,7 +752,7 @@ static void send_order(struct display* d, Action a) {
 			order = "order:pgdown\n";
 			break;
 		default:
-			viewglob_warning("Unexpection action in send_order().");
+			g_return_if_reached();
 			return;
 	}
 
@@ -797,7 +762,7 @@ static void send_order(struct display* d, Action a) {
 
 
 static void disable_viewglob(void) {
-	fprintf(stderr, "(viewglob disabled)");
+	g_printerr("(viewglob disabled)");
 	viewglob_enabled = FALSE;
 }
 
@@ -808,10 +773,7 @@ static void set_term_title(gint fd, gchar* title) {
 	gchar* full_title;
 
 	/* These are escape sequences that most terminals use to delimit the title. */
-	full_title = g_new(gchar, strlen("\033]0;") + strlen(title) + strlen("\007"));
-	strcpy(full_title, "\033]0;");
-	strcat(full_title, title);
-	strcat(full_title, "\007");
+	full_title = g_strconcat("\033]0;", title, "\007", NULL);
 
 	hardened_write(fd, full_title, strlen(full_title));
 	g_free(full_title);
@@ -839,6 +801,7 @@ static gboolean handle_signals(void) {
 	memset(&act, 0, sizeof(act));
 	if (sigfillset(&act.sa_mask) == -1)
 		return FALSE;
+
 	act.sa_handler = SIG_IGN;
 	if (sigaction(SIGHUP, &act, NULL) == -1)
 		return FALSE;
@@ -848,9 +811,11 @@ static gboolean handle_signals(void) {
 		return FALSE;
 	if (sigaction(SIGPIPE, &act, NULL) == -1)
 		return FALSE;
+
 	act.sa_handler = sigterm_handler;
 	if (sigaction(SIGTERM, &act, NULL) == -1)
 		return FALSE;
+
 	act.sa_handler = handler;
 	if (sigaction(SIGBUS, &act, NULL) == -1)
 		return FALSE;
@@ -866,13 +831,16 @@ static gboolean handle_signals(void) {
 		return FALSE;
 	if (sigaction(SIGXFSZ, &act, NULL) == -1)
 		return FALSE;
+
 	act.sa_handler = sigwinch_handler;
 	if (sigaction(SIGWINCH, &act, NULL) == -1)
 		return FALSE;
+
 	if (sigemptyset(&set) == -1)
 		return FALSE;
 	if (sigprocmask(SIG_SETMASK, &set, NULL) == -1)
 		return FALSE;
+
 	return TRUE;
 }
 

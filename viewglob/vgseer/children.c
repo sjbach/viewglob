@@ -22,7 +22,6 @@
 #endif
 
 #include "common.h"
-#include "viewglob-error.h"
 #include "children.h"
 #include "ptytty.h"
 #include <stdio.h>
@@ -56,16 +55,15 @@ static gboolean create_fifo(gchar* name) {
 		/* Only read/writable by this user. */
 		if (mkfifo(name, S_IRUSR | S_IWUSR) == -1) {
 			if (errno == EEXIST) {
-				viewglob_warning("Fifo already exists");
+				g_warning("Fifo already exists");
 				if (unlink(name) == -1) {
-					viewglob_error("Could not remove old file");
+					g_warning("Could not remove old file");
 					ok = FALSE;
 					break;
 				}
 			}
 			else {
-				viewglob_error("Could not create fifo");
-				viewglob_error(name);
+				g_critical("Could not create fifo \"%s\"", name);
 				ok = FALSE;
 				break;
 			}
@@ -184,17 +182,17 @@ gboolean display_fork(struct display* d) {
 
 	switch (d->pid = fork()) {
 		case -1:
-			viewglob_error("Could not fork display");
+			g_critical("Could not fork display: %s", g_strerror(errno));
 			return FALSE;
 
 		case 0:
 			/* Open the display. */
 			execvp(d->a.argv[0], d->a.argv);
 
-			viewglob_error("Display exec failed");
-			viewglob_error("If viewglob does not exit, you should do so manually");
-			_exit(EXIT_FAILURE);
+			g_critical("Display exec failed: %s", g_strerror(errno));
+			g_critical("If viewglob does not exit, you should do so manually");
 
+			_exit(EXIT_FAILURE);
 			break;
 	}
 
@@ -202,15 +200,15 @@ gboolean display_fork(struct display* d) {
 	/* The sandbox shell will be outputting to the glob fifo, but seer opens it too
 	   to make sure it doesn't get EOF'd by the sandbox shell accidentally. */
 	if ( (d->glob_fifo_fd = open(d->glob_fifo_name, O_WRONLY)) == -1) {
-		viewglob_error("Could not open glob fifo for writing");
+		g_critical("Could not open glob fifo for writing: %s", g_strerror(errno));
 		ok = FALSE;
 	}
 	if ( (d->cmd_fifo_fd = open(d->cmd_fifo_name, O_WRONLY)) == -1) {
-		viewglob_error("Could not open cmd fifo for writing");
+		g_critical("Could not open cmd fifo for writing: %s", g_strerror(errno));
 		ok = FALSE;
 	}
 	if ( (d->feedback_fifo_fd = open(d->feedback_fifo_name, O_RDONLY)) == -1) {
-		viewglob_error("Could not open feedback fifo for reading");
+		g_critical("Could not open feedback fifo for reading: %s", g_strerror(errno));
 		ok = FALSE;
 	}
 
@@ -232,17 +230,22 @@ gboolean display_terminate(struct display* d) {
 	/* Terminate and wait the child's process. */
 	if (d->pid != -1) {
 		switch (kill(d->pid, SIGTERM)) {
-			case ESRCH:
-				viewglob_warning("Display already closed");
 			case 0:
 				ok &= waitpid_wrapped(d->pid);
 				d->pid = -1;
 				d->xid = 0;
 				break;
-			default:
-				viewglob_error("Could not close display");
-				ok = FALSE;
+			case -1:
+				if (errno == ESRCH)
+					g_warning("Display already closed");
+				else {
+					g_critical("Could not close display: %s", g_strerror(errno));
+					ok = FALSE;
+				}
 				break;
+			default:
+				g_return_val_if_reached(FALSE);
+				/*break;*/
 		}
 	}
 
@@ -251,7 +254,7 @@ gboolean display_terminate(struct display* d) {
 		if (close(d->glob_fifo_fd) != -1)
 			d->glob_fifo_fd = -1;
 		else {
-			viewglob_error("Could not close glob fifo");
+			g_critical("Could not close glob fifo: %s", g_strerror(errno));
 			ok = FALSE;
 		}
 	}
@@ -259,7 +262,7 @@ gboolean display_terminate(struct display* d) {
 		if (close(d->cmd_fifo_fd) != -1)
 			d->cmd_fifo_fd = -1;
 		else {
-			viewglob_error("Could not close cmd fifo");
+			g_critical("Could not close cmd fifo: %s", g_strerror(errno));
 			ok = FALSE;
 		}
 	}
@@ -267,8 +270,7 @@ gboolean display_terminate(struct display* d) {
 		if (close(d->feedback_fifo_fd) != -1)
 			d->feedback_fifo_fd = -1;
 		else {
-			viewglob_error("Could not close feedback fifo");
-			viewglob_error(strerror(errno));
+			g_critical("Could not close feedback fifo: %s", g_strerror(errno));
 			ok = FALSE;
 		}
 	}
@@ -285,26 +287,20 @@ gboolean display_cleanup(struct display* d) {
 	/* Remove the fifos. */
 	if (d->glob_fifo_name) {
 		if ( unlink(d->glob_fifo_name) == -1 ) {
-			if (errno != ENOENT) {
-				viewglob_warning("Could not delete glob fifo");
-				viewglob_warning(d->glob_fifo_name);
-			}
+			if (errno != ENOENT)
+				g_warning("Could not delete glob fifo \"%s\": %s", d->glob_fifo_name, g_strerror(errno));
 		}
 	}
 	if (d->cmd_fifo_name) {
 		if ( unlink(d->cmd_fifo_name) == -1 ) {
-			if (errno != ENOENT) {
-				viewglob_warning("Could not delete cmd fifo");
-				viewglob_warning(d->cmd_fifo_name);
-			}
+			if (errno != ENOENT)
+				g_warning("Could not delete cmd fifo \"%s\": %s", d->cmd_fifo_name, g_strerror(errno));
 		}
 	}
 	if (d->feedback_fifo_name) {
 		if ( unlink(d->feedback_fifo_name) == -1 ) {
-			if (errno != ENOENT) {
-				viewglob_warning("Could not delete feedback fifo");
-				viewglob_warning(d->feedback_fifo_name);
-			}
+			if (errno != ENOENT)
+				g_warning("Could not delete feedback fifo \"%s\": %s", d->feedback_fifo_name, g_strerror(errno));
 		}
 	}
 
@@ -335,7 +331,7 @@ gboolean pty_child_fork(struct pty_child* c, gint new_stdin_fd, gint new_stdout_
 	/* Setup a pty for the new shell. */
 	/* get master (pty) */
 	if ((pty_master_fd = rxvt_get_pty(&pty_slave_fd, &pty_slave_name)) < 0) {
-		viewglob_fatal("Could not open master side of pty");
+		g_critical("Could not open master side of pty");
 		c->pid = -1;
 		c->fd = -1;
 		return FALSE;
@@ -350,7 +346,7 @@ gboolean pty_child_fork(struct pty_child* c, gint new_stdin_fd, gint new_stdout_
 
 	switch ( c->pid = fork() ) {
 		case -1:
-			viewglob_error("Could not fork process");
+			g_critical("Could not fork process: %s", g_strerror(errno));
 			return FALSE;
 			/*break;*/
 
@@ -359,14 +355,13 @@ gboolean pty_child_fork(struct pty_child* c, gint new_stdin_fd, gint new_stdout_
 			/* get slave (tty) */
 			if (pty_slave_fd < 0) {
 				if ((pty_slave_fd = rxvt_get_tty(pty_slave_name)) < 0) {
-					close(pty_master_fd);
-					viewglob_error("Could not open slave tty");
-					viewglob_error(pty_slave_name);
+					(void) close(pty_master_fd);
+					g_critical("Could not open slave tty \"%s\"", pty_slave_name);
 					goto child_fail;
 				}
 			}
 			if (rxvt_control_tty(pty_slave_fd, pty_slave_name) < 0) {
-				viewglob_error("Could not obtain control of tty");
+				g_critical("Could not obtain control of tty \"%s\"", pty_slave_name);
 				goto child_fail;
 			}
 
@@ -383,21 +378,21 @@ gboolean pty_child_fork(struct pty_child* c, gint new_stdin_fd, gint new_stdout_
 			if (new_stdin_fd == CLOSE_FD)
 				(void)close(STDIN_FILENO);
 			else if ( dup2(new_stdin_fd, STDIN_FILENO) == -1 ) {
-				viewglob_error("Could not replace stdin in child process");
+				g_critical("Could not replace stdin in child process: %s", g_strerror(errno));
 				goto child_fail;
 			}
 
 			if (new_stdout_fd == CLOSE_FD)
 				(void)close(STDOUT_FILENO);
 			else if ( dup2(new_stdout_fd, STDOUT_FILENO) == -1 ) {
-				viewglob_error("Could not replace stdout in child process");
+				g_critical("Could not replace stdout in child process: %s", g_strerror(errno));
 				goto child_fail;
 			}
 
 			if (new_stderr_fd == CLOSE_FD)
 				(void)close(STDERR_FILENO);
 			else if ( dup2(new_stderr_fd, STDERR_FILENO) == -1 ) {
-				viewglob_error("Could not replace stderr in child process");
+				g_critical("Could not replace stderr in child process: %s", g_strerror(errno));
 				goto child_fail;
 			}
 
@@ -405,15 +400,15 @@ gboolean pty_child_fork(struct pty_child* c, gint new_stdin_fd, gint new_stdout_
 			execvp(c->name, c->a.argv);
 
 			child_fail:
-			viewglob_error("Exec failed");
-			viewglob_error("If viewglob does not exit, you should do so manually");
+			g_critical("Exec failed: %s", g_strerror(errno));
+			g_critical("If viewglob does not exit, you should do so manually");
 			_exit(EXIT_FAILURE);
 
 			break;
 	}
 
 	if (!wait_for_data(c->fd)) {
-		viewglob_error("Did not receive go-ahead from child shell");
+		g_critical("Did not receive go-ahead from child shell");
 		ok = FALSE;
 	}
 
@@ -426,23 +421,28 @@ gboolean pty_child_terminate(struct pty_child* c) {
 
 	/* Close the pty to the sandbox shell (if valid). */
 	if ( (c->fd != -1) && (close(c->fd) == -1) ) {
-		viewglob_error("Could not close pty to child");
+		g_critical("Could not close pty to child: %s", g_strerror(errno));
 		ok = FALSE;
 	}
 	
 	/* Terminate and wait the child's process. */
 	if (c->pid != -1) {
 		switch (kill(c->pid, SIGHUP)) {    /* SIGHUP terminates bash, but SIGTERM won't. */
-			case ESRCH:
-				viewglob_warning("Child already terminated");
 			case 0:
 				ok &= waitpid_wrapped(c->pid);
 				c->pid = -1;
 				break;
-			default:
-				viewglob_error("Could not terminate child");
-				ok = FALSE;
+			case -1:
+				if (errno == ESRCH)
+					g_warning("Child already terminated");
+				else {
+					g_critical("Could not terminate child: %s", g_strerror(errno));
+					ok = FALSE;
+				}
 				break;
+			default:
+				g_return_val_if_reached(FALSE);
+				/*break;*/
 		}
 	}
 
@@ -452,12 +452,15 @@ gboolean pty_child_terminate(struct pty_child* c) {
 
 static gboolean wait_for_data(gint fd) {
 	fd_set fd_set_write;
+	gboolean ok = TRUE;
 
 	FD_ZERO(&fd_set_write);
 	FD_SET(fd, &fd_set_write);
-	if ( select(fd + 1, NULL, &fd_set_write, NULL, NULL) == -1 )
-		return FALSE;
-	return TRUE;
-}
+	if ( select(fd + 1, NULL, &fd_set_write, NULL, NULL) == -1 ) {
+		g_critical("wait_for_data(): %s", g_strerror(errno));
+		ok = FALSE;
+	}
 
+	return ok;
+}
 

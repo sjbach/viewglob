@@ -20,20 +20,16 @@
 #include "config.h"
 
 #include "common.h"
-#include "viewglob-error.h"
-#include "buffer.h"
+#include "connection.h"
 
 #include <string.h>
 
 
-void prepend_holdover(Buffer* b) {
+void prepend_holdover(Connection* b) {
 
 	size_t ho_len;
 
-	if (!b->holdover) {
-		viewglob_warning("b->holdover == NULL");
-		return;
-	}
+	g_return_if_fail(b->holdover != NULL);
 
 	ho_len = strlen(b->holdover);
 
@@ -75,16 +71,10 @@ void prepend_holdover(Buffer* b) {
 }
 
 
-void create_holdover(Buffer* b, gboolean write_later) {
+void create_holdover(Connection* b, gboolean write_later) {
 
-	if (!b->n) {
-		viewglob_warning("b->n == 0");
-		return;
-	}
-	else if (b->holdover) {
-		viewglob_warning("b->holdover != NULL");
-		return;
-	}
+	g_return_if_fail(b->n != 0);
+	g_return_if_fail(b->holdover != NULL);
 
 	/* Copy and null-terminate. */
 	b->holdover = g_new(char, b->n);
@@ -115,16 +105,13 @@ void create_holdover(Buffer* b, gboolean write_later) {
 }
 
 
-void eat_segment(Buffer* b) {
+void eat_segment(Connection* b) {
 
 	char* start;
 	char* end;
 	size_t length;
 
-	if (b->n <= 0) {
-		viewglob_warning("b->n <= 0");
-		return;
-	}
+	g_return_if_fail(b->n > 0);
 
 	start = b->buf + b->pos;
 	end = b->buf + b->pos + b->n;
@@ -141,7 +128,7 @@ void eat_segment(Buffer* b) {
 }
 
 
-void pass_segment(Buffer* b) {
+void pass_segment(Connection* b) {
 	DEBUG((df, "passing %d bytes\n", b->n - 1));
 	b->pos += b->n;
 	b->n = 1;

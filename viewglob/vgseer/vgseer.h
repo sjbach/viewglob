@@ -31,14 +31,6 @@
 
 G_BEGIN_DECLS
 
-struct options {
-	enum shell_type shell_type;
-	gchar* executable;
-	gchar* init_loc;
-	gchar* expand_command;
-	gboolean  smart_insert;
-};
-
 
 /* Data structure for the user's shell. */
 struct user_shell {
@@ -48,13 +40,6 @@ struct user_shell {
 
 	gboolean term_size_changed;
 	gboolean expect_newline;
-};
-
-
-/* Data structure for seer's sandbox shell. */
-struct glob_shell {
-	gchar* glob_cmd;
-	struct pty_child s;
 };
 
 

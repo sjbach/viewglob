@@ -20,7 +20,6 @@
 #include "config.h"
 
 #include "common.h"
-#include "viewglob-error.h"
 #include "vgseer.h"
 #include "sequences.h"
 #include "actions.h"
@@ -192,7 +191,7 @@ gboolean cmd_overwrite_char(gchar c, gboolean preserve_cret) {
 
 	if (u.cmd.length % CMD_STEP_SIZE == 0) {
 		if (!cmd_alloc()) {
-			viewglob_error("Could not allocate space for cmd");
+			g_critical("Could not allocate memory for cmd");
 			return FALSE;
 		}
 	}
@@ -264,7 +263,7 @@ gboolean cmd_wipe_in_line(enum direction dir) {
 
 			break;
 		default:
-			viewglob_warning("Unexpected direction in cmd_wipe_in_line");
+			g_return_val_if_reached(FALSE);
 			break;
 	}
 	action_queue(A_SEND_CMD);
@@ -278,7 +277,7 @@ gboolean cmd_backspace(gint n) {
 		if (u.cmd.pos > 0)
 			u.cmd.pos--;
 		else {
-			viewglob_error("Backspaced out of command line");
+			g_warning("Backspaced out of command line");
 			action_queue(A_SEND_LOST);
 			return FALSE;
 		}
@@ -288,8 +287,9 @@ gboolean cmd_backspace(gint n) {
 
 
 gboolean cmd_insert_chars(gchar c, gint n) {
+
 	if (n < 0) {
-		viewglob_error("<0 in cmd_insert_chars");
+		g_warning("<0 in cmd_insert_chars");
 		action_queue(A_SEND_LOST);
 		return FALSE;
 	}

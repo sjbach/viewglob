@@ -1,14 +1,15 @@
 AM_CPPFLAGS = @GLIB_CFLAGS@
 LDADD = @GLIB_LIBS@
-INCLUDES = -I../common
+COMMON = ../common
+INCLUDES = -I$(COMMON)
 
 pkglib_PROGRAMS = vgseer
 
-vgseer_SOURCES = vgseer.c children.c cmdline.c sequences.c sanitize.c  \
-               tc_setraw.c buffer.c   \
-               viewglob-error.c actions.c     \
-               ../common/ptytty.c ../common/hardened_io.c
+vgseer_SOURCES = vgseer.c children.c cmdline.c sequences.c \
+               tc_setraw.c connection.c   \
+               actions.c     \
+               $(COMMON)/ptytty.c $(COMMON)/hardened_io.c
 
-noinst_HEADERS = vgseer.h children.h cmdline.h sequences.h sanitize.h   \
-                 tc_setraw.h actions.h buffer.h circular.h
+noinst_HEADERS = vgseer.h children.h cmdline.h sequences.h \
+                 tc_setraw.h actions.h connection.h circular.h
 

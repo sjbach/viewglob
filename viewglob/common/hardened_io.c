@@ -23,7 +23,6 @@
 
 #include "common.h"
 #include "vgseer.h"
-#include "viewglob-error.h"
 #include "hardened_io.h"
 
 #if HAVE_TERMIOS_H
@@ -43,23 +42,21 @@ extern struct user_shell u;
 /* Attempt to open the given file with the given flags and mode.
    Emit warning if it doesn't work out. */
 gint open_warning(gchar* file_name, gint flags, mode_t mode) {
-	gint fd = -1;
-	if (file_name) {
-		if ( (fd = open(file_name, flags, mode)) == -1) {
-			viewglob_warning("Could not open file");
-			viewglob_warning(file_name);
-		}
-	}
+
+	g_return_val_if_fail(file_name != NULL, -1);
+
+	gint fd;
+
+	if ( (fd = open(file_name, flags, mode)) == -1)
+		g_warning("Could not open file \"%s\": %s", file_name, g_strerror(errno));
+
 	return fd;
 }
 
 /* Attempt to close the given file.  Emit warning on failure. */
 void close_warning(gint fd, gchar* file_name) {
-	if ( fd != -1 && close(fd) == -1) {
-		viewglob_warning("Could not close file");
-		if (file_name)
-			viewglob_warning(file_name);
-	}
+	if ( fd != -1 && close(fd) == -1)
+		g_warning("Could not close file \"%s\": %s", file_name, g_strerror(errno));
 }
 
 /* If read is interrupted by a signal, try again.  Emit error on failure. */
@@ -75,7 +72,7 @@ gboolean hardened_read(gint fd, void* buf, size_t count, ssize_t* nread) {
 					if (send_term_size(u.s.fd))
 						u.term_size_changed = FALSE;
 					else {
-						viewglob_error("Resizing term failed");
+						g_warning("Resizing term failed");
 						ok = FALSE;
 						break;
 					}
@@ -111,7 +108,7 @@ gboolean hardened_write(gint fd, gchar* buff, size_t length) {
 						if (send_term_size(u.s.fd))
 							u.term_size_changed = FALSE;
 						else {
-							viewglob_error("Resizing term failed");
+							g_critical("Resizing term failed");
 							return FALSE;
 						}
 					}
@@ -142,14 +139,14 @@ gboolean hardened_select(gint n, fd_set* readfds, fd_set* writefds) {
 					if (send_term_size(u.s.fd))
 						u.term_size_changed = FALSE;
 					else {
-						viewglob_error("Resizing term failed");
+						g_critical("Resizing term failed");
 						return FALSE;
 					}
 				}
 				continue;
 			}
 			else {
-				viewglob_error("Select failed in hardened_select");
+				g_critical("Select failed in hardened_select: %s", g_strerror(errno));
 				return FALSE;
 			}
 		}

@@ -20,7 +20,6 @@
 #include "config.h"
 
 #include "common.h"
-#include "viewglob-error.h"
 #include "actions.h"
 
 struct action_list {

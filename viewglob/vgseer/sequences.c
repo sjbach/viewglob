@@ -20,10 +20,9 @@
 #include "config.h"
 
 #include "common.h"
-#include "viewglob-error.h"
 #include "vgseer.h"
 #include "actions.h"
-#include "buffer.h"
+#include "connection.h"
 #include "sequences.h"
 
 #include <string.h>
@@ -33,12 +32,12 @@
 
 typedef struct _Sequence Sequence;
 struct _Sequence {
-	gchar name[32];	            /* For debugging. */
+	gchar* name;	            /* For debugging. */
 	gchar* seq;
 	gint length;
 	gint pos;
 	gboolean enabled;               /* Determines whether a match should be attempted. */
-	MatchEffect (*func)(Buffer* b);  /* Function to run after successful match. */
+	MatchEffect (*func)(Connection* b);  /* Function to run after successful match. */
 };
 
 /* Each process level (at prompt, executing, and eating) has a set of
@@ -57,36 +56,36 @@ static gchar*  parse_printables(const gchar* string, const gchar* sequence);
 static void init_bash_seqs(void);
 static void init_zsh_seqs(void);
 static MatchStatus check_seq(gchar c, Sequence* sq);
-static void analyze_effect(MatchEffect effect, Buffer* b);
+static void analyze_effect(MatchEffect effect, Connection* b);
 
 /* Pattern completion actions. */
-static MatchEffect seq_ps1_separator(Buffer* b);
-static MatchEffect seq_rprompt_separator_start(Buffer* b);
-static MatchEffect seq_rprompt_separator_end(Buffer* b);
-static MatchEffect seq_zsh_completion_done(Buffer* b);
-static MatchEffect seq_new_pwd(Buffer* b);
+static MatchEffect seq_ps1_separator(Connection* b);
+static MatchEffect seq_rprompt_separator_start(Connection* b);
+static MatchEffect seq_rprompt_separator_end(Connection* b);
+static MatchEffect seq_zsh_completion_done(Connection* b);
+static MatchEffect seq_new_pwd(Connection* b);
 
-static MatchEffect seq_nav_up(Buffer* b);
-static MatchEffect seq_nav_down(Buffer* b);
-static MatchEffect seq_nav_pgup(Buffer* b);
-static MatchEffect seq_nav_pgdown(Buffer* b);
-static MatchEffect seq_nav_ctrl_g(Buffer* b);
-static MatchEffect seq_nav_toggle(Buffer* b);
-static MatchEffect seq_nav_refocus(Buffer* b);
-static MatchEffect seq_nav_disable(Buffer* b);
-/*static MatchEffect seq_nav_catch_all(Buffer* b);*/
+static MatchEffect seq_nav_up(Connection* b);
+static MatchEffect seq_nav_down(Connection* b);
+static MatchEffect seq_nav_pgup(Connection* b);
+static MatchEffect seq_nav_pgdown(Connection* b);
+static MatchEffect seq_nav_ctrl_g(Connection* b);
+static MatchEffect seq_nav_toggle(Connection* b);
+static MatchEffect seq_nav_refocus(Connection* b);
+static MatchEffect seq_nav_disable(Connection* b);
+/*static MatchEffect seq_nav_catch_all(Connection* b);*/
 
-static MatchEffect seq_term_cmd_wrapped(Buffer* b);
-static MatchEffect seq_term_backspace(Buffer* b);
-static MatchEffect seq_term_cursor_forward(Buffer* b);
-static MatchEffect seq_term_cursor_backward(Buffer* b);
-static MatchEffect seq_term_cursor_up(Buffer* b);
-static MatchEffect seq_term_erase_in_line(Buffer* b);
-static MatchEffect seq_term_delete_chars(Buffer* b);
-static MatchEffect seq_term_insert_blanks(Buffer* b);
-static MatchEffect seq_term_bell(Buffer* b);
-static MatchEffect seq_term_carriage_return(Buffer* b);
-static MatchEffect seq_term_newline(Buffer* b);
+static MatchEffect seq_term_cmd_wrapped(Connection* b);
+static MatchEffect seq_term_backspace(Connection* b);
+static MatchEffect seq_term_cursor_forward(Connection* b);
+static MatchEffect seq_term_cursor_backward(Connection* b);
+static MatchEffect seq_term_cursor_up(Connection* b);
+static MatchEffect seq_term_erase_in_line(Connection* b);
+static MatchEffect seq_term_delete_chars(Connection* b);
+static MatchEffect seq_term_insert_blanks(Connection* b);
+static MatchEffect seq_term_bell(Connection* b);
+static MatchEffect seq_term_carriage_return(Connection* b);
+static MatchEffect seq_term_newline(Connection* b);
 
 /* The below characters don't appear in any of the sequences viewglob looks for, so we
    can use them as special characters. */
@@ -211,6 +210,7 @@ static gchar* parse_printables(const gchar* string, const gchar* sequence) {
 	return printables;
 }
 
+//FIXME remove find_prev_cret() and find_next_cret() and replace with g_strstrblah() etc.?
 
 gint find_prev_cret(gint pos) {
 	gint i;
@@ -254,7 +254,7 @@ void init_seqs(enum shell_type shell) {
 	else if (shell == ST_ZSH)
 		init_zsh_seqs();
 	else
-		viewglob_error("Unexpected shell type");
+		g_critical("Unexpected shell type");
 
 	seq_groups[PL_TERMINAL].n = 30;
 	seq_groups[PL_TERMINAL].seqs = g_new(Sequence, 30);
@@ -263,159 +263,159 @@ void init_seqs(enum shell_type shell) {
 		seq_groups[PL_TERMINAL].seqs[i].enabled = FALSE;
 	}
 
-	strcpy(seq_groups[PL_TERMINAL].seqs[0].name, "Nav vi up");
+	seq_groups[PL_TERMINAL].seqs[0].name = "Nav vi up";
 	seq_groups[PL_TERMINAL].seqs[0].seq = NAV_VI_UP_SEQ;
 	seq_groups[PL_TERMINAL].seqs[0].length = strlen(NAV_VI_UP_SEQ);
 	seq_groups[PL_TERMINAL].seqs[0].func = seq_nav_up;
 
-	strcpy(seq_groups[PL_TERMINAL].seqs[1].name, "Nav vi down");
+	seq_groups[PL_TERMINAL].seqs[1].name = "Nav vi down";
 	seq_groups[PL_TERMINAL].seqs[1].seq = NAV_VI_DOWN_SEQ;
 	seq_groups[PL_TERMINAL].seqs[1].length = strlen(NAV_VI_DOWN_SEQ);
 	seq_groups[PL_TERMINAL].seqs[1].func = seq_nav_down;
 
-	strcpy(seq_groups[PL_TERMINAL].seqs[2].name, "Nav vi pgup");
+	seq_groups[PL_TERMINAL].seqs[2].name = "Nav vi pgup";
 	seq_groups[PL_TERMINAL].seqs[2].seq = NAV_VI_PGUP_SEQ;
 	seq_groups[PL_TERMINAL].seqs[2].length = strlen(NAV_VI_PGUP_SEQ);
 	seq_groups[PL_TERMINAL].seqs[2].func = seq_nav_pgup;
 
-	strcpy(seq_groups[PL_TERMINAL].seqs[3].name, "Nav vi pgdown");
+	seq_groups[PL_TERMINAL].seqs[3].name = "Nav vi pgdown";
 	seq_groups[PL_TERMINAL].seqs[3].seq = NAV_VI_PGDOWN_SEQ;
 	seq_groups[PL_TERMINAL].seqs[3].length = strlen(NAV_VI_PGDOWN_SEQ);
 	seq_groups[PL_TERMINAL].seqs[3].func = seq_nav_pgdown;
 
-	strcpy(seq_groups[PL_TERMINAL].seqs[4].name, "Nav emacs up");
+	seq_groups[PL_TERMINAL].seqs[4].name = "Nav emacs up";
 	seq_groups[PL_TERMINAL].seqs[4].seq = NAV_EMACS_UP_SEQ;
 	seq_groups[PL_TERMINAL].seqs[4].length = strlen(NAV_EMACS_UP_SEQ);
 	seq_groups[PL_TERMINAL].seqs[4].func = seq_nav_up;
 
-	strcpy(seq_groups[PL_TERMINAL].seqs[5].name, "Nav emacs down");
+	seq_groups[PL_TERMINAL].seqs[5].name = "Nav emacs down";
 	seq_groups[PL_TERMINAL].seqs[5].seq = NAV_EMACS_DOWN_SEQ;
 	seq_groups[PL_TERMINAL].seqs[5].length = strlen(NAV_EMACS_DOWN_SEQ);
 	seq_groups[PL_TERMINAL].seqs[5].func = seq_nav_down;
 
-	strcpy(seq_groups[PL_TERMINAL].seqs[6].name, "Nav emacs pgup");
+	seq_groups[PL_TERMINAL].seqs[6].name = "Nav emacs pgup";
 	seq_groups[PL_TERMINAL].seqs[6].seq = NAV_EMACS_PGUP_SEQ;
 	seq_groups[PL_TERMINAL].seqs[6].length = strlen(NAV_EMACS_PGUP_SEQ);
 	seq_groups[PL_TERMINAL].seqs[6].func = seq_nav_pgup;
 
-	strcpy(seq_groups[PL_TERMINAL].seqs[7].name, "Nav emacs pgdown");
+	seq_groups[PL_TERMINAL].seqs[7].name = "Nav emacs pgdown";
 	seq_groups[PL_TERMINAL].seqs[7].seq = NAV_EMACS_PGDOWN_SEQ;
 	seq_groups[PL_TERMINAL].seqs[7].length = strlen(NAV_EMACS_PGDOWN_SEQ);
 	seq_groups[PL_TERMINAL].seqs[7].func = seq_nav_pgdown;
 
-	strcpy(seq_groups[PL_TERMINAL].seqs[8].name, "Nav keyboard up");
+	seq_groups[PL_TERMINAL].seqs[8].name = "Nav keyboard up";
 	seq_groups[PL_TERMINAL].seqs[8].seq = NAV_KEYBOARD_UP_SEQ;
 	seq_groups[PL_TERMINAL].seqs[8].length = strlen(NAV_KEYBOARD_UP_SEQ);
 	seq_groups[PL_TERMINAL].seqs[8].func = seq_nav_up;
 
-	strcpy(seq_groups[PL_TERMINAL].seqs[9].name, "Nav keyboard down");
+	seq_groups[PL_TERMINAL].seqs[9].name = "Nav keyboard down";
 	seq_groups[PL_TERMINAL].seqs[9].seq = NAV_KEYBOARD_DOWN_SEQ;
 	seq_groups[PL_TERMINAL].seqs[9].length = strlen(NAV_KEYBOARD_DOWN_SEQ);
 	seq_groups[PL_TERMINAL].seqs[9].func = seq_nav_down;
 
-	strcpy(seq_groups[PL_TERMINAL].seqs[10].name, "Nav keyboard pgup");
+	seq_groups[PL_TERMINAL].seqs[10].name = "Nav keyboard pgup";
 	seq_groups[PL_TERMINAL].seqs[10].seq = NAV_KEYBOARD_PGUP_SEQ;
 	seq_groups[PL_TERMINAL].seqs[10].length = strlen(NAV_KEYBOARD_PGUP_SEQ);
 	seq_groups[PL_TERMINAL].seqs[10].func = seq_nav_pgup;
 
-	strcpy(seq_groups[PL_TERMINAL].seqs[11].name, "Nav keyboard pgdown");
+	seq_groups[PL_TERMINAL].seqs[11].name = "Nav keyboard pgdown";
 	seq_groups[PL_TERMINAL].seqs[11].seq = NAV_KEYBOARD_PGDOWN_SEQ;
 	seq_groups[PL_TERMINAL].seqs[11].length = strlen(NAV_KEYBOARD_PGDOWN_SEQ);
 	seq_groups[PL_TERMINAL].seqs[11].func = seq_nav_pgdown;
 
-	strcpy(seq_groups[PL_TERMINAL].seqs[12].name, "Nav ctrl g");
+	seq_groups[PL_TERMINAL].seqs[12].name = "Nav ctrl g";
 	seq_groups[PL_TERMINAL].seqs[12].seq = NAV_CTRL_G_SEQ;
 	seq_groups[PL_TERMINAL].seqs[12].length = strlen(NAV_CTRL_G_SEQ);
 	seq_groups[PL_TERMINAL].seqs[12].func = seq_nav_ctrl_g;
 
-	strcpy(seq_groups[PL_TERMINAL].seqs[13].name, "Nav C vi up");
+	seq_groups[PL_TERMINAL].seqs[13].name = "Nav C vi up";
 	seq_groups[PL_TERMINAL].seqs[13].seq = NAV_C_VI_UP_SEQ;
 	seq_groups[PL_TERMINAL].seqs[13].length = strlen(NAV_C_VI_UP_SEQ);
 	seq_groups[PL_TERMINAL].seqs[13].func = seq_nav_up;
 
-	strcpy(seq_groups[PL_TERMINAL].seqs[14].name, "Nav C vi down");
+	seq_groups[PL_TERMINAL].seqs[14].name = "Nav C vi down";
 	seq_groups[PL_TERMINAL].seqs[14].seq = NAV_C_VI_DOWN_SEQ;
 	seq_groups[PL_TERMINAL].seqs[14].length = strlen(NAV_C_VI_DOWN_SEQ);
 	seq_groups[PL_TERMINAL].seqs[14].func = seq_nav_down;
 
-	strcpy(seq_groups[PL_TERMINAL].seqs[15].name, "Nav C vi pgup");
+	seq_groups[PL_TERMINAL].seqs[15].name = "Nav C vi pgup";
 	seq_groups[PL_TERMINAL].seqs[15].seq = NAV_C_VI_PGUP_SEQ;
 	seq_groups[PL_TERMINAL].seqs[15].length = strlen(NAV_C_VI_PGUP_SEQ);
 	seq_groups[PL_TERMINAL].seqs[15].func = seq_nav_pgup;
 
-	strcpy(seq_groups[PL_TERMINAL].seqs[16].name, "Nav C vi pgdown");
+	seq_groups[PL_TERMINAL].seqs[16].name = "Nav C vi pgdown";
 	seq_groups[PL_TERMINAL].seqs[16].seq = NAV_C_VI_PGDOWN_SEQ;
 	seq_groups[PL_TERMINAL].seqs[16].length = strlen(NAV_C_VI_PGDOWN_SEQ);
 	seq_groups[PL_TERMINAL].seqs[16].func = seq_nav_pgdown;
 
-	strcpy(seq_groups[PL_TERMINAL].seqs[17].name, "Nav C emacs up");
+	seq_groups[PL_TERMINAL].seqs[17].name = "Nav C emacs up";
 	seq_groups[PL_TERMINAL].seqs[17].seq = NAV_C_EMACS_UP_SEQ;
 	seq_groups[PL_TERMINAL].seqs[17].length = strlen(NAV_C_EMACS_UP_SEQ);
 	seq_groups[PL_TERMINAL].seqs[17].func = seq_nav_up;
 
-	strcpy(seq_groups[PL_TERMINAL].seqs[18].name, "Nav C emacs down");
+	seq_groups[PL_TERMINAL].seqs[18].name = "Nav C emacs down";
 	seq_groups[PL_TERMINAL].seqs[18].seq = NAV_C_EMACS_DOWN_SEQ;
 	seq_groups[PL_TERMINAL].seqs[18].length = strlen(NAV_C_EMACS_DOWN_SEQ);
 	seq_groups[PL_TERMINAL].seqs[18].func = seq_nav_down;
 
-	strcpy(seq_groups[PL_TERMINAL].seqs[19].name, "Nav C emacs pgup");
+	seq_groups[PL_TERMINAL].seqs[19].name = "Nav C emacs pgup";
 	seq_groups[PL_TERMINAL].seqs[19].seq = NAV_C_EMACS_PGUP_SEQ;
 	seq_groups[PL_TERMINAL].seqs[19].length = strlen(NAV_C_EMACS_PGUP_SEQ);
 	seq_groups[PL_TERMINAL].seqs[19].func = seq_nav_pgup;
 
-	strcpy(seq_groups[PL_TERMINAL].seqs[20].name, "Nav C emacs pgdown");
+	seq_groups[PL_TERMINAL].seqs[20].name = "Nav C emacs pgdown";
 	seq_groups[PL_TERMINAL].seqs[20].seq = NAV_C_EMACS_PGDOWN_SEQ;
 	seq_groups[PL_TERMINAL].seqs[20].length = strlen(NAV_C_EMACS_PGDOWN_SEQ);
 	seq_groups[PL_TERMINAL].seqs[20].func = seq_nav_pgdown;
 
-	strcpy(seq_groups[PL_TERMINAL].seqs[21].name, "Nav C keyboard up");
+	seq_groups[PL_TERMINAL].seqs[21].name = "Nav C keyboard up";
 	seq_groups[PL_TERMINAL].seqs[21].seq = NAV_C_KEYBOARD_UP_SEQ;
 	seq_groups[PL_TERMINAL].seqs[21].length = strlen(NAV_C_KEYBOARD_UP_SEQ);
 	seq_groups[PL_TERMINAL].seqs[21].func = seq_nav_up;
 
-	strcpy(seq_groups[PL_TERMINAL].seqs[22].name, "Nav C keyboard down");
+	seq_groups[PL_TERMINAL].seqs[22].name = "Nav C keyboard down";
 	seq_groups[PL_TERMINAL].seqs[22].seq = NAV_C_KEYBOARD_DOWN_SEQ;
 	seq_groups[PL_TERMINAL].seqs[22].length = strlen(NAV_C_KEYBOARD_DOWN_SEQ);
 	seq_groups[PL_TERMINAL].seqs[22].func = seq_nav_down;
 
-	strcpy(seq_groups[PL_TERMINAL].seqs[23].name, "Nav C keyboard pgup");
+	seq_groups[PL_TERMINAL].seqs[23].name = "Nav C keyboard pgup";
 	seq_groups[PL_TERMINAL].seqs[23].seq = NAV_C_KEYBOARD_PGUP_SEQ;
 	seq_groups[PL_TERMINAL].seqs[23].length = strlen(NAV_C_KEYBOARD_PGUP_SEQ);
 	seq_groups[PL_TERMINAL].seqs[23].func = seq_nav_pgup;
 
-	strcpy(seq_groups[PL_TERMINAL].seqs[24].name, "Nav C keyboard pgdown");
+	seq_groups[PL_TERMINAL].seqs[24].name = "Nav C keyboard pgdown";
 	seq_groups[PL_TERMINAL].seqs[24].seq = NAV_C_KEYBOARD_PGDOWN_SEQ;
 	seq_groups[PL_TERMINAL].seqs[24].length = strlen(NAV_C_KEYBOARD_PGDOWN_SEQ);
 	seq_groups[PL_TERMINAL].seqs[24].func = seq_nav_pgdown;
 
-	strcpy(seq_groups[PL_TERMINAL].seqs[25].name, "Nav toggle");
+	seq_groups[PL_TERMINAL].seqs[25].name = "Nav toggle";
 	seq_groups[PL_TERMINAL].seqs[25].seq = NAV_TOGGLE_SEQ;
 	seq_groups[PL_TERMINAL].seqs[25].length = strlen(NAV_TOGGLE_SEQ);
 	seq_groups[PL_TERMINAL].seqs[25].func = seq_nav_toggle;
 
 	/* Need to add 1 to the strlen here because we're matching on NUL. */
-	strcpy(seq_groups[PL_TERMINAL].seqs[26].name, "Nav C toggle");
+	seq_groups[PL_TERMINAL].seqs[26].name = "Nav C toggle";
 	seq_groups[PL_TERMINAL].seqs[26].seq = NAV_C_TOGGLE_SEQ;
 	seq_groups[PL_TERMINAL].seqs[26].length = strlen(NAV_C_TOGGLE_SEQ) + 1;
 	seq_groups[PL_TERMINAL].seqs[26].func = seq_nav_toggle;
 
-	strcpy(seq_groups[PL_TERMINAL].seqs[27].name, "Nav disable");
+	seq_groups[PL_TERMINAL].seqs[27].name = "Nav disable";
 	seq_groups[PL_TERMINAL].seqs[27].seq = NAV_DISABLE_SEQ;
 	seq_groups[PL_TERMINAL].seqs[27].length = strlen(NAV_DISABLE_SEQ);
 	seq_groups[PL_TERMINAL].seqs[27].func = seq_nav_disable;
 
-	strcpy(seq_groups[PL_TERMINAL].seqs[28].name, "Nav refocus");
+	seq_groups[PL_TERMINAL].seqs[28].name = "Nav refocus";
 	seq_groups[PL_TERMINAL].seqs[28].seq = NAV_REFOCUS_SEQ;
 	seq_groups[PL_TERMINAL].seqs[28].length = strlen(NAV_REFOCUS_SEQ);
 	seq_groups[PL_TERMINAL].seqs[28].func = seq_nav_refocus;
 
-	strcpy(seq_groups[PL_TERMINAL].seqs[29].name, "Nav refocus alt");
+	seq_groups[PL_TERMINAL].seqs[29].name = "Nav refocus alt";
 	seq_groups[PL_TERMINAL].seqs[29].seq = NAV_REFOCUS_ALT_SEQ;
 	seq_groups[PL_TERMINAL].seqs[29].length = strlen(NAV_REFOCUS_ALT_SEQ);
 	seq_groups[PL_TERMINAL].seqs[29].func = seq_nav_refocus;
 
 	/*
-	strcpy(seq_groups[PL_TERMINAL].seqs[13].name, "Nav catch all");
+	seq_groups[PL_TERMINAL].seqs[13].name = "Nav catch all";
 	seq_groups[PL_TERMINAL].seqs[13].seq = NAV_CATCH_ALL_SEQ;
 	seq_groups[PL_TERMINAL].seqs[13].length = strlen(NAV_CATCH_ALL_SEQ);
 	seq_groups[PL_TERMINAL].seqs[13].func = seq_nav_catch_all;
@@ -449,78 +449,78 @@ static void init_bash_seqs(void) {
 	}
 
 	/* PL_AT_PROMPT */
-	strcpy(seq_groups[PL_AT_PROMPT].seqs[0].name, "PS1 separator");
+	seq_groups[PL_AT_PROMPT].seqs[0].name = "PS1 separator";
 	seq_groups[PL_AT_PROMPT].seqs[0].seq = PS1_SEPARATOR_SEQ;
 	seq_groups[PL_AT_PROMPT].seqs[0].length = strlen(PS1_SEPARATOR_SEQ);
 	seq_groups[PL_AT_PROMPT].seqs[0].func = seq_ps1_separator;
 
-	strcpy(seq_groups[PL_AT_PROMPT].seqs[1].name, "New pwd");
+	seq_groups[PL_AT_PROMPT].seqs[1].name = "New pwd";
 	seq_groups[PL_AT_PROMPT].seqs[1].seq = NEW_PWD_SEQ;
 	seq_groups[PL_AT_PROMPT].seqs[1].length = strlen(NEW_PWD_SEQ);
 	seq_groups[PL_AT_PROMPT].seqs[1].func = seq_new_pwd;
 
-	strcpy(seq_groups[PL_AT_PROMPT].seqs[2].name, "Term cmd wrapped");
+	seq_groups[PL_AT_PROMPT].seqs[2].name = "Term cmd wrapped";
 	seq_groups[PL_AT_PROMPT].seqs[2].seq = TERM_CMD_WRAPPED_SEQ;
 	seq_groups[PL_AT_PROMPT].seqs[2].length = strlen(TERM_CMD_WRAPPED_SEQ);
 	seq_groups[PL_AT_PROMPT].seqs[2].func = seq_term_cmd_wrapped;
 
-	strcpy(seq_groups[PL_AT_PROMPT].seqs[3].name, "Term cursor forward");
+	seq_groups[PL_AT_PROMPT].seqs[3].name = "Term cursor forward";
 	seq_groups[PL_AT_PROMPT].seqs[3].seq = TERM_CURSOR_FORWARD_SEQ;
 	seq_groups[PL_AT_PROMPT].seqs[3].length = strlen(TERM_CURSOR_FORWARD_SEQ);
 	seq_groups[PL_AT_PROMPT].seqs[3].func = seq_term_cursor_forward;
 
-	strcpy(seq_groups[PL_AT_PROMPT].seqs[4].name, "Term backspace");
+	seq_groups[PL_AT_PROMPT].seqs[4].name = "Term backspace";
 	seq_groups[PL_AT_PROMPT].seqs[4].seq = TERM_BACKSPACE_SEQ;
 	seq_groups[PL_AT_PROMPT].seqs[4].length = strlen(TERM_BACKSPACE_SEQ);
 	seq_groups[PL_AT_PROMPT].seqs[4].func = seq_term_backspace;
 
-	strcpy(seq_groups[PL_AT_PROMPT].seqs[5].name, "Term erase in line");
+	seq_groups[PL_AT_PROMPT].seqs[5].name = "Term erase in line";
 	seq_groups[PL_AT_PROMPT].seqs[5].seq = TERM_ERASE_IN_LINE_SEQ;
 	seq_groups[PL_AT_PROMPT].seqs[5].length = strlen(TERM_ERASE_IN_LINE_SEQ);
 	seq_groups[PL_AT_PROMPT].seqs[5].func = seq_term_erase_in_line;
 
-	strcpy(seq_groups[PL_AT_PROMPT].seqs[6].name, "Term delete chars");
+	seq_groups[PL_AT_PROMPT].seqs[6].name = "Term delete chars";
 	seq_groups[PL_AT_PROMPT].seqs[6].seq = TERM_DELETE_CHARS_SEQ;
 	seq_groups[PL_AT_PROMPT].seqs[6].length = strlen(TERM_DELETE_CHARS_SEQ);
 	seq_groups[PL_AT_PROMPT].seqs[6].func = seq_term_delete_chars;
 
-	strcpy(seq_groups[PL_AT_PROMPT].seqs[7].name, "Term insert blanks");
+	seq_groups[PL_AT_PROMPT].seqs[7].name = "Term insert blanks";
 	seq_groups[PL_AT_PROMPT].seqs[7].seq = TERM_INSERT_BLANKS_SEQ;
 	seq_groups[PL_AT_PROMPT].seqs[7].length = strlen(TERM_INSERT_BLANKS_SEQ);
 	seq_groups[PL_AT_PROMPT].seqs[7].func = seq_term_insert_blanks;
 
-	strcpy(seq_groups[PL_AT_PROMPT].seqs[8].name, "Term cursor backward");
+	seq_groups[PL_AT_PROMPT].seqs[8].name = "Term cursor backward";
 	seq_groups[PL_AT_PROMPT].seqs[8].seq = TERM_CURSOR_BACKWARD_SEQ;
 	seq_groups[PL_AT_PROMPT].seqs[8].length = strlen(TERM_CURSOR_BACKWARD_SEQ);
 	seq_groups[PL_AT_PROMPT].seqs[8].func = seq_term_cursor_backward;
 
-	strcpy(seq_groups[PL_AT_PROMPT].seqs[9].name, "Term bell");
+	seq_groups[PL_AT_PROMPT].seqs[9].name = "Term bell";
 	seq_groups[PL_AT_PROMPT].seqs[9].seq = TERM_BELL_SEQ;
 	seq_groups[PL_AT_PROMPT].seqs[9].length = strlen(TERM_BELL_SEQ);
 	seq_groups[PL_AT_PROMPT].seqs[9].func = seq_term_bell;
 
-	strcpy(seq_groups[PL_AT_PROMPT].seqs[10].name, "Term cursor up");
+	seq_groups[PL_AT_PROMPT].seqs[10].name = "Term cursor up";
 	seq_groups[PL_AT_PROMPT].seqs[10].seq = TERM_CURSOR_UP_SEQ;
 	seq_groups[PL_AT_PROMPT].seqs[10].length = strlen(TERM_CURSOR_UP_SEQ);
 	seq_groups[PL_AT_PROMPT].seqs[10].func = seq_term_cursor_up;
 
-	strcpy(seq_groups[PL_AT_PROMPT].seqs[11].name, "Term carriage return");
+	seq_groups[PL_AT_PROMPT].seqs[11].name = "Term carriage return";
 	seq_groups[PL_AT_PROMPT].seqs[11].seq = TERM_CARRIAGE_RETURN_SEQ;
 	seq_groups[PL_AT_PROMPT].seqs[11].length = strlen(TERM_CARRIAGE_RETURN_SEQ);
 	seq_groups[PL_AT_PROMPT].seqs[11].func = seq_term_carriage_return;
 
-	strcpy(seq_groups[PL_AT_PROMPT].seqs[12].name, "Term newline");
+	seq_groups[PL_AT_PROMPT].seqs[12].name = "Term newline";
 	seq_groups[PL_AT_PROMPT].seqs[12].seq = TERM_NEWLINE_SEQ;
 	seq_groups[PL_AT_PROMPT].seqs[12].length = strlen(TERM_NEWLINE_SEQ);
 	seq_groups[PL_AT_PROMPT].seqs[12].func = seq_term_newline;
 
 	/* PL_EXECUTING */
-	strcpy(seq_groups[PL_EXECUTING].seqs[0].name, "PS1 separator");
+	seq_groups[PL_EXECUTING].seqs[0].name = "PS1 separator";
 	seq_groups[PL_EXECUTING].seqs[0].seq = PS1_SEPARATOR_SEQ;
 	seq_groups[PL_EXECUTING].seqs[0].length = strlen(PS1_SEPARATOR_SEQ);
 	seq_groups[PL_EXECUTING].seqs[0].func = seq_ps1_separator;
 
-	strcpy(seq_groups[PL_EXECUTING].seqs[1].name, "New pwd");
+	seq_groups[PL_EXECUTING].seqs[1].name = "New pwd";
 	seq_groups[PL_EXECUTING].seqs[1].seq = NEW_PWD_SEQ;
 	seq_groups[PL_EXECUTING].seqs[1].length = strlen(NEW_PWD_SEQ);
 	seq_groups[PL_EXECUTING].seqs[1].func = seq_new_pwd;
@@ -555,99 +555,99 @@ static void init_zsh_seqs(void) {
 	}
 
 	/* PL_AT_PROMPT */
-	strcpy(seq_groups[PL_AT_PROMPT].seqs[0].name, "PS1 separator");
+	seq_groups[PL_AT_PROMPT].seqs[0].name = "PS1 separator";
 	seq_groups[PL_AT_PROMPT].seqs[0].seq = PS1_SEPARATOR_SEQ;
 	seq_groups[PL_AT_PROMPT].seqs[0].length = strlen(PS1_SEPARATOR_SEQ);
 	seq_groups[PL_AT_PROMPT].seqs[0].func = seq_ps1_separator;
 
-	strcpy(seq_groups[PL_AT_PROMPT].seqs[1].name, "RPROMPT separator start");
+	seq_groups[PL_AT_PROMPT].seqs[1].name = "RPROMPT separator start";
 	seq_groups[PL_AT_PROMPT].seqs[1].seq = RPROMPT_SEPARATOR_START_SEQ;
 	seq_groups[PL_AT_PROMPT].seqs[1].length = strlen(RPROMPT_SEPARATOR_START_SEQ);
 	seq_groups[PL_AT_PROMPT].seqs[1].func = seq_rprompt_separator_start;
 
-	strcpy(seq_groups[PL_AT_PROMPT].seqs[2].name, "Term cmd wrapped");
+	seq_groups[PL_AT_PROMPT].seqs[2].name = "Term cmd wrapped";
 	seq_groups[PL_AT_PROMPT].seqs[2].seq = TERM_CMD_WRAPPED_SEQ;
 	seq_groups[PL_AT_PROMPT].seqs[2].length = strlen(TERM_CMD_WRAPPED_SEQ);
 	seq_groups[PL_AT_PROMPT].seqs[2].func = seq_term_cmd_wrapped;
 
-	strcpy(seq_groups[PL_AT_PROMPT].seqs[3].name, "Term cursor forward");
+	seq_groups[PL_AT_PROMPT].seqs[3].name = "Term cursor forward";
 	seq_groups[PL_AT_PROMPT].seqs[3].seq = TERM_CURSOR_FORWARD_SEQ;
 	seq_groups[PL_AT_PROMPT].seqs[3].length = strlen(TERM_CURSOR_FORWARD_SEQ);
 	seq_groups[PL_AT_PROMPT].seqs[3].func = seq_term_cursor_forward;
 
-	strcpy(seq_groups[PL_AT_PROMPT].seqs[4].name, "Term backspace");
+	seq_groups[PL_AT_PROMPT].seqs[4].name = "Term backspace";
 	seq_groups[PL_AT_PROMPT].seqs[4].seq = TERM_BACKSPACE_SEQ;
 	seq_groups[PL_AT_PROMPT].seqs[4].length = strlen(TERM_BACKSPACE_SEQ);
 	seq_groups[PL_AT_PROMPT].seqs[4].func = seq_term_backspace;
 
-	strcpy(seq_groups[PL_AT_PROMPT].seqs[5].name, "Term erase in line");
+	seq_groups[PL_AT_PROMPT].seqs[5].name = "Term erase in line";
 	seq_groups[PL_AT_PROMPT].seqs[5].seq = TERM_ERASE_IN_LINE_SEQ;
 	seq_groups[PL_AT_PROMPT].seqs[5].length = strlen(TERM_ERASE_IN_LINE_SEQ);
 	seq_groups[PL_AT_PROMPT].seqs[5].func = seq_term_erase_in_line;
 
-	strcpy(seq_groups[PL_AT_PROMPT].seqs[6].name, "Term delete chars");
+	seq_groups[PL_AT_PROMPT].seqs[6].name = "Term delete chars";
 	seq_groups[PL_AT_PROMPT].seqs[6].seq = TERM_DELETE_CHARS_SEQ;
 	seq_groups[PL_AT_PROMPT].seqs[6].length = strlen(TERM_DELETE_CHARS_SEQ);
 	seq_groups[PL_AT_PROMPT].seqs[6].func = seq_term_delete_chars;
 
-	strcpy(seq_groups[PL_AT_PROMPT].seqs[7].name, "Term insert blanks");
+	seq_groups[PL_AT_PROMPT].seqs[7].name = "Term insert blanks";
 	seq_groups[PL_AT_PROMPT].seqs[7].seq = TERM_INSERT_BLANKS_SEQ;
 	seq_groups[PL_AT_PROMPT].seqs[7].length = strlen(TERM_INSERT_BLANKS_SEQ);
 	seq_groups[PL_AT_PROMPT].seqs[7].func = seq_term_insert_blanks;
 
-	strcpy(seq_groups[PL_AT_PROMPT].seqs[8].name, "Term cursor backward");
+	seq_groups[PL_AT_PROMPT].seqs[8].name = "Term cursor backward";
 	seq_groups[PL_AT_PROMPT].seqs[8].seq = TERM_CURSOR_BACKWARD_SEQ;
 	seq_groups[PL_AT_PROMPT].seqs[8].length = strlen(TERM_CURSOR_BACKWARD_SEQ);
 	seq_groups[PL_AT_PROMPT].seqs[8].func = seq_term_cursor_backward;
 
-	strcpy(seq_groups[PL_AT_PROMPT].seqs[9].name, "Term bell");
+	seq_groups[PL_AT_PROMPT].seqs[9].name = "Term bell";
 	seq_groups[PL_AT_PROMPT].seqs[9].seq = TERM_BELL_SEQ;
 	seq_groups[PL_AT_PROMPT].seqs[9].length = strlen(TERM_BELL_SEQ);
 	seq_groups[PL_AT_PROMPT].seqs[9].func = seq_term_bell;
 
-	strcpy(seq_groups[PL_AT_PROMPT].seqs[10].name, "Cursor up");
+	seq_groups[PL_AT_PROMPT].seqs[10].name = "Cursor up";
 	seq_groups[PL_AT_PROMPT].seqs[10].seq = TERM_CURSOR_UP_SEQ;
 	seq_groups[PL_AT_PROMPT].seqs[10].length = strlen(TERM_CURSOR_UP_SEQ);
 	seq_groups[PL_AT_PROMPT].seqs[10].func = seq_term_cursor_up;
 
-	strcpy(seq_groups[PL_AT_PROMPT].seqs[11].name, "Carriage return");
+	seq_groups[PL_AT_PROMPT].seqs[11].name = "Carriage return";
 	seq_groups[PL_AT_PROMPT].seqs[11].seq = TERM_CARRIAGE_RETURN_SEQ;
 	seq_groups[PL_AT_PROMPT].seqs[11].length = strlen(TERM_CARRIAGE_RETURN_SEQ);
 	seq_groups[PL_AT_PROMPT].seqs[11].func = seq_term_carriage_return;
 
-	strcpy(seq_groups[PL_AT_PROMPT].seqs[12].name, "Newline");
+	seq_groups[PL_AT_PROMPT].seqs[12].name = "Newline";
 	seq_groups[PL_AT_PROMPT].seqs[12].seq = TERM_NEWLINE_SEQ;
 	seq_groups[PL_AT_PROMPT].seqs[12].length = strlen(TERM_NEWLINE_SEQ);
 	seq_groups[PL_AT_PROMPT].seqs[12].func = seq_term_newline;
 
-	strcpy(seq_groups[PL_AT_PROMPT].seqs[13].name, "New pwd");
+	seq_groups[PL_AT_PROMPT].seqs[13].name = "New pwd";
 	seq_groups[PL_AT_PROMPT].seqs[13].seq = NEW_PWD_SEQ;
 	seq_groups[PL_AT_PROMPT].seqs[13].length = strlen(NEW_PWD_SEQ);
 	seq_groups[PL_AT_PROMPT].seqs[13].func = seq_new_pwd;
 
 	/* PL_EXECUTING */
-	strcpy(seq_groups[PL_EXECUTING].seqs[0].name, "PS1 separator");
+	seq_groups[PL_EXECUTING].seqs[0].name = "PS1 separator";
 	seq_groups[PL_EXECUTING].seqs[0].seq = PS1_SEPARATOR_SEQ;
 	seq_groups[PL_EXECUTING].seqs[0].length = strlen(PS1_SEPARATOR_SEQ);
 	seq_groups[PL_EXECUTING].seqs[0].func = seq_ps1_separator;
 
-	strcpy(seq_groups[PL_EXECUTING].seqs[1].name, "RPROMPT separator end");
+	seq_groups[PL_EXECUTING].seqs[1].name = "RPROMPT separator end";
 	seq_groups[PL_EXECUTING].seqs[1].seq = RPROMPT_SEPARATOR_END_SEQ;
 	seq_groups[PL_EXECUTING].seqs[1].length = strlen(RPROMPT_SEPARATOR_END_SEQ);
 	seq_groups[PL_EXECUTING].seqs[1].func = seq_rprompt_separator_end;
 
-	strcpy(seq_groups[PL_EXECUTING].seqs[2].name, "New pwd");
+	seq_groups[PL_EXECUTING].seqs[2].name = "New pwd";
 	seq_groups[PL_EXECUTING].seqs[2].seq = NEW_PWD_SEQ;
 	seq_groups[PL_EXECUTING].seqs[2].length = strlen(NEW_PWD_SEQ);
 	seq_groups[PL_EXECUTING].seqs[2].func = seq_new_pwd;
 
-	strcpy(seq_groups[PL_EXECUTING].seqs[3].name, "Zsh completion done");
+	seq_groups[PL_EXECUTING].seqs[3].name = "Zsh completion done";
 	seq_groups[PL_EXECUTING].seqs[3].seq = ZSH_COMPLETION_DONE_SEQ;
 	seq_groups[PL_EXECUTING].seqs[3].length = strlen(ZSH_COMPLETION_DONE_SEQ);
 	seq_groups[PL_EXECUTING].seqs[3].func = seq_zsh_completion_done;
 
 	/* PL_AT_RPROMPT */
-	strcpy(seq_groups[PL_AT_RPROMPT].seqs[0].name, "RPROMPT separator end");
+	seq_groups[PL_AT_RPROMPT].seqs[0].name = "RPROMPT separator end";
 	seq_groups[PL_AT_RPROMPT].seqs[0].seq = RPROMPT_SEPARATOR_END_SEQ;
 	seq_groups[PL_AT_RPROMPT].seqs[0].length = strlen(RPROMPT_SEPARATOR_END_SEQ);
 	seq_groups[PL_AT_RPROMPT].seqs[0].func = seq_rprompt_separator_end;
@@ -669,7 +669,7 @@ void enable_all_seqs(enum process_level pl) {
 
 
 
-void check_seqs(Buffer* b) {
+void check_seqs(Connection* b) {
 	gint i;
 	MatchEffect effect;
 
@@ -688,6 +688,7 @@ void check_seqs(Buffer* b) {
 
 			/* Execute the pattern match function and analyze. */
 			effect = (*(seq->func))(b);
+			//FIXME return error value from analyze effect!
 			analyze_effect(effect, b);
 
 			break;
@@ -787,7 +788,7 @@ static MatchStatus check_seq(gchar c, Sequence* sq) {
 
 /* React (or not) on the instance of a sequence match. */
 /* FIXME probably should return a gboolean for graceful crash. */
-static void analyze_effect(MatchEffect effect, Buffer* b) {
+static void analyze_effect(MatchEffect effect, Connection* b) {
 
 	switch (effect) {
 
@@ -839,7 +840,7 @@ static void analyze_effect(MatchEffect effect, Buffer* b) {
 
 		default:
 			/* Error -- this shouldn't happen unless I've screwed up */
-			viewglob_fatal("Received unexpected match result");
+			g_return_if_reached();
 			break;
 	}
 }
@@ -854,25 +855,25 @@ void clear_seqs(enum process_level pl) {
 
 
 
-static MatchEffect seq_ps1_separator(Buffer* b) {
+static MatchEffect seq_ps1_separator(Connection* b) {
 	pass_segment(b);
 	return ME_CMD_STARTED;
 }
 
 
-static MatchEffect seq_rprompt_separator_start(Buffer* b) {
+static MatchEffect seq_rprompt_separator_start(Connection* b) {
 	pass_segment(b);
 	return ME_RPROMPT_STARTED;
 }
 
 
-static MatchEffect seq_rprompt_separator_end(Buffer* b) {
+static MatchEffect seq_rprompt_separator_end(Connection* b) {
 	pass_segment(b);
 	return ME_CMD_STARTED;
 }
 
 
-static MatchEffect seq_new_pwd(Buffer* b) {
+static MatchEffect seq_new_pwd(Connection* b) {
 	if (u.pwd != NULL)
 		g_free(u.pwd);
 
@@ -884,7 +885,7 @@ static MatchEffect seq_new_pwd(Buffer* b) {
 }
 
 
-static MatchEffect seq_zsh_completion_done(Buffer* b) {
+static MatchEffect seq_zsh_completion_done(Connection* b) {
 	u.cmd.rebuilding = TRUE;
 	pass_segment(b);
 	return ME_NO_EFFECT;
@@ -893,7 +894,7 @@ static MatchEffect seq_zsh_completion_done(Buffer* b) {
 
 /* Add a carriage return to the present location in the command line,
    or if we're expecting a newline, command executed. */
-static MatchEffect seq_term_cmd_wrapped(Buffer* b) {
+static MatchEffect seq_term_cmd_wrapped(Connection* b) {
 	MatchEffect effect;
 
 	if (u.expect_newline)
@@ -911,7 +912,7 @@ static MatchEffect seq_term_cmd_wrapped(Buffer* b) {
 
 
 /* Back up one character. */
-static MatchEffect seq_term_backspace(Buffer* b) {
+static MatchEffect seq_term_backspace(Connection* b) {
 	MatchEffect effect;
 
 	if (u.cmd.pos > 0) {
@@ -927,7 +928,7 @@ static MatchEffect seq_term_backspace(Buffer* b) {
 
 
 /* Move cursor forward from present location n times. */
-static MatchEffect seq_term_cursor_forward(Buffer* b) {
+static MatchEffect seq_term_cursor_forward(Connection* b) {
 	MatchEffect effect = ME_NO_EFFECT;
 	gint n;
 	
@@ -959,7 +960,7 @@ static MatchEffect seq_term_cursor_forward(Buffer* b) {
 
 
 /* Move cursor backward from present location n times. */
-static MatchEffect seq_term_cursor_backward(Buffer* b) {
+static MatchEffect seq_term_cursor_backward(Connection* b) {
 	MatchEffect effect = ME_NO_EFFECT;
 	gint n;
 	
@@ -979,7 +980,7 @@ static MatchEffect seq_term_cursor_backward(Buffer* b) {
 
 
 /* Delete n chars from the command line. */
-static MatchEffect seq_term_delete_chars(Buffer* b) {
+static MatchEffect seq_term_delete_chars(Connection* b) {
 	MatchEffect effect = ME_NO_EFFECT;
 	gint n;
 	
@@ -996,7 +997,7 @@ static MatchEffect seq_term_delete_chars(Buffer* b) {
 }
 
 /* Insert n blanks at the current location on command line. */
-static MatchEffect seq_term_insert_blanks(Buffer* b) {
+static MatchEffect seq_term_insert_blanks(Connection* b) {
 	MatchEffect effect = ME_NO_EFFECT;
 	gint n;
 
@@ -1017,7 +1018,7 @@ static MatchEffect seq_term_insert_blanks(Buffer* b) {
 	0 = Clear to right
 	1 = Clear to left
 	2 = Clear all */
-static MatchEffect seq_term_erase_in_line(Buffer* b) {
+static MatchEffect seq_term_erase_in_line(Connection* b) {
 	MatchEffect effect = ME_NO_EFFECT;
 	gint n;
 	
@@ -1033,14 +1034,14 @@ static MatchEffect seq_term_erase_in_line(Buffer* b) {
 
 
 /* Just ignore the damn bell. */
-static MatchEffect seq_term_bell(Buffer* b) {
+static MatchEffect seq_term_bell(Connection* b) {
 	pass_segment(b);
 	return ME_NO_EFFECT;
 }
 
 
 /* Move cursor up from present location n times. */
-static MatchEffect seq_term_cursor_up(Buffer* b) {
+static MatchEffect seq_term_cursor_up(Connection* b) {
 	MatchEffect effect = ME_NO_EFFECT;
 	gint i, n;
 	gint last_cret, next_cret, offset;
@@ -1111,7 +1112,7 @@ static MatchEffect seq_term_cursor_up(Buffer* b) {
 
 /* Return cursor to beginning of this line, or if expecting
    newline, command executed. */
-static MatchEffect seq_term_carriage_return(Buffer* b) {
+static MatchEffect seq_term_carriage_return(Connection* b) {
 	MatchEffect effect;
 	gint p;
 
@@ -1145,7 +1146,7 @@ static MatchEffect seq_term_carriage_return(Buffer* b) {
    If so, then a newline that takes us out of the command line
    is interpreted as a command execution.  If not, then it is
    a command line wrap. */
-static MatchEffect seq_term_newline(Buffer* b) {
+static MatchEffect seq_term_newline(Connection* b) {
 	gint p;
 	MatchEffect effect;
 
@@ -1175,7 +1176,7 @@ static MatchEffect seq_term_newline(Buffer* b) {
 }
 
 
-static MatchEffect seq_nav_up(Buffer* b) {
+static MatchEffect seq_nav_up(Connection* b) {
 	DEBUG((df, "seq_nav_up!\n"));
 	eat_segment(b);
 	action_queue(A_SEND_UP);
@@ -1183,7 +1184,7 @@ static MatchEffect seq_nav_up(Buffer* b) {
 }
 
 
-static MatchEffect seq_nav_down(Buffer* b) {
+static MatchEffect seq_nav_down(Connection* b) {
 	DEBUG((df, "seq_nav_down!\n"));
 	eat_segment(b);
 	action_queue(A_SEND_DOWN);
@@ -1191,7 +1192,7 @@ static MatchEffect seq_nav_down(Buffer* b) {
 }
 
 
-static MatchEffect seq_nav_pgup(Buffer* b) {
+static MatchEffect seq_nav_pgup(Connection* b) {
 	DEBUG((df, "seq_nav_pgup!\n"));
 	eat_segment(b);
 	action_queue(A_SEND_PGUP);
@@ -1199,7 +1200,7 @@ static MatchEffect seq_nav_pgup(Buffer* b) {
 }
 
 
-static MatchEffect seq_nav_pgdown(Buffer* b) {
+static MatchEffect seq_nav_pgdown(Connection* b) {
 	DEBUG((df, "seq_nav_pgdown!\n"));
 	eat_segment(b);
 	action_queue(A_SEND_PGDOWN);
@@ -1207,7 +1208,7 @@ static MatchEffect seq_nav_pgdown(Buffer* b) {
 }
 
 
-static MatchEffect seq_nav_ctrl_g(Buffer* b) {
+static MatchEffect seq_nav_ctrl_g(Connection* b) {
 	DEBUG((df, "seq_nav_ctrlg!\n"));
 	b->n--;
 	b->pos++;
@@ -1216,7 +1217,7 @@ static MatchEffect seq_nav_ctrl_g(Buffer* b) {
 }
 
 
-static MatchEffect seq_nav_toggle(Buffer* b) {
+static MatchEffect seq_nav_toggle(Connection* b) {
 	DEBUG((df, "seq_nav_toggle!\n"));
 	eat_segment(b);
 	action_queue(A_TOGGLE);
@@ -1224,7 +1225,7 @@ static MatchEffect seq_nav_toggle(Buffer* b) {
 }
 
 
-static MatchEffect seq_nav_refocus(Buffer* b) {
+static MatchEffect seq_nav_refocus(Connection* b) {
 	DEBUG((df, "seq_nav_refocus!\n"));
 	eat_segment(b);
 	action_queue(A_REFOCUS);
@@ -1232,7 +1233,7 @@ static MatchEffect seq_nav_refocus(Buffer* b) {
 }
 
 
-static MatchEffect seq_nav_disable(Buffer* b) {
+static MatchEffect seq_nav_disable(Connection* b) {
 	DEBUG((df, "seq_nav_disable!\n"));
 	eat_segment(b);
 	action_queue(A_DISABLE);
@@ -1241,7 +1242,7 @@ static MatchEffect seq_nav_disable(Buffer* b) {
 
 
 /*
-static MatchEffect seq_nav_catch_all(Buffer* b) {
+static MatchEffect seq_nav_catch_all(Connection* b) {
 	DEBUG((df, "seq_nav_catch_all!\n"));
 	eat_segment(b);
 	return ME_NO_EFFECT;

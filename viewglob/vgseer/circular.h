@@ -21,7 +21,7 @@
 #define CIRCULAR_H
 
 /* This file only exists because of the circular dependencies between
-   sequences.h and buffer.h. */
+   sequences.h and connection.h. */
 
 #if HAVE_CONFIG_H
 #  include "config.h"
@@ -48,11 +48,11 @@ enum process_level {
 };
 
 
-typedef struct _Buffer Buffer;
-struct _Buffer {
-//	char* name;
-//	int fd_in;
-//	int fd_out;
+typedef struct _Connection Connection;
+struct _Connection {
+	char* name;
+	int fd_in;
+	int fd_out;
 	char* buf;
 	size_t size;            /* malloc'd size. */
 	size_t filled;          /* The amount of the buffer that is actually filled. */

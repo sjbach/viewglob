@@ -36,7 +36,7 @@ AC_PATH_XTRA
 
 dnl The display requires GTK+ 2.4.0.
 AM_PATH_GTK_2_0(2.4.0)
-AM_PATH_GLIB_2_0
+AM_PATH_GLIB_2_0(2.2.0)
 
 dnl Test for bash.
 AC_PATH_PROG(BASH_FULL_PATH, bash, nope)

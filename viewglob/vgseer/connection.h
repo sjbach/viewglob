@@ -17,8 +17,8 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#ifndef BUFFER_H
-#define BUFFER_H
+#ifndef CONNECTION_H
+#define CONNECTION_H
 
 #if HAVE_CONFIG_H
 #  include "config.h"
@@ -29,12 +29,12 @@
 
 G_BEGIN_DECLS
 
-void prepend_holdover(Buffer* b);
-void create_holdover(Buffer* b, gboolean write_later);
-void eat_segment(Buffer* b);
-void pass_segment(Buffer* b);
+void prepend_holdover(Connection* b);
+void create_holdover(Connection* b, gboolean write_later);
+void eat_segment(Connection* b);
+void pass_segment(Connection* b);
 
 G_END_DECLS
 
-#endif /* !BUFFER_H */
+#endif /* !CONNECTION_H */
 
