@@ -34,14 +34,14 @@
 #include "common.h"
 #include <X11/Xlib.h>
 
-BEGIN_C_DECLS
+G_BEGIN_DECLS
 
 
 void refocus(Display* disp, Window w1, Window w2);
 Window get_xid_from_title(Display* disp, char* title);
 
 
-END_C_DECLS
+G_END_DECLS
 
 #endif /* !X11_STUFF_H */
 
