@@ -1,7 +1,7 @@
 LDADD = @GTK_LIBS@
 AM_CFLAGS = @GTK_CFLAGS@
 
-pkgdata_PROGRAMS = gviewglob
+pkglib_PROGRAMS = gviewglob
 gviewglob_SOURCES = gviewglob.c exhibit.c dlisting.c wrap_box.c file_box.c
 
 BUILT_SOURCES = icons.h

@@ -1,3 +1,9 @@
+2004-09-20 15:58  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* src/Makefile.am, gviewglob/Makefile.am:
+	  Install to .../lib/viewglob instead of .../share/viewglob to conform
+	  to the Filesystem Hierarchy Standard.
+
 2004-09-19 20:11  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* actions.c, actions.h, seer.c, sequences.c:

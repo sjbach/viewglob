@@ -4,7 +4,7 @@ bin_SCRIPTS = viewglob
 
 viewglob: Makefile
 	rm -f viewglob.tmp
-	sed -e 's,@datadir\@,$(pkgdatadir),g' \
+	sed -e 's,@datadir\@,$(pkglibdir),g' \
 		-e 's,@BASH_FULL_PATH\@,$(BASH_FULL_PATH),g' \
 		-e 's,@PACKAGE_NAME\@,$(PACKAGE_NAME),g' \
 		-e 's,@PACKAGE_VERSION\@,$(PACKAGE_VERSION),g' \
@@ -44,9 +44,9 @@ tc_setraw.viewglob.h: Makefile
 CLEANFILES = viewglob .zshrc getopt.sh ptutil.viewglob.c       \
              ptutil.viewglob.h tc_setraw.viewglob.c tc_setraw.viewglob.h
 
-pkgdata_DATA = init-viewglob.bashrc .zshrc
-pkgdata_SCRIPTS = getopt.sh
-pkgdata_PROGRAMS = seer glob-expand
+pkglib_DATA = init-viewglob.bashrc .zshrc
+pkglib_SCRIPTS = getopt.sh
+pkglib_PROGRAMS = seer glob-expand
 
 seer_SOURCES = seer.c children.c cmdline.c sequences.c sanitize.c  \
                tc_setraw.viewglob.c ptutil.viewglob.c xmalloc.c    \
