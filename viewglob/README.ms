@@ -4,9 +4,9 @@
 .so giftcurs.tmac
 .
 .TL
-viewglob 0.9 README
+viewglob 0.9.1 README
 .br
-September 9, 2004
+September 20, 2004
 .AU
 Stephen Bach <sjbach@users.sourceforge.net>
 .
@@ -39,27 +39,31 @@ Feedback is welcome!
 .
 .Sh NEW IN THIS RELEASE
 .LP
-Preliminary support for zsh has been added.  From my testing viewglob works well with the advanced completion features of zsh, but there is a lot of ground to cover.  If you use zsh and find that viewglob isn't working well at all, please let me know - I'd be mostly interested in seeing your .zshrc file.
+First of all, if you've got a previous installation of viewglob that's not from a package manager (i.e. you just ran make && make install), you should remove it before installing this version.  I was incorrectly installing some binaries to .../share/viewglob instead of .../lib/viewglob, which goes against the Filesystem Hierarchy Standard.  If you've still got the sources to the old install, a make uninstall should do the job.  If not, the directory which you want to remove is, by default, /usr/local/share/viewglob.
 .LP
-This release also adds the capability to navigate the display from the terminal.  This is done in a way similar to GNU screen's Ctrl-A commands - you type the control key followed by a direction character.
+The display can now be toggled on and off with the sequence Ctrl-G <SPACE> (or Ctrl-G Ctrl-<SPACE>).  If the display is closed manually, viewglob now interprets it as toggling off, and doesn't disable itself.  A toggled-off display still follows the state of the shell (i.e. when it's toggled on it'll be at the right place).
 .LP
-I've chosen Ctrl-G as viewglob's control key, because a. the letter makes sense, and b. Ctrl-G is by default just a beeping (i.e. more annoying) version of Ctrl-C in most shell configurations, and I don't think people use it.  But I could be wrong.
+To disable viewglob (which you used to be able to do by closing the display), you can use the sequence Ctrl-G Q (but not Ctrl-G Ctrl-Q, because that's too easy to type accidentally).  Disabling a viewglob shell is non-recoverable.
 .LP
-If you think this is a bad move, let me know.  Making the control key configurable would complicate things, but I'd be willing to go the distance if there's a reason to do so.
-.LP
-I've tried to accomodate both emacs and vi users for key bindings:
+When you might want to toggle off the display (C-g <SPACE>):
 .RS
-.IP Down: 12n
-j, n, <Down Arrow>
-.IP Up:
-k, p, <Up Arrow>
-.IP Page\ Down:
-f, d, <PgDown>
-.IP Page\ Up:
-b, u, <PgUp>
+.IP - 3n
+You're dealing with a directory or a series of directories that have a lot of files, and the display's refresh time is slowing you down.
+.IP -
+You need the extra memory (the display's memory footprint is sometimes not as small as it probably should be); when the display is "toggled off", all of its memory is freed.
+.IP -
+It's just in the way.
 .RE
 .LP
-The Ctrl counterparts also work.  Read NEWS and ChangeLog for more information.  See the manpage (man viewglob) for notes and usage information.
+When you might want to disable viewglob (C-g q):
+.RS
+.IP - 3n
+You just want a regular shell, but you want to keep the current environment.
+.IP -
+Maybe you're compiling in the background, and your viewglob shell has begun to stutter.
+.RE
+.LP
+See NEWS for the full list of changes.
 .
 .Sh INSTALLATION
 .LP
@@ -71,7 +75,7 @@ Tested on:
 .Vs
 FreeBSD 4.10 with GTK+ 2.4.3
 GNU/Linux (various) with GTK+ 2.4+
-Mac OS X 10.3.5 with fink unstable providing GTK+ 2.4.9
+Mac OS X 10.3.5 with fink unstable providing GTK+ 2.4.9 (viewglob 0.9)
 .Ve
 I don't have access to Solaris, so I can only hope for the best -- it would be awesome if someone could try it for me.
 .

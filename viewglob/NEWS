@@ -1,3 +1,14 @@
+New in 0.9.1, released 2004-09-20:
+	* The display can now be toggled on and off from the terminal (and from
+	  the display).  Idea contributed by Andy Bastien.
+	* viewglob can be disabled from the terminal (leaving shell intact).
+	* Fixed some command line tracking issues introduced in 0.9.
+	* Fixed the "Show Hidden" context menu functionality.
+	* Fixed a display resizing bug.
+	* Fixed formatting in documentation.
+	* Conformance to Filesystem Hierarchy Standard.
+	* Miscellaneous bug fixes.
+
 New in 0.9, released 2004-09-09:
 	* Added support for zsh (please send bug reports!).
 	* Added functionality to navigate the display from the terminal.

@@ -1,8 +1,8 @@
 dnl Process this file with autoconf to produce a configure script.
-AC_INIT([viewglob], [0.9])
+AC_INIT([viewglob], [0.9.1])
 AM_INIT_AUTOMAKE
 AM_CONFIG_HEADER([config.h])
-RELEASE_DATE="September 9, 2004"
+RELEASE_DATE="September 20, 2004"
 
 AC_DEFINE_UNQUOTED([VG_RELEASE_DATE], ["$RELEASE_DATE"] , [Date of release])
 

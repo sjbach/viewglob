@@ -1,6 +1,6 @@
 
-                            viewglob 0.9 README
-                             September 9, 2004
+                           viewglob 0.9.1 README
+                            September 20, 2004
 
                 Stephen Bach <sjbach@users.sourceforge.net>
 
@@ -40,42 +40,51 @@ Feedback is welcome!
 NEW IN THIS RELEASE
 -------------------
 
-Preliminary  support for zsh has been added. From my testing viewglob works
-well with the advanced completion features of zsh, but there is  a  lot  of
-ground  to  cover. If you use zsh and find that viewglob isn't working well
-at all, please let me know - I'd be mostly interested in seeing your .zshrc
-file.
+First  of all, if you've got a previous installation of viewglob that's not
+from a package manager (i.e. you just ran make && make install), you should
+remove it before installing this version. I was incorrectly installing some
+binaries to .../share/viewglob  instead  of  .../lib/viewglob,  which  goes
+against  the Filesystem Hierarchy Standard. If you've still got the sources
+to the old install, a make uninstall should do the job. If not, the  direc­
+tory which you want to remove is, by default, /usr/local/share/viewglob.
 
-This release also adds the capability to navigate the display from the ter­
-minal. This is done in a way similar to GNU screen's Ctrl-A commands -  you
-type the control key followed by a direction character.
+The  display can now be toggled on and off with the sequence Ctrl-G <SPACE>
+(or Ctrl-G Ctrl-<SPACE>). If the display is closed manually,  viewglob  now
+interprets  it  as  toggling off, and doesn't disable itself. A toggled-off
+display still follows the state of the shell (i.e.  when  it's  toggled  on
+it'll be at the right place).
 
-I've  chosen  Ctrl-G as viewglob's control key, because a. the letter makes
-sense, and b. Ctrl-G is by default just a beeping (i.e. more annoying) ver­
-sion  of  Ctrl-C in most shell configurations, and I don't think people use
-it. But I could be wrong.
+To  disable  viewglob  (which you used to be able to do by closing the dis­
+play), you can use the sequence Ctrl-G Q (but not  Ctrl-G  Ctrl-Q,  because
+that's  too  easy to type accidentally). Disabling a viewglob shell is non-
+recoverable.
 
-If you think this is a bad move, let me know. Making the control  key  con­
-figurable would complicate things, but I'd be willing to go the distance if
-there's a reason to do so.
+When you might want to toggle off the display (C-g <SPACE>):
 
-I've tried to accomodate both emacs and vi users for key bindings:
+     -  You're dealing with a directory or a  series  of  directories  that
+        have  a lot of files, and the display's refresh time is slowing you
+        down.
 
-     Down:       j, n, <Down Arrow>
+     -  You need the extra memory (the display's memory footprint is  some­
+        times  not  as small as it probably should be); when the display is
+        "toggled off", all of its memory is freed.
 
-     Up:         k, p, <Up Arrow>
+     -  It's just in the way.
 
-     Page Down:  f, d, <PgDown>
+When you might want to disable viewglob (C-g q):
 
-     Page Up:    b, u, <PgUp>
+     -  You just want a regular shell, but you want  to  keep  the  current
+        environment.
 
-The Ctrl counterparts also work. Read NEWS and ChangeLog for more  informa­
-tion. See the manpage (man viewglob) for notes and usage information.
+     -  Maybe  you're  compiling in the background, and your viewglob shell
+        has begun to stutter.
+
+See NEWS for the full list of changes.
 
 INSTALLATION
 ------------
 
-See  the  file  INSTALL  for generic instructions. This program follows the
+See the file INSTALL for generic instructions.  This  program  follows  the
 ./configure && make && make install convention.
 
 PORTABILITY
@@ -85,7 +94,7 @@ Tested on:
 
      FreeBSD 4.10 with GTK+ 2.4.3
      GNU/Linux (various) with GTK+ 2.4+
-     Mac OS X 10.3.5 with fink unstable providing GTK+ 2.4.9
+     Mac OS X 10.3.5 with fink unstable providing GTK+ 2.4.9 (viewglob 0.9)
 
 I don't have access to Solaris, so I can only hope for the best -- it would
 be awesome if someone could try it for me.
@@ -94,6 +103,6 @@ REQUIREMENTS
 ------------
 
 viewglob requires a version of bash (any, as far as I know) and GTK+ 2.4. A
-version of zsh is also obviously required if you  wish  to  use  zsh  under
+version  of  zsh  is  also  obviously required if you wish to use zsh under
 viewglob.
 

@@ -1,4 +1,4 @@
-.TH VIEWGLOB 1 "9 September 2004"
+.TH VIEWGLOB 1 "20 September 2004"
 .SH NAME
 viewglob, gviewglob \- display shell expansion and globbing dynamically
 .SH SYNOPSIS
@@ -64,28 +64,29 @@ If the number of files in a shown directory is above the given max, viewglob wil
 .PP
 At the bottom of the display window is a textbox with your command line.  This is what viewglob is actually globbing on; if you find the display is not showing what you expected, check to make sure the display's command line is the same as the one in the shell, as they can be different (see \fBNOTES\fP below).
 .PP
-If you close the display without exiting the viewglob\-supervised shell, you'll get a single warning while viewglob figures out what's going on.  It will then mostly disable itself and you'll have a regular shell.
-.PP
 You can navigate the display from the terminal by pressing C\-g (Ctrl\-G) followed by a direction character.  They are:
 .PP
 .RS
 .PD 0
-.TP 12n
+.TP 16n
 Up:
-k, p, <Up Arrow>
+k, p, or <Up Arrow>
 .TP
 Down:
-j, n, <Down Arrow>
+j, n, or <Down Arrow>
 .TP
 Page Up:
-b, u, <PgUp>
+b, u, or <PgUp>
 .TP
 Page Down:
-f, d, <PgDown>
+f, d, or <PgDown>
+.TP
+Toggle on/off:
+<SPACE>
 .PD
 .RE
 .LP
-Their C\- counterparts should also work.  To enter a real C\-g to the shell, type it twice.
+Their C\- counterparts also work.  To enter a real C\-g to the shell, type it twice.  If the display is closed through the window manager (e.g. you clicked the little "x" icon), it's only been toggled off.  To get it back, type C-g <SPACE> in the terminal.  To disable viewglob functionality (i.e. close the display and stop tracking the command line, etc.), you can type C-g q.  Once viewglob has been disabled in this manner, it can't be re-enabled without exiting.
 .PP
 Directories referenced in several different ways will always be interpreted as the same directory if they're on the same device and have the same inode (i.e. they are indeed the same).  Therefore these three names are equivalent to viewglob (and a trailing slash does not differentiate a directory from one without a trailing slash):
 .IP
@@ -106,7 +107,7 @@ If present, this file specifies a default configuration for viewglob.  The file 
 .IP
 <\fIlong_option_name\fP> [ <\fIwhitespace\fP> <\fIvalue\fP> ]
 .IP
-So, to always use zsh, disable the asterisk at the prompt, use a display limit of 700, show hidden files, and use windows\-style sorting, the file should contain:
+So, to always use zsh, disable the asterisk at the prompt, use a display limit of 700, show hidden files, and use Windows\-style sorting, the file should contain:
 .IP
 .RS
 .PD 0
@@ -166,13 +167,13 @@ For more information, please visit:
 .SM HOME
 The location of the default configuration file.
 .SH BUGS
-Sometimes the heading labels in the display enforce a minimum width (which I find annoying), sometimes they don't.  I haven't figured out why.
+Sometimes the heading labels in the display enforce a minimum width (which I find annoying), sometimes they don't.  I haven't yet figured out why, but I think I'm getting close to tracking it down.
 .PP
 Resizing the terminal window after you've typed a multi\-line command will often cause viewglob's command line to become temporarily out of sync with the true command line, though it tries really hard to keep up.  No big deal if this happens \-\- viewglob will catch up at the start of the next command.
 .PP
 Ctrl\-C may not work in terminals with FreeBSD.
 .PP
-And there are certainly others.  If you spot any bugs (and they aren't explained by \fBNOTES\fP above), send me a message, okay?  Contributions are also very welcome.
+And there are certainly others.  If you spot any bugs (and they aren't explained by \fBNOTES\fP above), send me a message, okay?  Ideas and code contributions are also very welcome.
 .SH AUTHORS
 Stephen Bach <sjbach@users.sourceforge.net>
 .SH SEE ALSO
