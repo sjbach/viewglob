@@ -247,15 +247,17 @@ static void process_display(struct state* s) {
 	switch (param) {
 
 		case P_FILE:
+			/* Pass the file on to the client. */
 			g_message("(disp) P_FILE: %s", value);
 			break;
 
 		case P_KEY:
+			/* Pass the key on to the client. */
 			g_message("(disp) P_KEY: %s", value);
 			break;
 
 		case P_WIN_ID:
-			g_message("(disp) P_WIN_ID: %s", value);
+			/* Store the new window id. */
 			if ((s->display_win = strtoul(value, NULL, 10)) == ULONG_MAX) {
 				g_warning("(disp) window ID is out of bounds: %s", value);
 				s->display_win = 0;
