@@ -1,5 +1,5 @@
 %define name     viewglob
-%define version  0.8.1
+%define version  0.8.2
 %define release  1
 
 Name:        %{name}
@@ -39,6 +39,7 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(-,root,root,0755)
 %doc AUTHORS COPYING COPYING2 ChangeLog INSTALL NEWS README TODO
 %{_mandir}/man1/viewglob.1*
+%{_mandir}/man1/gviewglob.1*
 %{_bindir}/viewglob
 %{_bindir}/gviewglob
 %{_datadir}/%{name}/getopt.sh
@@ -48,6 +49,6 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/%{name}/gviewglob
 
 %changelog
-* Mon Aug 21 2004 Stephen Bach <sjbach@users.sourceforge.net> 0.8.1-1
+* Mon Aug 23 2004 Stephen Bach <sjbach@users.sourceforge.net> 0.8.2-1
 - Creating initial package
 
