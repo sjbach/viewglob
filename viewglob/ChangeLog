@@ -1,3 +1,7 @@
+2004-08-25 20:25  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* seer.c: fixed a tab-completion bug.
+
 2004-08-25 19:25  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* glob-expand.c:

@@ -473,15 +473,21 @@ static bool user_activity(void) {
 }
 
 
-/* Look for newlines, Ctrl-C, Ctrl-D, Ctrl-O and carriage returns */
+/* Look for characters which can break a line. */
 static bool scan_for_newline(const char* buff, size_t n) {
 	size_t i;
 
 	for (i = 0; i < n; i++) {
-		if ( *(buff + i) == '\n' || *(buff + i) == '\003'
-				|| *(buff + i) == '\004' || *(buff + i) == '\015'
-				|| *(buff + i) == '\017' ) {
-			return true;
+		switch ( *(buff + i) ) {
+			case '\n':     /* Newline. */
+			case '\t':     /* Horizontal tab (for tab completion with multiple potential hits). */
+			case '\003':   /* End of text -- Ctrl-C. */
+			case '\004':   /* End of transmission -- Ctrl-D. */
+			case '\015':   /* Carriage return -- this is the Enter key. */
+			case '\017':   /* Shift in -- Ctrl-O (operate-and-get-next in bash readline). */
+				return true;
+			default:
+				break;
 		}
 	}
 
