@@ -33,17 +33,9 @@
 #include "x11-stuff.h"
 #include "shell.h"
 
-struct sandbox {
-	enum shell_type   shell;
-	gint               fd;
-	pid_t             pid;
-};
-
 
 struct state {
 	GList*         clients;
-	struct sandbox bash;
-	struct sandbox zsh;
 	struct display d;
 	gboolean       persistent;
 	gint            listen_fd;
@@ -64,10 +56,11 @@ struct vgseer_client {
 
 	/* Dynamic properties (change often) */
 	enum shell_status status;
-	gchar*            cli;
-	gchar*            pwd;
-	gchar*            developing_mask;
-	gchar*            mask;
+	GString*          cli;
+	GString*          pwd;
+	GString*          developing_mask;
+	GString*          mask;
+	GString*          expanded;
 };
 
 
@@ -242,57 +235,43 @@ static void process_client(struct state* s, struct vgseer_client* v) {
 			break;
 
 		case P_PWD:
-			if (v->pwd == NULL || !STREQ(v->pwd, value)) {
-				g_free(v->pwd);
-				v->pwd = g_strdup(value);
-				g_message("(%d) New pwd: %s", v->fd, v->pwd);
-				//FIXME update display (no reglob) if active
-				//put_param(v->fd, P_FILE, "/blah/blah/so/and/so");
-				//put_param(v->fd, P_KEY, "a");
-			}
+			v->pwd = g_string_assign(v->pwd, value);
+			g_message("(%d) New pwd: %s", v->fd, v->pwd->str);
+			//FIXME update display (no reglob) if active
+			//put_param(v->fd, P_FILE, "/blah/blah/so/and/so");
+			//put_param(v->fd, P_KEY, "a");
 			break;
 
 		case P_CMD:
-			if (v->cli == NULL || !STREQ(v->cli, value)) {
-				g_free(v->cli);
-				v->cli = g_strdup(value);
-				g_message("(%d) New cli: %s", v->fd, v->cli);
-				//FIXME update display (with reglob) if active
-			}
+			v->cli = g_string_assign(v->cli, value);
+			g_message("(%d) New cli: %s", v->fd, v->cli->str);
+			//FIXME update display (with reglob) if active
 			break;
 
 		case P_MASK:
 			/* Clear the developing mask, if any. */
-			g_free(v->developing_mask);
-			v->developing_mask = NULL;
+			v->developing_mask = g_string_truncate(v->developing_mask, 0);
+			v->mask = g_string_assign(v->mask, value);
 
-			if (strlen(value) == 0) {
-				g_free(v->mask);
-				v->mask = NULL;
+			if (v->mask->len == 0) {
 				g_message("(%d) Mask cleared", v->fd);
 				// FIXME update display with reglob if active
 			}
-			else if (v->mask == NULL || !STREQ(v->mask, value)) {
-				g_free(v->mask);
-				v->mask = g_strdup(value);
-				g_message("(%d) New mask: %s", v->fd, v->mask);
+			else {
+				g_message("(%d) New mask: %s", v->fd, v->mask->str);
 				// FIXME update display with reglob if active
 			}
 			break;
 
 		case P_DEVELOPING_MASK:
-			if (strlen(value) == 0) {
-				g_free(v->developing_mask);
-				v->developing_mask = NULL;
+			v->developing_mask = g_string_assign(v->developing_mask, value);
+			if (v->developing_mask->len == 0) {
 				g_message("(%d) Developing mask cleared", v->fd);
 				// FIXME update display (with no reglob)
 			}
-			else if (v->developing_mask == NULL || !STREQ(v->developing_mask,
-						value)) {
-				g_free(v->developing_mask);
-				v->developing_mask = g_strdup(value);
+			else {
 				g_message("(%d) New developing mask: %s", v->fd,
-						v->developing_mask);
+						v->developing_mask->str);
 				// FIXME update display (with no reglob)
 			}
 			break;
@@ -302,7 +281,9 @@ static void process_client(struct state* s, struct vgseer_client* v) {
 			break;
 
 		case P_VGEXPAND_DATA:
-			g_message("(%d) Received vgexpand_data:\n%s", v->fd, value);
+			v->expanded = g_string_assign(v->expanded, value);
+			g_message("(%d) Received vgexpand_data:\n%s", v->fd,
+					v->expanded->str);
 			break;
 
 		case P_EOF:
@@ -533,12 +514,6 @@ static void die(struct state* s, gint result) {
 
 void state_init(struct state* s) {
 	s->clients = NULL;
-	s->bash.shell = ST_BASH;
-	s->bash.pid = -1;
-	s->bash.fd = -1;
-	s->zsh.shell = ST_ZSH;
-	s->zsh.pid = -1;
-	s->zsh.fd = -1;
 	s->d.pid = -1;
 	s->d.fd = -1;
 	s->persistent = FALSE;
@@ -559,9 +534,10 @@ void vgseer_client_init(struct vgseer_client* v) {
 	v->fd = -1;
 
 	v->status = SS_LOST;
-	v->cli = NULL;
-	v->pwd = NULL;
-	v->developing_mask = NULL;
-	v->mask = NULL;
+	v->cli = g_string_new(NULL);
+	v->pwd = g_string_new(NULL);
+	v->developing_mask = g_string_new(NULL);
+	v->mask = g_string_new(NULL);
+	v->expanded = g_string_new(NULL);
 }
 

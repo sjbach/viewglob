@@ -1,6 +1,9 @@
 2005-03-29 00:21  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* vgexpand.c: added special directory-only case for masks
+	* vgd.c:
+	  - Use GStrings for volatile data.
+	  - Sandbox activity is strictly in vgseer.
 
 2005-03-28 20:55  Stephen Bach <sjbach@users.sourceforge.net>
 
