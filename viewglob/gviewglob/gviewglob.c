@@ -561,8 +561,6 @@ static void set_icons(Exhibit* e) {
 	if (icon_size < 6)
 		icon_size = 12;
 
-	g_printerr("height: %d\n", icon_size);
-
 	/* Setup the application icons. */
 	icons = g_list_append(icons, gdk_pixbuf_new_from_inline(-1, icon_16x16_inline, FALSE, NULL));
 	icons = g_list_append(icons, gdk_pixbuf_new_from_inline(-1, icon_24x24_inline, FALSE, NULL));
