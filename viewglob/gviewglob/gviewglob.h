@@ -22,16 +22,12 @@
 
 #include <gtk/gtk.h>
 #include <gdk/gdk.h>
-#include "file_box.h"
-#include "dlisting.h"
 
 G_BEGIN_DECLS
 
 struct viewable_preferences {
 	GdkPixbuf* show_hidden_pixbuf;
 	GdkPixbuf* show_all_pixbuf;
-
-	GdkColor* separator_color;
 
 	/* Options */
 	gboolean show_icons;
@@ -44,22 +40,11 @@ struct viewable_preferences {
 };
 
 
-typedef struct _Exhibit Exhibit;
-struct _Exhibit {
-	GSList* dl_slist;           /* This is for DListing structs. */
-	GtkWidget* listings_box;    /* This is the vbox holding the dir/file listings. */
-	GtkAdjustment* vadjustment; /* Vertical scrollbar. */
-
-	GtkWidget* cmdline;         /* The entry holding the cmdline. */
-};
-
-
 /* Used in the read_string function. */
 struct holdover {
 	GString* string;
 	gboolean has_holdover;
 };
-
 
 enum glob_read_state {
 	GRS_DONE,
@@ -68,7 +53,7 @@ enum glob_read_state {
 	GRS_FILE_COUNT,
 	GRS_HIDDEN_COUNT,
 	GRS_DIR_NAME,
-	GRS_IN_LIMBO,     /* Either Input ends or another file follows. */
+	GRS_IN_LIMBO,     /* Either input ends or another file or dir follows. */
 	GRS_FILE_STATE,
 	GRS_FILE_TYPE,
 	GRS_FILE_NAME,

@@ -17,11 +17,13 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#if HAVE_CONFIG_H
-#  include "config.h"
-#endif
+#include "config.h"
 
 #include "common.h"
+#include "file_box.h"
+#include "dlisting.h"
+#include "exhibit.h"
+#include "gviewglob.h"
 
 #include <gtk/gtk.h>
 #include <gdk/gdk.h>
@@ -29,12 +31,11 @@
 #include <string.h>       /* For strcmp. */
 #include <unistd.h>       /* For getopt. */
 #include <stdio.h>        /* For BUFSIZ. */
-#include "file_box.h"
-#include "gviewglob.h"
+
 
 /* Prototypes. */
-static gboolean receive_data(GIOChannel* source, gchar* buff, gsize size, gsize* bytes_read);
-static GString* read_string(const gchar* buff, gsize* start, gsize n, gchar delim, struct holdover* ho, gboolean* finished);
+static gboolean  receive_data(GIOChannel* source, gchar* buff, gsize size, gsize* bytes_read);
+static GString*  read_string(const gchar* buff, gsize* start, gsize n, gchar delim, struct holdover* ho, gboolean* finished);
 
 static void        set_icons(Exhibit* e);
 static GdkPixbuf*  make_pixbuf_scaled(const guint8 icon_inline[], gint scale_height);
@@ -42,28 +43,22 @@ static GdkPixbuf*  make_pixbuf_scaled(const guint8 icon_inline[], gint scale_hei
 static gboolean  parse_args(int argc, char** argv);
 static void      report_version(void);
 
-static void process_cmd_data(const gchar* buff, gsize bytes, Exhibit* e);
-static void process_glob_data(const gchar* buff, gsize bytes, Exhibit* e);
-
-static void exhibit_unmark_all(Exhibit* e);
-static void exhibit_cull(Exhibit* e);
-static void exhibit_rearrange_and_show(Exhibit* e);
-static void exhibit_do_order(Exhibit* e, GString* order);
+static void  process_cmd_data(const gchar* buff, gsize bytes, Exhibit* e);
+static void  process_glob_data(const gchar* buff, gsize bytes, Exhibit* e);
 
 static FileSelection  map_selection_state(const GString* string);
 static FileType       map_file_type(const GString* string);
 
-static gint cmp_dlisting_same_name(gconstpointer a, gconstpointer b);
-static gint cmp_dlisting_same_rank(gconstpointer a, gconstpointer b);
-
 static gboolean  win_delete_event(GtkWidget*, GdkEvent*, gpointer);
-static gboolean configure_event(GtkWidget* window, GdkEventConfigure* event, Exhibit* e);
+static gboolean  configure_event(GtkWidget* window, GdkEventConfigure* event, Exhibit* e);
 
+/* Globals. */
 struct viewable_preferences v;
 
 #if DEBUG_ON
 FILE* df;
 #endif
+
 
 /* Chooses a selection state based on the string's first char. */
 static FileSelection map_selection_state(const GString* string) {
@@ -104,27 +99,6 @@ static FileType map_file_type(const GString* string) {
 			g_warning("Unexpected file type \"%c\".", *(string->str));
 			return FT_REGULAR;
 	}
-}
-
-
-static gint cmp_dlisting_same_name(gconstpointer a, gconstpointer b) {
-	const DListing* aa = a;
-	const GString* bb = b;
-
-	return strcmp( aa->name->str, bb->str );
-}
-
-
-static gint cmp_dlisting_same_rank(gconstpointer a, gconstpointer b) {
-	const DListing* aa = a;
-	const gint* bb = b;
-
-	if ( aa->rank == *bb )
-		return 0;
-	else if ( aa->rank > *bb )
-		return 1;
-	else
-		return -1;
 }
 
 
@@ -365,7 +339,6 @@ static void process_glob_data(const gchar* buff, gsize bytes, Exhibit* e) {
 	static DListing* dl;
 
 	GString* string = NULL;
-	GSList* search_result;
 	gboolean completed = FALSE;
 
 	gsize pos = 0;
@@ -418,22 +391,8 @@ static void process_glob_data(const gchar* buff, gsize bytes, Exhibit* e) {
 				string = read_string(buff, &pos, bytes, '\n', &ho, &completed);
 				if (completed) {
 
-					search_result = g_slist_find_custom(e->dl_slist, string, cmp_dlisting_same_name);
-					if (search_result) {
-						/* DEBUG((df, "<known_dir>")); */
-						dl = search_result->data;
-						dlisting_update_file_counts(dl, selected_count, total_count, hidden_count);
-						dlisting_mark(dl, dir_rank);
+					dl = exhibit_add(e, string, dir_rank, selected_count, total_count, hidden_count);
 
-						/* We'll be reading these next, at which point they'll be remarked. */
-						file_box_begin_read(FILE_BOX(dl->file_box));
-					}
-					else {
-						/* It's a new DListing. */
-						/* DEBUG((df, "<new_dir>")); */
-						dl = dlisting_new(string, dir_rank, selected_count, total_count, hidden_count, e->listings_box->allocation.width);
-						e->dl_slist = g_slist_append(e->dl_slist, dl);
-					}
 					g_string_free(selected_count, TRUE);
 					g_string_free(total_count, TRUE);
 					g_string_free(hidden_count, TRUE);
@@ -512,110 +471,10 @@ static void process_glob_data(const gchar* buff, gsize bytes, Exhibit* e) {
 	if (rs == GRS_DONE) {
 		exhibit_cull(e);
 		exhibit_rearrange_and_show(e);
-		gtk_widget_queue_resize(e->listings_box);  /* To make the scrollbars rescale. */
 		DEBUG((df, "(^^)"));
 	}
 
 	DEBUG((df, "(**)"));
-}
-
-
-static void exhibit_rearrange_and_show(Exhibit* e) {
-	gint next_rank = 1;
-	DListing* dl;
-	GSList* search_result;
-
-	while ( (search_result = g_slist_find_custom(e->dl_slist, &next_rank, cmp_dlisting_same_rank)) ) {
-		dl = search_result->data;
-
-		/* Commit the updates to the file box. */
-		file_box_flush(FILE_BOX(dl->file_box));
-
-		/* Ordering */
-		if (dlisting_is_new(dl)) {
-			gtk_box_pack_start(GTK_BOX(e->listings_box), dl->widget, FALSE, FALSE, 0);
-			gtk_box_reorder_child(GTK_BOX(e->listings_box), dl->widget, next_rank - 1);
-			gtk_widget_show(dl->widget);
-		}
-		else if (dl->rank != dl->old_rank)
-			gtk_box_reorder_child(GTK_BOX(e->listings_box), dl->widget, next_rank - 1);
-
-		next_rank++;
-		DEBUG((df, "(~~)"));
-	}
-	DEBUG((df, "(@@)"));
-}
-
-
-/* Remove DListings and their widgets if they're no longer marked for showing. */
-static void exhibit_cull(Exhibit* e) {
-	GSList* iter;
-	DListing* dl;
-
-	iter = e->dl_slist;
-	while (iter) {
-		dl = iter->data;
-
-		if (dl->marked)
-			iter = g_slist_next(iter);
-		else {
-			/* Take no prisoners. */
-			/* DEBUG((df, "removing %s\n", dl->name->str)); */
-			GSList* tmp;
-			tmp = iter;
-			iter = g_slist_next(iter);
-			e->dl_slist = g_slist_delete_link(e->dl_slist, tmp);
-			dlisting_free(dl);
-		}
-	}
-}
-
-
-static void exhibit_unmark_all(Exhibit* e) {
-	GSList* iter;
-	DListing* dl;
-
-	for (iter = e->dl_slist; iter; iter = g_slist_next(iter)) {
-		dl = iter->data;
-		dl->marked = FALSE;
-	}
-}
-
-
-static void exhibit_do_order(Exhibit* e, GString* order) {
-
-	gdouble upper, lower, current, step_increment, page_increment, change;
-
-	change = 0;
-	current = gtk_adjustment_get_value(e->vadjustment);
-	step_increment = e->vadjustment->step_increment;
-	page_increment = e->vadjustment->page_increment;
-	lower = e->vadjustment->lower;
-
-	/* Otherwise we scroll down into a page of black. */
-	upper = e->vadjustment->upper - page_increment - step_increment;
-
-	if (strcmp(order->str, "lost") == 0) {
-		/* Do something. */
-		/*gtk_entry_set_text(GTK_ENTRY(e->cmdline), "I give up!");*/
-	}
-	else if (strcmp(order->str, "up") == 0)
-		change = -step_increment;
-	else if (strcmp(order->str, "down") == 0)
-		change = +step_increment;
-	else if (strcmp(order->str, "pgup") == 0)
-		change = -page_increment;
-	else if (strcmp(order->str, "pgdown") == 0)
-		change = +page_increment;
-	else {
-		g_error("Unexpected order in process_cmd_data.");
-		return;
-	}
-
-	if (change) {
-		gtk_adjustment_set_value(e->vadjustment, CLAMP(current + change, lower, upper));
-		gtk_adjustment_value_changed(e->vadjustment);
-	}
 }
 
 
@@ -779,10 +638,7 @@ static gboolean configure_event(GtkWidget* window, GdkEventConfigure* event, Exh
 	if (event->width != window->allocation.width) {
 		for (dl_iter = e->dl_slist; dl_iter; dl_iter = g_slist_next(dl_iter)) {
 			dl = dl_iter->data;
-			if (dl->file_box) {
-				file_box_set_optimal_width(FILE_BOX(dl->file_box), 
-						file_box_get_optimal_width(FILE_BOX(dl->file_box)) + event->width - window->allocation.width);
-			}
+			dlisting_set_optimal_width(dl, ((gint)dl->optimal_width) + event->width - window->allocation.width);
 		}
 	}
 
@@ -862,6 +718,8 @@ int main(int argc, char *argv[]) {
 	GtkWidget* vbox;
 	GtkWidget* scrolled_window;
 
+	GtkStyle* style;
+
 	GtkWidget* command_line_entry;
 
 	Exhibit	e;        /* This is pretty central -- it gets passed around a lot. */
@@ -914,8 +772,8 @@ int main(int argc, char *argv[]) {
 
 	/* The DListing separator looks better if it's filled instead of sunken, so use the text color.
 	   This probably isn't the best way to do this. */
-	GtkStyle* style = gtk_widget_get_default_style();
-	v.separator_color = &style->fg[GTK_STATE_NORMAL];
+    style = gtk_widget_get_default_style();
+	dlisting_set_separator_color(style->fg[GTK_STATE_NORMAL]);
 
 	/* Setup the listings display. */
 	e.listings_box = gtk_vbox_new(FALSE, 5);

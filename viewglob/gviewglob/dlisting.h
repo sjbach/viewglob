@@ -20,38 +20,61 @@
 #ifndef DLISTING_H
 #define DLISTING_H
 
-#include <gtk/gtk.h>
+#include <gtk/gtkvbox.h>
 
 G_BEGIN_DECLS
 
-typedef struct _DListing DListing;
-struct _DListing {
-	GString* name;
-	gint rank;
-	gint old_rank;
-	gboolean marked;
-	GString* selected_count;
-	GString* total_count;
-	GString* hidden_count;
+/* --- type macros --- */
+#define DLISTING_TYPE		     (dlisting_get_type())
+#define DLISTING(obj)	         (G_TYPE_CHECK_INSTANCE_CAST ((obj), DLISTING_TYPE, DListing))
+#define DLISTING_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass), DLISTING_TYPE, DListingClass))
+#define IS_DLISTING(obj)	     (G_TYPE_CHECK_INSTANCE_TYPE ((obj), DLISTING_TYPE))
+#define IS_DLISTING_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), DLISTING_TYPE))
+#define DLISTING_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS ((obj), DLISTING_TYPE, DListingClass))
 
-	GtkWidget* widget;
+/* --- typedefs --- */
+typedef struct _DListing DListing;
+typedef struct _DListingClass DListingClass;
+
+/* --- DListing --- */
+struct _DListing {
+	GtkVBox   vbox;
+
+	guint optimal_width;
+
+	GString*  name;
+	gint      rank;
+	gint      old_rank;
+	gboolean  marked;
+
+	GString*  selected_count;
+	GString*  total_count;
+	GString*  hidden_count;
+
+	GtkWidget* heading_event_box;
 	GtkWidget* name_label;
 	GtkWidget* count_label;
-
 	GtkWidget* menu;
-
 	GtkWidget* file_box;
 };
 
+struct _DListingClass {
+	GtkVBoxClass parent_class;
+};
 
-DListing*  dlisting_new(const GString* name, gint rank, const GString* selected_count, const GString* total_count, const GString* hidden_count, gint width);
-void       dlisting_mark(DListing* d, gint rank);
-void       dlisting_update_file_counts(DListing* dl, const GString* selected_count, const GString* total_count, const GString* hidden_count);
-void       dlisting_reset_file_count_label(DListing* dl);
-gboolean   dlisting_is_new(const DListing* dl);
-void       dlisting_free(DListing* dl);
+
+/* --- prototypes --- */
+GType       dlisting_get_type(void) G_GNUC_CONST;
+GtkWidget*  dlisting_new(void);
+void        dlisting_set_separator_color(GdkColor color);
+void        dlisting_destroy(DListing* dl);
+void        dlisting_set_name(DListing* dl, const gchar* name);
+void        dlisting_set_file_counts(DListing* dl, const gchar* selected, const gchar* total, const gchar* hidden);
+void        dlisting_set_optimal_width(DListing* dl, gint width);
+void        dlisting_mark(DListing* d, gint rank);
+gboolean    dlisting_is_new(const DListing* dl);
+void        dlisting_free(DListing* dl);
 
 G_END_DECLS
 
 #endif /* !DLISTING_H */
-

@@ -2,7 +2,7 @@ LDADD = @GTK_LIBS@
 AM_CFLAGS = @GTK_CFLAGS@
 
 pkgdata_PROGRAMS = gviewglob
-gviewglob_SOURCES = gviewglob.c dlisting.c wrap_box.c file_box.c
+gviewglob_SOURCES = gviewglob.c exhibit.c dlisting.c wrap_box.c file_box.c
 
 BUILT_SOURCES = icons.h
 icons.h: Makefile
@@ -24,10 +24,11 @@ icons.h: Makefile
 	mv icons.tmp icons.h
 
 CLEANFILES = icons.h icons.tmp
-noinst_HEADERS = gviewglob.h dlisting.h wrap_box.h file_box.h common.h
+noinst_HEADERS = gviewglob.h exhibit.h dlisting.h wrap_box.h file_box.h \
+                 common.h
 EXTRA_DIST = icon_16x16.png icon_24x24.png icon_32x32.png icon_36x36.png \
-			 gnome-fs-regular.png gnome-fs-directory.png gnome-fs-fifo.png \
-			 gnome-dev-symlink.png gnome-fs-blockdev.png gnome-fs-chardev.png \
-			 gnome-fs-socket.png gnome-fs-executable.png \
-			 all.png hidden.png
+             gnome-fs-regular.png gnome-fs-directory.png gnome-fs-fifo.png \
+             gnome-dev-symlink.png gnome-fs-blockdev.png gnome-fs-chardev.png \
+             gnome-fs-socket.png gnome-fs-executable.png \
+             all.png hidden.png
 

@@ -35,10 +35,10 @@
 G_BEGIN_DECLS
 
 /* --- type macros --- */
-#define WRAP_BOX_TYPE		       (wrap_box_get_type ())
-#define WRAP_BOX(obj)	           (G_TYPE_CHECK_INSTANCE_CAST ((obj), WRAP_BOX_TYPE, WrapBox))
+#define WRAP_BOX_TYPE		     (wrap_box_get_type ())
+#define WRAP_BOX(obj)	         (G_TYPE_CHECK_INSTANCE_CAST ((obj), WRAP_BOX_TYPE, WrapBox))
 #define WRAP_BOX_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass), WRAP_BOX_TYPE, WrapBoxClass))
-#define IS_WRAP_BOX(obj)	       (G_TYPE_CHECK_INSTANCE_TYPE ((obj), WRAP_BOX_TYPE))
+#define IS_WRAP_BOX(obj)	     (G_TYPE_CHECK_INSTANCE_TYPE ((obj), WRAP_BOX_TYPE))
 #define IS_WRAP_BOX_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), WRAP_BOX_TYPE))
 #define WRAP_BOX_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS ((obj), WRAP_BOX_TYPE, WrapBoxClass))
 
