@@ -253,9 +253,12 @@ static gboolean receive_data(GIOChannel* source, gchar* buff, gsize size, gsize*
 
 /* Finite state machine to interpret cmd data. */
 static void process_cmd_data(const gchar* buff, gsize bytes, Exhibit* e) {
-	static enum read_state rs = RS_DONE;  /* These variables are all static because they may need */
-	static gboolean advance = FALSE;      /* to be preserved between calls to this function (in   */
-	                                      /* the case that buff is not the whole input).          */
+
+	/* These variables are all static because they may need
+	   to be preserved between calls to this function (in
+	   the case that buff is not the whole input).  */
+	static enum cmd_read_state rs = CRS_DONE;
+	static gboolean advance = FALSE;
 
 	static struct holdover ho = { NULL, FALSE };
 
@@ -263,6 +266,14 @@ static void process_cmd_data(const gchar* buff, gsize bytes, Exhibit* e) {
 	gboolean completed = FALSE;
 
 	gsize pos = 0;
+
+	DEBUG((df,"\n[["));
+	while (pos < bytes) {
+		DEBUG((df,"%c", buff[pos]));
+		pos++;
+	}
+	DEBUG((df,"\n]]"));
+	pos = 0;
 
 	while (pos < bytes) {
 
@@ -274,19 +285,52 @@ static void process_cmd_data(const gchar* buff, gsize bytes, Exhibit* e) {
 		}
 
 		switch (rs) {
-			case RS_DONE:
+
+			case CRS_DONE:
 				DEBUG((df, ":::"));
-				rs = RS_CMD;
+
+				/* Determine what type of data is being read. */
+				string = read_string(buff, &pos, bytes, ':', &ho, &completed);
+				if (completed) {
+					if (strcmp(string->str, "cmd") == 0)
+						rs = CRS_CMD;
+					else if (strcmp(string->str, "order") == 0)
+						rs = CRS_ORDER;
+					else {
+						g_error("Unexpected data type in process_cmd_data.");
+						return;
+					}
+
+					advance = TRUE;
+					g_string_free(string, TRUE);
+				}
 				break;
 
-			case RS_CMD:
+			case CRS_CMD:
 				string = read_string(buff, &pos, bytes, '\n', &ho, &completed);
 				if (completed) {
 					/* Set the cmdline text. */
 					DEBUG((df, "cmd: %s\n", string->str));
 					gtk_entry_set_text(GTK_ENTRY(e->cmdline), string->str);
-					rs = RS_DONE;
+					rs = CRS_DONE;
 					advance = TRUE;
+					g_string_free(string, TRUE);
+				}
+				break;
+
+			case CRS_ORDER:
+				string = read_string(buff, &pos, bytes, '\n', &ho, &completed);
+				if (completed) {
+					if (strcmp(string->str, "lost") == 0) {
+						/* Do something. */
+						gtk_entry_set_text(GTK_ENTRY(e->cmdline), "I give up!");
+					}
+					else {
+						g_error("Unexpected order in process_cmd_data.");
+						return;
+					}
+					advance = TRUE;
+					rs = CRS_DONE;
 					g_string_free(string, TRUE);
 				}
 				break;
@@ -304,9 +348,12 @@ static void process_cmd_data(const gchar* buff, gsize bytes, Exhibit* e) {
 /* Finite state machine to interpret glob data. */
 /* TODO: instead of freeing string after each read, try to use it correctly. */
 static void process_glob_data(const gchar* buff, gsize bytes, Exhibit* e) {
-	static enum read_state rs = RS_DONE;  /* These variables are all static because they may need */
-	static gboolean advance = FALSE;      /* to be preserved between calls to this function (in   */
-	                                      /* the case that buff is not the whole input).          */
+
+	/* These variables are all static because they may need
+	   to be preserved between calls to this function (in
+	   the case that buff is not the whole input).  */
+	static enum glob_read_state rs = GRS_DONE;
+	static gboolean advance = FALSE;
 
 	static struct holdover ho = { NULL, FALSE };
 
@@ -337,40 +384,40 @@ static void process_glob_data(const gchar* buff, gsize bytes, Exhibit* e) {
 		}
 
 		switch (rs) {
-			case RS_DONE:
+			case GRS_DONE:
 				DEBUG((df, ":::"));
 				dir_rank = 0;
 				exhibit_unmark_all(e);
-				rs = RS_SELECTED_COUNT;
+				rs = GRS_SELECTED_COUNT;
 				break;
 
-			case RS_SELECTED_COUNT:
+			case GRS_SELECTED_COUNT:
 				selected_count = read_string(buff, &pos, bytes, ' ', &ho, &completed);
 				if (completed) {
 					dir_rank++;
-					rs = RS_FILE_COUNT;
+					rs = GRS_FILE_COUNT;
 					advance = TRUE;
 				}
 				break;
 
-			case RS_FILE_COUNT:
+			case GRS_FILE_COUNT:
 				total_count = read_string(buff, &pos, bytes, ' ', &ho, &completed);
 				if (completed) {
-					rs = RS_HIDDEN_COUNT;
+					rs = GRS_HIDDEN_COUNT;
 					advance = TRUE;
 				}
 				break;
 
-			case RS_HIDDEN_COUNT:
+			case GRS_HIDDEN_COUNT:
 				hidden_count = read_string(buff, &pos, bytes, ' ', &ho, &completed);
 				if (completed) {
-					rs = RS_DIR_NAME;
+					rs = GRS_DIR_NAME;
 					advance = TRUE;
 				}
 				break;
 
 			/* Get dl, the DListing we're currently working on, from here. */
-			case RS_DIR_NAME:
+			case GRS_DIR_NAME:
 				string = read_string(buff, &pos, bytes, '\n', &ho, &completed);
 				if (completed) {
 
@@ -395,61 +442,61 @@ static void process_glob_data(const gchar* buff, gsize bytes, Exhibit* e) {
 					g_string_free(hidden_count, TRUE);
 
 					advance = TRUE;
-					rs = RS_IN_LIMBO;
+					rs = GRS_IN_LIMBO;
 				}
 				break;
 
 			/* Either we'll read another FItem (or the first), a new DListing, or EOF (double \n). */
-			case RS_IN_LIMBO:
+			case GRS_IN_LIMBO:
 				completed = FALSE;
 				if ( *(buff + pos) == '\t' ) {        /* Another FItem. */
 					advance = TRUE;
-					rs = RS_FILE_STATE;
+					rs = GRS_FILE_STATE;
 				}
 				else if ( *(buff + pos) == '\n' ) {   /* End of glob-expand data. */
 					advance = TRUE;
 					DEBUG((df, "~~~"));
-					rs = RS_DONE;
+					rs = GRS_DONE;
 				}
 				else {                                /* Another DListing. */
 					/* (No need to advance) */
-					rs = RS_SELECTED_COUNT;
+					rs = GRS_SELECTED_COUNT;
 				}
 
 				break;
 
 
 			/* Have to save file_state and file_type until we get file_name */
-			case RS_FILE_STATE:
+			case GRS_FILE_STATE:
 				string = read_string(buff, &pos, bytes, ' ', &ho, &completed);
 				if (completed) {
 					selection = map_selection_state(string);
 					g_string_free(string, TRUE);
 
 					advance = TRUE;
-					rs = RS_FILE_TYPE;
+					rs = GRS_FILE_TYPE;
 				}
 				break;
 
-			case RS_FILE_TYPE:
+			case GRS_FILE_TYPE:
 				string = read_string(buff, &pos, bytes, ' ', &ho, &completed);
 				if (completed) {
 					type = map_file_type(string);
 					g_string_free(string, TRUE);
 
 					advance = TRUE;
-					rs = RS_FILE_NAME;
+					rs = GRS_FILE_NAME;
 				}
 				break;
 
-			case RS_FILE_NAME:
+			case GRS_FILE_NAME:
 				string = read_string(buff, &pos, bytes, '\n', &ho, &completed);
 				if (completed) {
 					file_box_add(FILE_BOX(dl->file_box), string, type, selection);
 					g_string_free(string, TRUE);
 
 					advance = TRUE;
-					rs = RS_IN_LIMBO;
+					rs = GRS_IN_LIMBO;
 				}
 				break;
 
@@ -465,7 +512,7 @@ static void process_glob_data(const gchar* buff, gsize bytes, Exhibit* e) {
 	/* We only display the glob data if we've read a set AND it's at the end of the buffer.  Otherwise,
 	   the stuff we'd display would immediately be overwritten by the stuff we're going to read in the
 	   next iteration (which should happen immediately). */
-	if (rs == RS_DONE) {
+	if (rs == GRS_DONE) {
 		exhibit_cull(e);
 		exhibit_rearrange_and_show(e);
 		gtk_widget_queue_resize(e->listings_box);  /* To make the scrollbars rescale. */

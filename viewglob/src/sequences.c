@@ -17,13 +17,12 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#if HAVE_CONFIG_H
-#  include "config.h"
-#endif
+#include "config.h"
 
 #include "common.h"
 #include "viewglob-error.h"
 #include "seer.h"
+#include "actions.h"
 #include "sequences.h"
 
 #include <string.h>

@@ -17,14 +17,13 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#if HAVE_CONFIG_H
-#  include "config.h"
-#endif
+#include "config.h"
 
 #include "common.h"
 #include "viewglob-error.h"
 #include "seer.h"
 #include "sequences.h"
+#include "actions.h"
 #include "cmdline.h"
 
 #include <string.h>
@@ -186,6 +185,7 @@ bool cmd_del_chars(int n) {
 
 	if (u.cmd.pos + n > u.cmd.length) {
 		/* We've failed to keep up. */
+		action_queue(A_SEND_LOST);
 		return false;
 	}
 
@@ -218,8 +218,6 @@ bool cmd_wipe_in_line(enum direction dir) {
 				if (!u.cmd.pos)
 					cmd_del_chars(1);
 			}
-
-
 			break;
 		case D_LEFT:	/* Clear to left -- I've never seen this happen. */
 			DEBUG((df, "D_LEFT seen in cmd_wipe_in_line\n"));
@@ -254,6 +252,7 @@ bool cmd_backspace(int n) {
 			u.cmd.pos--;
 		else {
 			viewglob_error("Backspaced out of command line");
+			action_queue(A_SEND_LOST);
 			return false;
 		}
 	}
@@ -264,6 +263,7 @@ bool cmd_backspace(int n) {
 bool cmd_insert_chars(char c, int n) {
 	if (n < 0) {
 		viewglob_error("<0 in cmd_insert_chars");
+		action_queue(A_SEND_LOST);
 		return false;
 	}
 

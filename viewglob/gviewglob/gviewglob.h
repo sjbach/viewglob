@@ -60,17 +60,23 @@ struct holdover {
 };
 
 
-enum read_state {
-	RS_DONE,
-	RS_CMD,
-	RS_SELECTED_COUNT, 
-	RS_FILE_COUNT,
-	RS_HIDDEN_COUNT,
-	RS_DIR_NAME,
-	RS_IN_LIMBO,     /* Either Input ends or another file follows. */
-	RS_FILE_STATE,
-	RS_FILE_TYPE,
-	RS_FILE_NAME,
+enum glob_read_state {
+	GRS_DONE,
+	GRS_CMD,
+	GRS_SELECTED_COUNT, 
+	GRS_FILE_COUNT,
+	GRS_HIDDEN_COUNT,
+	GRS_DIR_NAME,
+	GRS_IN_LIMBO,     /* Either Input ends or another file follows. */
+	GRS_FILE_STATE,
+	GRS_FILE_TYPE,
+	GRS_FILE_NAME,
+};
+
+enum cmd_read_state {
+	CRS_DONE,
+	CRS_CMD,
+	CRS_ORDER,
 };
 
 G_END_DECLS

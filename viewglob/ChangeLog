@@ -1,3 +1,9 @@
+2004-09-05 20:43  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* gviewglob.c, gviewglob.h, src/Makefile.am, cmdline.c, sanitize.c, seer.c,
+	  seer.h, sequences.c, actions.h, actions.c:
+	  Getting ready to implement terminal navigation of the display.
+
 2004-09-05 16:18  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* dlisting.c: differentiated the appearance of restricted dlistings.

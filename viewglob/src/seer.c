@@ -25,6 +25,7 @@
 #include "tc_setraw.viewglob.h"
 #include "hardened_io.h"
 #include "sanitize.h"
+#include "actions.h"
 #include "seer.h"
 
 #include <signal.h>
@@ -55,6 +56,7 @@ static bool match_loop(enum process_level pl);
 static bool eat(char* buff, size_t* n, size_t* start);
 
 static void send_sane_cmd(struct display* d);
+static void send_lost(struct display* d);
 
 static void parse_args(int argc, char** argv);
 static void report_version(void);
@@ -63,7 +65,7 @@ static void report_version(void);
 /* Globals */
 struct options opts;
 
-struct user_shell u;	/* Almost everything revolves around this. */
+struct user_shell u;    /* Almost everything revolves around this. */
 struct glob_shell x;
 struct display disp;
 
@@ -84,6 +86,7 @@ int main(int argc, char* argv[]) {
 	opts.executable = opts.display = NULL;
 	opts.config_file = opts.shell_out_file = opts.term_out_file = NULL;
 	opts.init_loc = opts.expand_command = NULL;
+	opts.navigation = true;
 
 	/* Initialize the shell and display structs. */
 	u.s.pid = x.s.pid = disp.pid = -1;
@@ -339,7 +342,7 @@ static void report_version(void) {
 /* Main program loop. */
 static bool main_loop(struct display* disp) {
 
-	enum action d;
+	Action d;
 	bool ok = true;
 	bool in_loop = true;
 
@@ -379,6 +382,11 @@ static bool main_loop(struct display* disp) {
 			else if (d == A_SEND_PWD) {
 				/* Do nothing. */
 				DEBUG((df, "::send pwd::"));
+			}
+			else if (d == A_SEND_LOST) {
+				/* blah */
+				if (viewglob_enabled)
+					send_lost(disp);
 			}
 			else {
 				viewglob_error("Received unexpected action");
@@ -528,12 +536,47 @@ static bool scan_for_newline(const char* buff, size_t n) {
 			case '\015':   /* Carriage return -- this is the Enter key. */
 			case '\017':   /* Shift in -- Ctrl-O (operate-and-get-next in bash readline). */
 				return true;
+			case '!':
+				action_queue(A_SEND_LOST);
+				break;
 			default:
 				break;
 		}
 	}
 
 	return false;
+}
+
+
+/* Look for and remove Ctrl-G commands. */
+static void filter_navigation(char* buff, size_t* n) {
+	static bool ctrlg_seen = false;
+	size_t i;
+	char command;
+
+	for (i = 0; i < *n; i++) {
+		if (ctrlg_seen) {
+			ctrlg_seen = false;
+			command = *(buff + i);
+			memmove(buff + i, buff + i + 1, n - i);
+			*n--;
+
+			switch (command) {
+
+				case 'j':
+
+				case 'k':
+				case 'f':
+				case 'b':
+					break;
+
+		}
+		else if (*(buff + i) == '\007') {
+			ctrlg_seen = true;
+			memmove(buff + i, buff + i + 1, n - i);
+			*n--;
+		}
+	}
 }
 
 
@@ -665,8 +708,8 @@ static bool match_loop(enum process_level pl) {
 
 
 /* This function writes out stuff that looks like this:
-   cmd:<command>
-   cd <u.pwd> && <glob-command> <sane_cmd> >> <glob fifo> ; cd /
+   cmd:<sane_command>
+   cd "<u.pwd>" && <glob-command> <sane_cmd> >> <glob fifo> ; cd /
 */
 static void send_sane_cmd(struct display* d) {
 
@@ -676,18 +719,12 @@ static void send_sane_cmd(struct display* d) {
 	sane_cmd = make_sane_cmd(u.cmd.command, u.cmd.length);
 
 	/* sane_cmd_delimited gets sent directly to the display. */
-	sane_cmd_delimited = XMALLOC(char, strlen(sane_cmd) + strlen("\n") + 1);
-	(void)strcpy(sane_cmd_delimited, sane_cmd);
+	sane_cmd_delimited = XMALLOC(char, strlen("cmd:") + strlen(sane_cmd) + strlen("\n") + 1);
+	(void)strcpy(sane_cmd_delimited, "cmd:");
+	(void)strcat(sane_cmd_delimited, sane_cmd);
 	(void)strcat(sane_cmd_delimited, "\n");
 
-	/* Write the sanitized command line to the cmd_fifo. */
-	DEBUG((df, "\n^^^%s^^^\n", sane_cmd_delimited));
-	if ( ! hardened_write(d->cmd_fifo_fd, sane_cmd_delimited, strlen(sane_cmd_delimited)) ) {
-		fprintf(stderr, "(viewglob disabled)");
-		viewglob_enabled = false;
-		goto done;
-	}
-
+	/* TODO don't send the command if it's reasonably unchanged. */
 	XFREE(x.glob_cmd);
 	x.glob_cmd = XMALLOC(char,
 		strlen("cd \"") + strlen(u.pwd) + strlen("\" && ") +
@@ -704,66 +741,27 @@ static void send_sane_cmd(struct display* d) {
 	strcat(x.glob_cmd, d->glob_fifo_name);
 	strcat(x.glob_cmd, " ; cd /\n");
 
-	/* Write the glob command to the sandbox shell. */
+	DEBUG((df, "\n^^^%s^^^\n", sane_cmd_delimited));
 	DEBUG((df, "\n[[[%s]]]\n", x.glob_cmd));
-	if ( ! hardened_write(x.s.fd, x.glob_cmd, strlen(x.glob_cmd)) ) {
+
+	/* Write the sanitized command line to the cmd_fifo, then the glob command to the sandbox
+	   shell (which sends it to the display). */
+	if ( (! hardened_write(d->cmd_fifo_fd, sane_cmd_delimited, strlen(sane_cmd_delimited))) ||
+	     (! hardened_write(x.s.fd, x.glob_cmd, strlen(x.glob_cmd)))) {
 		fprintf(stderr, "(viewglob disabled)");
 		viewglob_enabled = false;
 	}
 
-done:
 	XFREE(sane_cmd_delimited);
 	XFREE(sane_cmd);
 }
 
 
-/* This is kind-of a queue.  If o is A_SEND_CMD, A_SEND_PWD, or A_EXIT,
-   the action is queued.  If o is A_POP, then the correct queued action
-   is dequeued.  Note that this doesn't follow first in, first out,
-   since A_EXIT is a much more important action, so it gets dequeued
-   first.  Also, a new A_SEND_PWD invalidates a previous A_SEND_CMD. */
-enum action action_queue(enum action o) {
-
-	static bool send_cmd = false;
-	static bool send_pwd = false;
-	static bool do_exit = false;
-
-	switch (o) {
-
-		case (A_SEND_CMD):
-			DEBUG((df, "send_cmd_here"));
-			send_cmd = true;
-			break;
-
-		case (A_SEND_PWD):
-			send_cmd = false;
-			send_pwd = true;
-			break;
-
-		case (A_POP):
-			if (do_exit)
-				return A_EXIT;
-			else if (send_pwd) {
-				send_pwd = false;
-				return A_SEND_PWD;
-			}
-			else if (send_cmd) {
-				send_cmd = false;
-				return A_SEND_CMD;
-			}
-			else
-				return A_DONE;
-			break;
-
-		case (A_EXIT):
-			do_exit = true;
-			break;
-
-		default:
-			break;
+static void send_lost(struct display* d) {
+	if (!hardened_write(d->cmd_fifo_fd, "order:lost\n", strlen("order:lost\n"))) {
+		fprintf(stderr, "(viewglob disabled)");
+		viewglob_enabled = false;
 	}
-	
-	return A_NOP;
 }
 
 

@@ -50,13 +50,13 @@ pkgdata_PROGRAMS = seer glob-expand
 
 seer_SOURCES = seer.c children.c cmdline.c sequences.c sanitize.c  \
                tc_setraw.viewglob.c ptutil.viewglob.c xmalloc.c    \
-               viewglob-error.c hardened_io.c misc.c
+               viewglob-error.c hardened_io.c misc.c actions.c
 
 glob_expand_SOURCES = glob-expand.c xmalloc.c viewglob-error.c
 
 noinst_HEADERS = seer.h children.h cmdline.h sequences.h sanitize.h   \
                  tc_setraw.h ptutil.h viewglob-error.h hardened_io.h  \
-                 common.h glob-expand.h
+                 common.h glob-expand.h actions.h
 
 EXTRA_DIST = ptutil.h ptutil.h.diff ptutil.c ptutil.c.diff \
              tc_setraw.h tc_setraw.h.diff tc_setraw.c tc_setraw.c.diff \

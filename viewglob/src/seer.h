@@ -40,6 +40,7 @@ struct options {
 	char* term_out_file;
 	char* init_loc;
 	char* expand_command;
+	bool navigation;
 };
 
 
@@ -66,19 +67,7 @@ struct glob_shell {
 };
 
 
-enum action {
-	A_NOP,      /* Do nothing. */
-	A_SEND_CMD, /* Send the shell's current command line. */
-	A_SEND_PWD, /* Send the shell's current pwd. */
-	A_POP,      /* Pop off the top queued action. */
-	A_DONE,     /* Nothing more to pop. */
-	A_EXIT,     /* Shell closed -- finish execution. */
-};
-
-
 /* Prototypes */
-enum action action_queue(enum action);
-
 void sigwinch_handler(int signum);
 void sigterm_handler(int signum);
 bool handle_signals(void);
