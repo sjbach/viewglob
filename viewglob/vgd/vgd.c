@@ -1,3 +1,22 @@
+/*
+	Copyright (C) 2004, 2005 Stephen Bach
+	This file is part of the Viewglob package.
+
+	Viewglob is free software; you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation; either version 2 of the License, or
+	(at your option) any later version.
+
+	Viewglob is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with Viewglob; if not, write to the Free Software
+	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*/
+
 #include <unistd.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -11,7 +30,9 @@
 #include <glib.h>
 
 #include "common.h"
+#include "hardened-io.h"
 #include "param-io.h"
+#include "display.h"
 #include "x11-stuff.h"
 
 
@@ -29,11 +50,6 @@ enum shell_status {
 	SS_TITLE_SET,
 };
 
-struct display {
-	pid_t pid;
-	int   fd;
-};
-
 
 struct sandbox {
 	enum shell_type   shell;
@@ -48,8 +64,8 @@ struct state {
 	struct sandbox zsh;
 	struct display d;
 	Window         active_win;
+	gboolean       persistent;
 	int            listen_fd;
-
 };
 
 
@@ -111,6 +127,37 @@ int main(int argc, char** argv) {
 
 static void data_loop(struct state* s) {
 
+	GList* iter;
+	struct vgseer_client v;
+
+	fd_set rset;
+	int max_fd;
+
+	while (TRUE) {
+
+		/* Setup polling for the accept socket. */
+		FD_ZERO(&rset);
+		FD_SET(s->listen_fd, &rset);
+		max_fd = s->listen_fd;
+
+		/* Setup polling for each vgseer client. */
+		for (iter = s->clients; iter; iter = g_list_next(iter)) {
+			v = iter->data;
+			g_return_if_fail(v->fd >= 0);
+			FD_SET(v->fd, &rset);
+			max_fd = MAX(max_fd, v->fd);
+		}
+
+		/* And poll the display. */
+		if (display_running(&s->d)) {
+			FD_SET(s->d.fd, &rset);
+			max_fd = MAX(max_fd, s->d.fd);
+		}
+
+
+
+
+	}
 }
 
 
@@ -125,6 +172,7 @@ void state_init(struct state* s) {
 	s->d.pid = -1;
 	s->d.fd = -1;
 	s->active_win = 0;
+	s->persistent = FALSE;
 	s->listen_fd = -1;
 }
 

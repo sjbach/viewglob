@@ -22,7 +22,7 @@
 #include "common.h"
 
 #include "tc_setraw.h"
-#include "hardened_io.h"
+#include "hardened-io.h"
 #include "actions.h"
 #include "connection.h"
 #include "sequences.h"
@@ -102,7 +102,7 @@ static gboolean parse_args(gint argc, gchar** argv, struct options* opts);
 static void report_version(void);
 
 static gboolean send_term_size(gint shell_fd);
-static void set_term_title(gint fd, gchar* title);
+static gboolean set_term_title(gint fd, gchar* title);
 static void disable_viewglob(void);
 
 
@@ -479,7 +479,7 @@ static gboolean io_activity(Connection** connections, struct user_shell* u) {
 	}
 
 	/* Poll for output from the buffers. */
-	if (!hardened_select(max_fd + 1, &fdset_read, NULL)) {
+	if (hardened_select(max_fd + 1, &fdset_read, -1) == -1) {
 		g_critical("Problem while waiting for input: %s", g_strerror(errno));
 		ok = FALSE;
 		goto done;
@@ -490,23 +490,32 @@ static gboolean io_activity(Connection** connections, struct user_shell* u) {
 		if (FD_ISSET(cnt->fd_in, &fdset_read)) {
 
 			/* Read in from the connection. */
-			if (!hardened_read(cnt->fd_in, cnt->buf, cnt->size, &cnt->filled)) {
-				if (errno == EIO) {
-					DEBUG((df, "~~2~~"));
+			switch (hardened_read(cnt->fd_in, cnt->buf, cnt->size, &cnt->filled)) {
+				case IOR_OK:
+					break;
+
+				case IOR_ERROR:
+					if (errno == EIO) {
+						DEBUG((df, "~~1~~"));
+						action_queue(A_EXIT);
+					}
+					else {
+						g_critical("Read problem from %s: %s", cnt->name, g_strerror(errno));
+						ok = FALSE;
+					}
+					goto done;
+					/*break;*/
+
+				case IOR_EOF:
+					DEBUG((df, "~~1~~"));
 					action_queue(A_EXIT);
-					break;
-				}
-				else {
-					g_critical("Read problem from %s: %s", cnt->name, g_strerror(errno));
-					ok = FALSE;
-					break;
-				}
+					goto done;
+					/*break;*/
+				default:
+					g_return_val_if_reached(FALSE);
+					/*break;*/
 			}
-			else if (cnt->filled == 0) {
-				DEBUG((df, "~~1~~"));
-				action_queue(A_EXIT);
-				break;
-			}
+
 
 			if (strcmp(cnt->name,"terminal") == 0)
 				DEBUG2((df, "termlen: %d\n", cnt->filled));
@@ -540,10 +549,17 @@ static gboolean io_activity(Connection** connections, struct user_shell* u) {
 
 
 			/* Write out the full buffer. */
-			if (cnt->filled && !hardened_write(cnt->fd_out, cnt->buf + cnt->skip, cnt->filled - cnt->skip)) {
-				g_critical("Problem writing for %s: %s", cnt->name, g_strerror(errno));
-				ok = FALSE;
-				break;
+			if (cnt->filled) { 
+				switch (write_all(cnt->fd_out, cnt->buf + cnt->skip, cnt->filled - cnt->skip)) {
+					case IOR_OK:
+						break;
+					case IOR_ERROR:
+						g_critical("Problem writing for %s: %s", cnt->name, g_strerror(errno));
+						ok = FALSE;
+						break;
+					default:
+						g_return_val_if_reached(FALSE);
+				}
 			}
 		}
 	}
@@ -807,15 +823,30 @@ static void disable_viewglob(void) {
 
 
 /* Set the title of the current terminal window (hopefully). */
-static void set_term_title(gint fd, gchar* title) {
+static gboolean set_term_title(gint fd, gchar* title) {
 
+	gboolean ok = TRUE;
 	gchar* full_title;
 
 	/* These are escape sequences that most terminals use to delimit the title. */
 	full_title = g_strconcat("\033]0;", title, "\007", NULL);
 
-	hardened_write(fd, full_title, strlen(full_title));
+	switch (write_all(fd, full_title, strlen(full_title))) {
+		case IOR_OK:
+			break;
+
+		case IOR_ERROR:
+			g_warning("Couldn't write term title");
+			ok = FALSE;
+			break;
+
+		default:
+			g_return_val_if_reached(FALSE);
+			/*break;*/
+	}
+
 	g_free(full_title);
+	return ok;
 }
 
 

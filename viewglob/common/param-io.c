@@ -23,12 +23,10 @@
 
 #include "common.h"
 #include "param-io.h"
-#include "io-all.h"
+#include "hardened_io.h"
 
-#include <errno.h>
 #include <netinet/in.h>
 #include <string.h>
-#include <glib.h>
 
 /* Order must correspond to enum parameter type. */
 static gchar* params[P_COUNT] = {
