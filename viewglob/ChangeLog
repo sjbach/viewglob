@@ -3,7 +3,7 @@
 	* feedback.c, feedback.h: added
 	* Makefile.am: updated for feedback.{c,h}
 	* seer.c: don't escape '/' characters in filenames.
-	* file_box.c, dlisting.c:
+	* file_box.c, file_box.h, dlisting.c, gviewglob.c:
 	  - Context menu only on dl header.
 	  - Trailing '/' when inserting directory files.
 	  - Double clicking directory header inserts path.

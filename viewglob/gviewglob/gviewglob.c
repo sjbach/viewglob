@@ -23,6 +23,7 @@
 #include "file_box.h"
 #include "dlisting.h"
 #include "exhibit.h"
+#include "feedback.h"
 #include "gviewglob.h"
 
 #include <gtk/gtk.h>
@@ -870,7 +871,7 @@ int main(int argc, char *argv[]) {
 		/*g_io_channel_set_flags(feedback_channel, G_IO_FLAG_NONBLOCK, NULL);*/
 
 		/* Double clicked widgets will output data to this channel. */
-		file_box_set_out_channel(feedback_channel);
+		feedback_set_channel(feedback_channel);
 	}
 
 	/*gdk_window_set_debug_updates(TRUE);*/
