@@ -37,6 +37,7 @@
 static gchar* params[P_COUNT] = {
 	"none",
 	"purpose",
+	"version",
 	"pid",
 	"status",
 	"pwd",

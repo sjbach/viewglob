@@ -64,6 +64,7 @@ struct vgseer_client {
 
 void state_init(struct state* s);
 void vgseer_client_init(struct vgseer_client* v);
+gchar* win_to_str(Window win);
 static void poll_loop(struct state* s);
 static void die(struct state* s, gint result);
 static gint setup_polling(struct state* s, fd_set* set);
@@ -154,7 +155,8 @@ static void poll_loop(struct state* s) {
 				nready--;
 			}
 
-			if (FD_ISSET(s->display.fd_in, &rset)) {
+			if (child_running(&s->display) && 
+					FD_ISSET(s->display.fd_in, &rset)) {
 				process_display(s);
 				nready--;
 			}
@@ -205,6 +207,20 @@ static void check_active_window(struct state* s) {
 }
 
 
+/* Converts win to a string (statically allocated memory) */
+gchar* win_to_str(Window win) {
+	g_return_val_if_fail(win != 0, "0");
+
+	static GString* win_str = NULL;
+
+	if (!win_str)
+		win_str = g_string_new(NULL);
+
+	g_string_printf(win_str, "%lu", win);
+	return win_str->str;
+}
+
+
 static void context_switch(struct state* s, struct vgseer_client* v) {
 	g_return_if_fail(s != NULL);
 	g_return_if_fail(v != NULL);
@@ -218,6 +234,7 @@ static void context_switch(struct state* s, struct vgseer_client* v) {
 			!put_param(fd, P_CMD, v->cli->str) ||
 			!put_param(fd, P_DEVELOPING_MASK, v->developing_mask->str) ||
 			!put_param(fd, P_MASK, v->mask->str) ||
+			!put_param(fd, P_WIN_ID, win_to_str(v->win)) ||
 			!put_param(fd, P_VGEXPAND_DATA, v->expanded->str)) {
 		g_critical("(disp) Couldn't make context switch");
 		// FIXME restart display, try again
@@ -514,6 +531,26 @@ static void new_vgseer_client(struct state* s, gint client_fd) {
 	v = g_new(struct vgseer_client, 1);
 	vgseer_client_init(v);
 
+	/* Version */
+	if (!get_param(client_fd, &param, &value) || param != P_VERSION)
+		goto out_of_sync;
+	if (STREQ(VERSION, value)) {
+		value = "OK";
+		if (!put_param(client_fd, P_STATUS, value))
+			goto reject;
+	}
+	else {
+		/* Versions differ */
+		gchar* warning = g_strconcat("vgd is v", VERSION,
+				", vgseer is v", value, NULL);
+		value = "WARNING";
+		if (!put_param(client_fd, P_STATUS, value))
+			goto reject;
+		if (!put_param(client_fd, P_REASON, warning))
+			goto reject;
+		g_free(warning);
+	}
+
 	/* Pid */
 	if (!get_param(client_fd, &param, &value) || param != P_PROC_ID)
 		goto out_of_sync;
@@ -556,9 +593,14 @@ static void new_vgseer_client(struct state* s, gint client_fd) {
 	s->clients = g_list_prepend(s->clients, v);
 
 	/* Startup the display if it's not around. */
-	if (!child_running(&s->display) && !child_fork(&s->display)) {
-		g_critical("Couldn't fork the display");
-		die(s, EXIT_FAILURE);
+	if (!child_running(&s->display)) {
+		if (!child_fork(&s->display)) {
+			g_critical("Couldn't fork the display");
+			die(s, EXIT_FAILURE);
+		}
+		/* Send the window ID, just in case this is the active window.
+		   Otherwise the window ID is only sent on a context switch. */
+		update_display(s, v, P_WIN_ID, win_to_str(v->win));
 	}
 
 	return;

@@ -38,25 +38,25 @@
 /* Prototypes. */
 static gboolean receive_data(GIOChannel* source, GIOCondition condition,
 		gpointer data);
-static void      write_xwindow_id(GtkWidget* gtk_window);
+static void write_xwindow_id(GtkWidget* gtk_window);
 
-static void        set_icons(void);
+static void set_icons(void);
 
-static gboolean  parse_args(int argc, char** argv, struct prefs* v);
-static void      report_version(void);
+static gboolean parse_args(int argc, char** argv, struct prefs* v);
+static void report_version(void);
 
-static void  process_glob_data(gchar* buf, gsize bytes, Exhibit* e);
+static void process_glob_data(gchar* buf, gsize bytes, Exhibit* e);
 
-static FileSelection  map_selection_state(gchar c);
-static FileType       map_file_type(gchar c);
+static FileSelection map_selection_state(gchar c);
+static FileType      map_file_type(gchar c);
 
-static gboolean  window_delete_event(GtkWidget* widget, GdkEvent* event,
+static gboolean window_delete_event(GtkWidget* widget, GdkEvent* event,
 		gpointer data);
-static gboolean  window_configure_event(GtkWidget* window,
+static gboolean window_configure_event(GtkWidget* window,
 		GdkEventConfigure* event, Exhibit* e);
-static void      window_allocate_event(GtkWidget* window,
+static void window_allocate_event(GtkWidget* window,
 		GtkAllocation* allocation, Exhibit* e);
-static gboolean  window_key_press_event(GtkWidget* window,
+static gboolean window_key_press_event(GtkWidget* window,
 		GdkEventKey* event, gpointer data);
 
 
@@ -128,6 +128,10 @@ static gboolean receive_data(GIOChannel* source, GIOCondition condition,
 
 			case P_CMD:
 				exhibit_set_cmd(e, value);
+				break;
+
+			case P_WIN_ID:
+				/* This display doesn't use the window id. */
 				break;
 
 			case P_MASK:

@@ -35,11 +35,14 @@ extern FILE* df;
 /* --- prototypes --- */
 static void  dlisting_class_init(DListingClass* klass);
 static void  dlisting_init(DListing* dl);
-static void  dlisting_size_request(GtkWidget* widget, GtkRequisition* requisition);
-static void  dlisting_size_allocate(GtkWidget *widget, GtkAllocation *allocation);
-static void  dlisting_reset_file_count_label(DListing* dl);
+static void  dlisting_size_request(GtkWidget* widget,
+		GtkRequisition* requisition);
+static void  dlisting_size_allocate(GtkWidget *widget,
+		GtkAllocation *allocation);
+static void  reset_file_count_label(DListing* dl);
 
-static gboolean dlisting_button_press_event(GtkWidget *widget, GdkEventButton *event, DListing* dl);
+static gboolean button_press_event(GtkWidget *widget,
+		GdkEventButton *event, DListing* dl);
 
 
 /* --- variables --- */
@@ -67,7 +70,8 @@ GType dlisting_get_type(void) {
 			0,		/* n_preallocs */
 			(GInstanceInitFunc) dlisting_init,
 		};
-		dlisting_type = g_type_register_static (GTK_TYPE_VBOX, "DListing", &dlisting_info, 0);
+		dlisting_type = g_type_register_static (GTK_TYPE_VBOX, "DListing",
+				&dlisting_info, 0);
 	}
 
 	return dlisting_type;
@@ -125,8 +129,10 @@ static void dlisting_init(DListing* dl) {
 
 	/* Create black-line separator. */
 	dir_heading_separator = gtk_hseparator_new();
-	gtk_widget_modify_bg(dir_heading_separator, GTK_STATE_NORMAL, &separator_color);
-	gtk_box_pack_start(GTK_BOX(dir_heading_vbox), dir_heading_separator, FALSE, FALSE, 0);
+	gtk_widget_modify_bg(dir_heading_separator, GTK_STATE_NORMAL,
+			&separator_color);
+	gtk_box_pack_start(GTK_BOX(dir_heading_vbox), dir_heading_separator,
+			FALSE, FALSE, 0);
 	gtk_widget_show(dir_heading_separator);
 
 	/* Create directory label and align it to the left. */
@@ -135,7 +141,8 @@ static void dlisting_init(DListing* dl) {
 	left_spacer = gtk_alignment_new(0, 0, 0, 0);
 	gtk_alignment_set_padding(GTK_ALIGNMENT(left_spacer), 0, 0, 2, 0);
 	gtk_container_add(GTK_CONTAINER(left_spacer), dl->name_label);
-	gtk_box_pack_start(GTK_BOX(dir_heading_vbox), left_spacer, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(dir_heading_vbox), left_spacer,
+			FALSE, FALSE,0);
 	gtk_widget_show(left_spacer);
 	gtk_widget_show(dl->name_label);
 
@@ -145,7 +152,8 @@ static void dlisting_init(DListing* dl) {
 	left_spacer = gtk_alignment_new(0, 0, 0, 0);
 	gtk_alignment_set_padding(GTK_ALIGNMENT(left_spacer), 0, 0, 2, 0);
 	gtk_container_add(GTK_CONTAINER(left_spacer), dl->count_label);
-	gtk_box_pack_start(GTK_BOX(dir_heading_vbox), left_spacer, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(dir_heading_vbox), left_spacer,
+			FALSE, FALSE, 0);
 	gtk_widget_show(left_spacer);
 	gtk_widget_show(dl->count_label);
 
@@ -159,34 +167,41 @@ static void dlisting_init(DListing* dl) {
 
 	/* For double left-click. */
 	g_signal_connect(dl->heading_event_box, "button-press-event",
-			G_CALLBACK(dlisting_button_press_event), dl);
+			G_CALLBACK(button_press_event), dl);
 
 	/* Initialize the labels. */
 	dlisting_set_name(dl, "<unset>");
-	dlisting_reset_file_count_label(dl);
+	reset_file_count_label(dl);
 }
 
 
-static void dlisting_size_request(GtkWidget* widget, GtkRequisition* requisition) {
+static void dlisting_size_request(GtkWidget* widget,
+		GtkRequisition* requisition) {
 	DListing* dl;
 	GtkRequisition heading_req = { 0, 0 }, file_box_req = { 0, 0 };
 
 	dl = DLISTING(widget);
 	
-	if (GTK_WIDGET_VISIBLE(GTK_WIDGET(dl->heading_event_box)))
-		gtk_widget_size_request(GTK_WIDGET(dl->heading_event_box), &heading_req);
+	if (GTK_WIDGET_VISIBLE(GTK_WIDGET(dl->heading_event_box))) {
+		gtk_widget_size_request(GTK_WIDGET(dl->heading_event_box),
+				&heading_req);
+	}
 	if (GTK_WIDGET_VISIBLE(GTK_WIDGET(dl->file_box)))
 		gtk_widget_size_request(GTK_WIDGET(dl->file_box), &file_box_req);
 
-	requisition->width = heading_req.width + file_box_req.width + GTK_CONTAINER(dl)->border_width * 2;
-	requisition->height = heading_req.height + file_box_req.height + GTK_CONTAINER(dl)->border_width * 2;
+	requisition->width = heading_req.width + file_box_req.width +
+		GTK_CONTAINER(dl)->border_width * 2;
+	requisition->height = heading_req.height + file_box_req.height +
+		GTK_CONTAINER(dl)->border_width * 2;
 
-	requisition->width = MIN(requisition->width, dl->optimal_width - WIDTH_BUFFER);
+	requisition->width = MIN(requisition->width,
+			dl->optimal_width - WIDTH_BUFFER);
 }
 
 
 
-static void dlisting_size_allocate(GtkWidget* widget, GtkAllocation* allocation) {
+static void dlisting_size_allocate(GtkWidget* widget,
+		GtkAllocation* allocation) {
 	DListing* dl;
 	GtkRequisition child_requisition;
 	GtkAllocation child_allocation;
@@ -194,17 +209,23 @@ static void dlisting_size_allocate(GtkWidget* widget, GtkAllocation* allocation)
 	dl = DLISTING(widget);
 
 	child_allocation.x = allocation->x + GTK_CONTAINER(dl)->border_width;
-	child_allocation.width = MIN(child_allocation.width, dl->optimal_width - WIDTH_BUFFER);
-	child_allocation.width = MAX(1, (gint) allocation->width - (gint) GTK_CONTAINER(dl)->border_width * 2);
+	child_allocation.width = MIN(child_allocation.width,
+			dl->optimal_width - WIDTH_BUFFER);
+	child_allocation.width = MAX(1,(gint) allocation->width -
+			(gint) GTK_CONTAINER(dl)->border_width * 2);
 
-	gtk_widget_get_child_requisition(GTK_WIDGET(dl->heading_event_box), &child_requisition);
-	child_allocation.height = MIN(child_requisition.height, allocation->height);
+	gtk_widget_get_child_requisition(GTK_WIDGET(dl->heading_event_box),
+			&child_requisition);
+	child_allocation.height = MIN(child_requisition.height,
+			allocation->height);
 	child_allocation.y = allocation->y + GTK_CONTAINER(dl)->border_width;
 
-	gtk_widget_size_allocate (GTK_WIDGET(dl->heading_event_box), &child_allocation);
+	gtk_widget_size_allocate (GTK_WIDGET(dl->heading_event_box),
+			&child_allocation);
 
 	child_allocation.y = child_allocation.y + child_allocation.height;
-	child_allocation.height = MAX(1, allocation->height - child_allocation.height);
+	child_allocation.height = MAX(1,
+			allocation->height - child_allocation.height);
 
 	gtk_widget_size_allocate (GTK_WIDGET(dl->file_box), &child_allocation);
 }
@@ -307,7 +328,7 @@ void dlisting_set_sizing(gint modifier) {
 
 
 
-static void dlisting_reset_file_count_label(DListing* dl) {
+static void reset_file_count_label(DListing* dl) {
 	gchar* temp_string;
 	gchar* markup;
 
@@ -368,7 +389,8 @@ void dlisting_set_name(DListing* dl, const gchar* new_name) {
 }
 
 
-void dlisting_set_file_counts(DListing* dl, const gchar* selected, const gchar* total, const gchar* hidden) {
+void dlisting_set_file_counts(DListing* dl, const gchar* selected,
+		const gchar* total, const gchar* hidden) {
 
 	gboolean change = FALSE;
 
@@ -403,7 +425,7 @@ void dlisting_set_file_counts(DListing* dl, const gchar* selected, const gchar* 
 	}
 
 	if (change)
-		dlisting_reset_file_count_label(dl);
+		reset_file_count_label(dl);
 }
 
 
@@ -413,7 +435,8 @@ void dlisting_set_optimal_width(DListing* dl, gint width) {
 	g_return_if_fail(width >= 0);
 
 	dl->optimal_width = width;
-	file_box_set_optimal_width(FILE_BOX(dl->file_box), dl->optimal_width - WIDTH_BUFFER);
+	file_box_set_optimal_width(FILE_BOX(dl->file_box),
+			dl->optimal_width - WIDTH_BUFFER);
 
 	gtk_widget_queue_resize(GTK_WIDGET(dl->heading_event_box));
 }
@@ -461,7 +484,8 @@ void dlisting_free(DListing* dl) {
 }
 
 
-static gboolean dlisting_button_press_event(GtkWidget *widget, GdkEventButton *event, DListing* dl) {
+static gboolean button_press_event(GtkWidget *widget, GdkEventButton *event,
+		DListing* dl) {
 
 
 	g_return_val_if_fail(dl != NULL, FALSE);

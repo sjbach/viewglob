@@ -243,14 +243,34 @@ static gint connect_to_vgd(gchar* server, gint port, struct user_state* u,
 	gchar* value = NULL;
 	if (!put_param(fd, P_PURPOSE, "vgseer"))
 		goto fail;
+	if (!put_param(fd, P_VERSION, VERSION))
+		goto fail;
 	if (!put_param(fd, P_PROC_ID, string))
 		goto fail;
 
 	/* Wait for acknowledgement. */
+	if (!get_param(fd, &param, &value) || param != P_STATUS)
+		goto fail;
+	if (STREQ(value, "ERROR")) {
+		/* Print error and exit. */
+		if (!get_param(fd, &param, &value) || param != P_REASON)
+			goto fail;
+		g_critical(value);
+		goto fail;
+	}
+	else if (STREQ(value, "WARNING")) {
+		/* Print warning but continue. */
+		if (!get_param(fd, &param, &value) || param != P_REASON)
+			goto fail;
+		g_warning(value);
+	}
+	else if (!STREQ(value, "OK"))
+		goto fail;
+
+	/* Wait for vgd to tell us to set our title. */
 	if (!get_param(fd, &param, &value) || param != P_ORDER ||
 			!STREQ(value, "set-title"))
 		goto fail;
-
 	/* Set the terminal title. */
 	if (snprintf(string, sizeof(string), "vgseer%ld",
 				(glong) getpid()) <= 0) {

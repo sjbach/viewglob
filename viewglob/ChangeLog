@@ -1,3 +1,9 @@
+2005-03-30 18:27  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* param-io.c, param-io.h: added P_VERSION
+	* vgd.c, vgseer.c: version negotiation
+	* vgclassic.c: accept window ids
+
 2005-03-30 16:46  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* vgdisplay/file_types.h: removed
