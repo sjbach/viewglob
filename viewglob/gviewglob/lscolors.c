@@ -34,7 +34,6 @@
 #define STREQ(a, b) (strcmp ((a), (b)) == 0)
 
 TermTextAttr type_ttas[FILE_TYPES_NUM];
-//TermTextAttr* ext_ttas = NULL;
 
 /* Null is a valid character in a color indicator (think about Epson
    printers, for example) so we have to use a length/buffer string
@@ -476,6 +475,7 @@ static void create_termtextattrs(void) {
 /* Create PangoAttrLists from the TermTextAttrs. */
 static void create_pangoattrlists(void) {
 	TermTextAttr* match;
+	struct color_ext_type* iter;
 	int i;
 
 	for (i = 0; i < FILE_TYPES_NUM; i++) {
@@ -495,6 +495,7 @@ static void create_pangoattrlists(void) {
 			iter->tta.p_list = create_pango_list(&iter->tta);
 	}
 }
+
 
 /* If the given TermTextAttr has TAC_REVERSE, reverse its colors. */
 static void termtextattr_check_reverse(TermTextAttr* tta) {
