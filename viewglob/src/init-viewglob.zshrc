@@ -15,6 +15,10 @@
 # along with viewglob; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+# Make sure the user doesn't run viewglob on top of a viewglob shell
+# The naming is purposely ugly to ensure there's no clobbering.
+export VG_VIEWGLOB_ACTIVE=yep
+
 # Source the user's run-control file.
 [ -f ~/.zshrc ] && . ~/.zshrc
 
@@ -106,11 +110,10 @@ else
 
 	# If viewglob is to exit correctly, zsh shouldn't handle SIGHUP.
 	unfunction TRAPHUP  2>/dev/null
-
-	# Used to make sure the user doesn't run viewglob on top of a viewglob
-	# shell.  The naming is purposely ugly to ensure there's no clobbering.
-	export VG_VIEWGLOB_ACTIVE=yep
 fi
+
+# Re-set this just in case.
+export VG_VIEWGLOB_ACTIVE=yep
 
 # Don't want to clutter the environment.
 unset VG_ASTERISK

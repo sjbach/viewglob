@@ -1,3 +1,9 @@
+2004-11-04 14:11  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* init-viewglob.bashrc, init-viewglob.zshrc:
+	  Small fix to prevent an infinite forking loop if the user puts a
+	  call to viewglob into their .bashrc or .zshrc file.
+
 2004-10-11 22:01  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* NEWS, README, README.ms, configure.ac, viewglob.1:
