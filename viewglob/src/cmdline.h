@@ -44,6 +44,12 @@ bool  cmd_init(void);
 bool  cmd_alloc(void);
 bool  cmd_clear(void);
 
+void  cmd_enqueue_overwrite(char c, bool preserve_cret);
+void  cmd_dequeue_overwrite(void);
+bool  cmd_has_queue(void);
+bool  cmd_write_queue(void);
+void  cmd_clear_queue(void);
+
 bool  cmd_overwrite_char(char c, bool preserve_cret);
 bool  cmd_insert_chars(char c, int n);
 bool  cmd_del_chars(int n);

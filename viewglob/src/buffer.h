@@ -30,7 +30,7 @@
 BEGIN_C_DECLS
 
 void prepend_holdover(Buffer* b);
-void create_holdover(Buffer* b);
+void create_holdover(Buffer* b, bool write_later);
 void eat_segment(Buffer* b);
 void pass_segment(Buffer* b);
 

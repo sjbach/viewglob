@@ -497,12 +497,12 @@ static bool user_activity(void) {
 			u.expect_newline = scan_for_newline(&termb);
 
 		/* Write it out. */
-		if (!hardened_write(u.s.fd, termb.buf, termb.filled)) {
+		if (!hardened_write(u.s.fd, termb.buf + termb.skip, termb.filled - termb.skip)) {
 			viewglob_error("Problem writing to shell");
 			ok = false;
 			goto done;
 		}
-		if (u.term_transcript_fd != -1 && !hardened_write(u.term_transcript_fd, termb.buf, termb.filled))
+		if (u.term_transcript_fd != -1 && !hardened_write(u.term_transcript_fd, termb.buf + termb.skip, termb.filled - termb.skip))
 			viewglob_warning("Could not write term transcript");
 
 	}
@@ -544,12 +544,12 @@ static bool user_activity(void) {
 		}
 
 		/* Write out the full buffer. */
-		if (shellb.filled && !hardened_write(STDOUT_FILENO, shellb.buf, shellb.filled)) {
+		if (shellb.filled && !hardened_write(STDOUT_FILENO, shellb.buf + shellb.skip, shellb.filled - shellb.skip)) {
 			viewglob_error("Problem writing to stdout");
 			ok = false;
 			goto done;
 		}
-		if (u.shell_transcript_fd != -1 && !hardened_write(u.shell_transcript_fd, shellb.buf, shellb.filled))
+		if (u.shell_transcript_fd != -1 && !hardened_write(u.shell_transcript_fd, shellb.buf + shellb.skip, shellb.filled - shellb.skip))
 			viewglob_warning("Could not write shell transcript");
 	}
 
@@ -587,6 +587,7 @@ static bool process_input(Buffer* b) {
 	else {
 		b->pos = 0;
 		b->n = 1;
+		b->skip = 0;
 	}
 
 	while (b->pos + (b->n - 1) < b->filled) {
@@ -619,7 +620,7 @@ static bool process_input(Buffer* b) {
 		else if (b->status & MS_NO_MATCH) {
 			DEBUG((df, "*MS_NO_MATCH*\n"));
 			if (b->pl == PL_AT_PROMPT) {
-				cmd_overwrite_char(b->buf[b->pos], true);
+				cmd_overwrite_char(b->buf[b->pos], false);
 				action_queue(A_SEND_CMD);
 			}
 			b->pos++;
@@ -631,19 +632,8 @@ static bool process_input(Buffer* b) {
 	}
 
 	if (IN_PROGRESS(b->status)) {
-		if (b->pl == PL_AT_PROMPT) {
-			/* We're at the prompt, so we can't make a holdover for the next read because the user's
-			   actions may depend on this output.  This is an unfortunate kludge. */
-			DEBUG((df, "pre-emptive write of segment (because of PL_AT_PROMPT)\n"));
-			for (; b->pos < b->filled; b->pos++)
-				cmd_overwrite_char(b->buf[b->pos], true);
-			action_queue(A_SEND_CMD);
-		}
-		else {
-			/* We'll store the sequence thus far as holdover. */
-			DEBUG((df, "n = %d, pos = %d, filled = %d\n", b->n, b->pos, b->filled));
-			create_holdover(b);
-		}
+		DEBUG((df, "n = %d, pos = %d, filled = %d\n", b->n, b->pos, b->filled));
+		create_holdover(b, b->pl != PL_AT_PROMPT);
 	}
 
 	return true;
@@ -683,8 +673,8 @@ static void send_sane_cmd(struct display* d) {
 	strcat(x.glob_cmd, d->glob_fifo_name);
 	strcat(x.glob_cmd, " ; cd /\n");
 
-	DEBUG((df, "\n^^^%s^^^\n", sane_cmd_delimited));
-	DEBUG((df, "\n[[[%s]]]\n", x.glob_cmd));
+	DEBUG((df, "writing %s", sane_cmd_delimited));
+	DEBUG((df, "[[[%s]]]\n", x.glob_cmd));
 
 	/* Write the sanitized command line to the cmd_fifo, then the glob command to the sandbox
 	   shell (which sends it to the display). */

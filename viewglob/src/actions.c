@@ -26,8 +26,10 @@
 struct action_list {
 	Action a;
 	struct action_list* next;
-};
+}* al = NULL;
 
+
+/* Prototypes. */
 static void    al_push(Action a);
 static Action  al_pop(void);
 
@@ -35,9 +37,6 @@ static Action  al_pop(void);
 #if DEBUG_ON
 extern FILE* df;
 #endif
-
-
-static struct action_list* al = NULL;
 
 
 /* This is kind-of a queue.  If o is A_SEND_CMD, A_SEND_PWD, or A_EXIT,

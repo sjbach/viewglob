@@ -56,6 +56,8 @@ struct _Buffer {
 	enum process_level pl;
 	MatchStatus status;     /* Result of the last check_seqs() attempt. */
 	char* holdover;         /* Segment leftover from the last read. */
+	bool ho_written;        /* The holdover was written already (and thus should be skipped. */
+	size_t skip;            /* Number of bytes to skip writing (already written). */
 };
 
 

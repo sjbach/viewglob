@@ -749,6 +749,7 @@ static void analyze_effect(MatchEffect effect, Buffer* b) {
 			   and wait for the next PS1. */
 			cmd_clear();
 			b->pl = PL_EXECUTING;
+			action_queue(A_SEND_LOST);
 			break;
 
 		case ME_NO_EFFECT:

@@ -28,6 +28,12 @@
 
 #include <string.h>
 
+struct overwrite_queue {
+	char c;
+	bool preserve_cret;
+	struct overwrite_queue* next;
+}* oq = NULL;
+
 #if DEBUG_ON
 extern FILE *df;
 #endif
@@ -66,6 +72,61 @@ bool cmd_clear(void) {
 	u.cmd.pos = 0;
 	u.cmd.length = 0;
 	return true;
+}
+
+
+void cmd_enqueue_overwrite(char c, bool preserve_cret) {
+	struct overwrite_queue* new_oq;
+
+	DEBUG((df, "enqueuing \'%c\'\n", c));
+
+	new_oq = XMALLOC(struct overwrite_queue, 1);
+	new_oq->c = c;
+	new_oq->preserve_cret = preserve_cret;
+	new_oq->next = oq;
+	oq = new_oq;
+}
+
+
+void cmd_dequeue_overwrite(void) {
+	if (oq) {
+		struct overwrite_queue* tmp = oq->next;
+		XFREE(oq);
+		oq = tmp;
+	}
+}
+
+
+bool cmd_has_queue(void) {
+	return oq != NULL;
+}
+
+
+bool cmd_write_queue(void) {
+	struct overwrite_queue* tmp;
+	bool ok = true;
+
+	while (oq) {
+		DEBUG((df, "(queue) "));
+		if ( (!ok) || (!cmd_overwrite_char(oq->c, oq->preserve_cret)) )
+			ok = false;
+
+		tmp = oq;
+		oq = oq->next;
+		XFREE(tmp);
+	}
+
+	return ok;
+}
+
+
+void cmd_clear_queue(void) {
+	struct overwrite_queue* tmp;
+	while (oq) {
+		tmp = oq;
+		oq = oq->next;
+		XFREE(tmp);
+	}
 }
 
 

@@ -1,3 +1,9 @@
+2004-09-08 16:54  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* actions.c, buffer.c, buffer.h, circular.h, cmdline.c, cmdline.h, seer.c,
+	  sequences.c:
+	  More changes to get back to the level of functionality pre-reorganization.
+
 2004-09-08 01:47  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* gviewglob.c, gviewglob.h, actions.c, seer.c, sequences.c:

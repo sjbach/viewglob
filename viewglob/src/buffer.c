@@ -58,9 +58,16 @@ void prepend_holdover(Buffer* b) {
 	XFREE(b->holdover);
 	b->holdover = NULL;
 
-	b->pos = 0;
 	b->filled += ho_len;
+	b->pos = 0;
 	/* b->n has not changed since the create_holdover(). */
+
+	if (b->ho_written) {
+		DEBUG((df, "skipping write of %d chars (first char: \'%c\'\n", ho_len, *(b->buf + ho_len)));
+		b->skip = ho_len;
+	}
+	else
+		b->skip = 0;
 
 	#if DEBUG_ON
 		size_t x;
@@ -72,7 +79,7 @@ void prepend_holdover(Buffer* b) {
 }
 
 
-void create_holdover(Buffer* b) {
+void create_holdover(Buffer* b, bool write_later) {
 
 	if (!b->n) {
 		viewglob_warning("b->n == 0");
@@ -91,7 +98,16 @@ void create_holdover(Buffer* b) {
 	DEBUG((df, "copied \"%s\"\n", b->holdover));
 	DEBUG((df, "b->n: %d\n", b->n));
 
-	b->filled -= (b->n - 1);
+	if (write_later) {
+		/* Writing of this segment is postponed until after the next buffer read. */
+		DEBUG((df, "writing this holdover later.\n"));
+		b->filled -= (b->n - 1);
+		b->ho_written = false;
+	}
+	else {
+		DEBUG((df, "writing this holdover now.\n"));
+		b->ho_written = true;
+	}
 
 	#if DEBUG_ON
 		size_t x;
