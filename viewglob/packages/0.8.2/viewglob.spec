@@ -2,18 +2,19 @@
 %define version  0.8.2
 %define release  1
 
-Name:        %{name}
-Summary:     Adjunct to the shell for graphical environments
-Version:     %{version}
-Release:     %{release}
-Source0:     %{name}-%{version}.tar.gz
-Icon:        icon_36x36.xpm
-URL:         http://viewglob.sourceforge.net/
-Group:       Applications/Productivity
-Packager:    Stephen Bach <sjbach@users.sourceforge.net>
-BuildRoot:   %{_tmppath}/%{name}-%{version}-%{release}-buildroot
-License:     GPL
-Requires:    bash, gtk+ >= 2.4
+Name:          %{name}
+Summary:       Adjunct to the shell for graphical environments
+Version:       %{version}
+Release:       %{release}
+Source0:       %{name}-%{version}.tar.gz
+Icon:          icon_36x36.xpm
+URL:           http://viewglob.sourceforge.net/
+Group:         System Environment/Shells
+Packager:      Stephen Bach <sjbach@users.sourceforge.net>
+BuildRoot:     %{_tmppath}/%{name}-%{version}-%{release}-buildroot
+License:       GPL
+Requires:      bash, gtk2 >= 2.4.0
+#BuildRequires: gtk2-devel >= 2.4.0
 
 %description
 viewglob is a utility designed to complement the Unix shell in graphical
@@ -26,7 +27,7 @@ layout of relevant directories.
 
 %build
 %configure
-make
+make %{?_smp_mflags}
 
 %install
 rm -rf $RPM_BUILD_ROOT
