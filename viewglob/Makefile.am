@@ -2,7 +2,7 @@ AUTOMAKE_OPTIONS = gnu
 
 SUBDIRS = src gviewglob
 man_MANS = viewglob.1
-EXTRA_DIST = COPYING2 $(man_MANS)
+EXTRA_DIST = COPYING2 HACKING $(man_MANS)
 
 # Also put the manpage under the name gviewglob.
 install-data-hook:

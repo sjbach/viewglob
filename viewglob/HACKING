@@ -1,0 +1,71 @@
+
+The viewglob CVS repository is accessible from here:
+
+	http://sourceforge.net/cvs/?group_id=116249
+
+
+Preamble
+--------
+viewglob looks like a little program, but it's actually been fairly complicated
+to implement (certainly more so than it should need to be).  viewglob's
+usefulness hinges on knowing the developing command line, but there's no
+functionality within bash or zsh to present the command line to another program.
+So viewglob fakes it by pretending to be a terminal, reading ALL of bash's
+output as the user does his or her thing, and tries to isolate command line
+information.
+
+This is very hard to do well, so viewglob's tracking is far from perfect -
+and it probably won't substantially improve using this method (it's just a huge
+hack).  The only good solution is for there to be a hook from the shell, but
+this would require a code change to the shells themselves.  That would be great,
+but it's not something I'm going to pursue right now.
+
+Still, for general usage viewglob is usually Good Enough at tracking the command
+line; and when it fails, it usually catches up on the next command.
+
+Overview
+--------
+
+These are the main pieces of viewglob:
+
+	viewglob (also symlinked at install as gviewglob)
+	 - A bash script which parses the command line flags and config file,
+	   validates them, and passes them along to seer.
+
+	seer
+	- The engine; when called, this program forks two shells connected through
+	  pseudo terminals.  The user types in one, and seer uses the other as a
+	  "sandbox".  Seer examines all data coming into and out of the user shell,
+	  looking at different times for different groups of character sequences
+	  (some of which are general terminal sequences, some of which are placed by
+	  viewglob as semaphores).
+	- When seer finds the command line, it tries to track changes to it by
+	  watching changes in the terminal, NOT by emulating the shell (that would
+	  be way too hard).  Every time the command line changes, seer submits it as
+	  an argument to glob-expand in its sandbox shell.
+	- Seer also forks the display, gviewglob, which it connects to with two
+	  fifos.  One of the fifos is used to pass data from glob-expand and the
+	  other is used to pass non-glob data (such as the command line or
+	  navigation commands).  Two fifos are required because otherwise the glob
+	  data can bleed into the command data because the sandbox shell's timing
+	  is unpredictable.
+
+	init-viewglob.bashrc
+	init-viewglob.zshrc (installed as .zshrc)
+	- Initialization files for the shells forked by seer.  These try to "harden"
+	  the sandbox shell, and insert viewglob semaphores into the user shell.
+
+	glob-expand
+	- A little program which examines its arguments (which are from the
+	  developing command line as expanded by the sandbox shell) and prints to
+	  stdout the listings for referenced directories, showing file selections
+	  and predicted name completions.
+
+	gviewglob
+	- The display, written in GTK+ 2.  Basically this makes graphical
+	  representations of the glob-expand data.
+
+Only the viewglob shell script is callable from PATH.
+
+
+

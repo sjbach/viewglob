@@ -1,3 +1,7 @@
+2004-09-07 20:27  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* Makefile.am, HACKING: adding HACKING document
+
 2004-09-07 19:15  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* seer.c, sequences.c:
