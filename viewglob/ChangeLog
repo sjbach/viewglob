@@ -1,4 +1,8 @@
-2005-03-06 09:27  Stephen Bach <sjbach@users.sourceforge.net>
+2005-03-07 13:28  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* gviewglob.c: no more window padding
+
+2005-03-06 21:27  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* seer.c, x11-stuff.c, x11-stuff.h:
 	  Tweaked the algorithm for refocusing.  If display is focused,
