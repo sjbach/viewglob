@@ -46,7 +46,7 @@ gint open_warning(gchar* file_name, gint flags, mode_t mode) {
 
 /* Attempt to close the given file.  Emit warning on failure. */
 void close_warning(gint fd, gchar* file_name) {
-	if ( fd != -1 && close(fd) == -1)
+	if (fd != -1 && close(fd) == -1)
 		g_warning("Could not close file \"%s\": %s", file_name, g_strerror(errno));
 }
 
@@ -80,16 +80,12 @@ gboolean hardened_write(gint fd, gchar* buff, size_t length) {
 	size_t offset = 0;
 
 	while (length > 0) {
-		while (TRUE) {
-			errno = 0;
-			if ( (nwritten = write(fd, buff + offset, length)) == -1 ) {
-				if (errno == EINTR)
-					continue;
-				else
-					return FALSE;
-			}
+		errno = 0;
+		if ( (nwritten = write(fd, buff + offset, length)) == -1 ) {
+			if (errno == EINTR)
+				nwritten = 0;
 			else
-				break;
+				return FALSE;
 		}
 		length -= nwritten;
 		offset += nwritten;
