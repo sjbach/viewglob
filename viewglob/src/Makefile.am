@@ -40,7 +40,7 @@ tc_setraw.viewglob.h: Makefile
 CLEANFILES = viewglob getopt.sh ptutil.viewglob.c ptutil.viewglob.h \
              tc_setraw.viewglob.c tc_setraw.viewglob.h gviewglob
 
-pkgdata_DATA = getopt.sh init-viewglob.sh
+pkgdata_SCRIPTS = getopt.sh init-viewglob.sh
 pkgdata_PROGRAMS = seer glob-expand
 seer_SOURCES = seer.c children.c cmdline.c sequences.c   \
                sanitize.c tc_setraw.viewglob.c ptutil.viewglob.c xmalloc.c \
