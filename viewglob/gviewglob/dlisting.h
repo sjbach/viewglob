@@ -33,9 +33,8 @@ struct _DListing {
 	GString* selected_count;
 	GString* total_count;
 	GString* hidden_count;
-	//glong n_v_fis;             /* Number of visable FItems (sorry). */
 
-	GtkWidget* listing_vbox;
+	GtkWidget* widget;
 	GtkWidget* name_label;
 	GtkWidget* count_label;
 
@@ -43,9 +42,7 @@ struct _DListing {
 	gboolean force_show_all;
 	GtkWidget* menu;
 
-	//GSList* fi_slist;
-	//gboolean update_file_table;
-	GtkWidget* file_table;
+	GtkWidget* file_table;  /* TODO file_box */
 };
 
 

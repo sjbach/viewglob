@@ -29,10 +29,13 @@ static void  file_box_size_allocate(GtkWidget* widget, GtkAllocation* allocation
 
 static gint  file_box_get_display_pos(FileBox* fbox, FItem* fitem);
 
-static FItem* fitem_new(const GString* name, FileType type, FileSelection selection, gboolean build_widgets);
-static void fitem_rebuild_widgets(FItem* fi);
-static void fitem_free(FItem* fi, gboolean destroy_widgets);
-static gboolean fitem_update_type_and_selection(FItem* fi, FileType t, FileSelection s);
+static FItem*    fitem_new(const GString* name, FileType type, FileSelection selection);
+static void      fitem_build_widgets(FItem* fi);
+static void      fitem_free(FItem* fi, gboolean destroy_widgets);
+static void      fitem_update_type_selection_and_order(FItem* fi, FileType t, FileSelection s, FileBox* fbox);
+static gboolean  fitem_is_hidden(FItem* fi);
+static void      fitem_determine_display_category(FItem* fi, FileBox* fbox);
+static void      fitem_display(FItem* fi, FileBox* fbox);
 
 static gint cmp_same_name(gconstpointer a, gconstpointer b);
 static gint cmp_ordering_ls(gconstpointer a, gconstpointer b);
@@ -61,12 +64,12 @@ GType file_box_get_type(void) {
 			0,		/* n_preallocs */
 			(GInstanceInitFunc) file_box_init,
 		};
-		//file_box_type = g_type_register_static (GTK_TYPE_CONTAINER, "FileBox", &file_box_info, 0);
 		file_box_type = g_type_register_static (WRAP_BOX_TYPE, "FileBox", &file_box_info, 0);
 	}
 
 	return file_box_type;
 }
+
 
 
 static void file_box_class_init(FileBoxClass* class) {
@@ -111,6 +114,7 @@ static void file_box_class_init(FileBoxClass* class) {
 }
 
 
+
 static void file_box_init(FileBox *fbox) {
 	GTK_WIDGET_SET_FLAGS (fbox, GTK_NO_WINDOW);
 
@@ -119,14 +123,23 @@ static void file_box_init(FileBox *fbox) {
 	fbox->n_files = 0;
 	fbox->file_max = 32767;
 	fbox->file_display_limit = 300;
-	//fbox->sort_func = cmp_ordering_ls;
-	fbox->fitems = NULL;
+	fbox->fi_slist = NULL;
 }
+
 
 
 GtkWidget* file_box_new (void) {
 	return g_object_new (FILE_BOX_TYPE, NULL);
 }
+
+
+void file_box_destroy(FileBox* fbox) {
+
+	g_slist_foreach(fbox->fi_slist, (GFunc) fitem_free, (gpointer) TRUE);
+	g_slist_free(fbox->fi_slist);
+	gtk_widget_destroy(GTK_WIDGET(fbox));
+}
+
 
 
 /*
@@ -149,6 +162,7 @@ static void file_box_set_property (GObject *object, guint property_id, const GVa
 	}
 }
 */
+
 
 
 /*
@@ -174,6 +188,7 @@ static void file_box_get_property (GObject *object, guint property_id, GValue *v
 */
 
 
+
 void file_box_set_optimal_width(FileBox* fbox, guint optimal_width) {
 	g_return_if_fail(IS_FILE_BOX(fbox));
 	g_return_if_fail(optimal_width >= GTK_CONTAINER(fbox)->border_width * 2);
@@ -181,7 +196,7 @@ void file_box_set_optimal_width(FileBox* fbox, guint optimal_width) {
 	optimal_width -= GTK_CONTAINER(fbox)->border_width * 2;
 
 	if (fbox->optimal_width != optimal_width) {
-		g_printerr("<new optimal_width: %d>\n", optimal_width);
+		DEBUG((df, "<new optimal_width: %d>\n", optimal_width));
 		fbox->optimal_width = optimal_width;
 		gtk_widget_queue_resize(GTK_WIDGET(fbox));
 		/* FIXME */
@@ -189,26 +204,51 @@ void file_box_set_optimal_width(FileBox* fbox, guint optimal_width) {
 }
 
 
+
 void file_box_set_show_hidden_files(FileBox* fbox, gboolean show) {
 	g_return_if_fail(IS_FILE_BOX(fbox));
 
+	if (fbox->show_hidden_files == show)
+		return;
+
+	DEBUG((df, "<new show_hidden_files>\n"));
+
+	GSList* fi_iter;
+	FItem* fi;
+
+	fbox->show_hidden_files = show;
+	if (show) {
+		/* Display hidden files, but only up to file_display_limit. */
+
+		for (fi_iter = fbox->fi_slist; fi_iter; fi_iter = g_slist_next(fi_iter)) {
+			fi = fi_iter->data;
+			if (fitem_is_hidden(fi)) {
+				fi->disp_cat = FDC_REVEAL;
+				
+			}
+		}
+	}
+
+
 	if (fbox->show_hidden_files != show) {
-		g_printerr("<new show_hidden_files>\n");
 		fbox->show_hidden_files = show;
 		/* FIXME */
 	}
 }
 
 
+
 void file_box_set_file_display_limit(FileBox* fbox, guint limit) {
 	g_return_if_fail(IS_FILE_BOX(fbox));
+	/* TODO: truncate results if limit is less than n_displayed_files.*/
 
 	if (fbox->file_display_limit != limit) {
-		g_printerr("<new display_limit: %d>\n", limit);
+		DEBUG((df, "<new display_limit: %d>\n", limit));
 		fbox->file_display_limit = limit;
 		/* FIXME */
 	}
 }
+
 
 
 void file_box_set_ordering(FileBoxOrdering fbo) {
@@ -219,9 +259,11 @@ void file_box_set_ordering(FileBoxOrdering fbo) {
 }
 
 
+
 void file_box_set_icon(FileType type, GdkPixbuf* icon) {
 	file_type_icons[type] = icon;
 }
+
 
 
 void file_box_add(FileBox* fbox, GString* name, FileType type, FileSelection selection) {
@@ -229,43 +271,83 @@ void file_box_add(FileBox* fbox, GString* name, FileType type, FileSelection sel
 
 	GSList* search_result;
 	FItem* fi;
-	
-	DEBUG((df, "."));
 
-	/* Locate the fitem. */
-	search_result = g_slist_find_custom(fbox->fitems, name, cmp_same_name);
-
-	/* TODO: if found, compare type and selection */
+	/* Check if we've already got this FItem. */
+	search_result = g_slist_find_custom(fbox->fi_slist, name, cmp_same_name);
 	if (search_result) {
 		fi = search_result->data;
-
-		if (fitem_update_type_and_selection(fi, type, selection)) {
-			/* Reposition this FItem, which has changed type. */
-			fbox->fitems = g_slist_remove(fbox->fitems, fi);
-			fbox->fitems = g_slist_insert_sorted(fbox->fitems, fi, ordering_func);   /* TODO sort_func should be global */
-			wrap_box_pack(WRAP_BOX(fbox), fi->widget);
-			wrap_box_reorder_child(WRAP_BOX(fbox), fi->widget, file_box_get_display_pos(fbox, fi));
-		}
-
-		fi->marked = TRUE;
+		fitem_update_type_selection_and_order(fi, type, selection, fbox);
 	}
 	else {
-		/* TODO: Must check to see if starts with ".", etc. */
-		if (fbox->n_displayed_files < fbox->file_display_limit) {
-			/* Put it in the correct place in the box. */
-			fi = fitem_new(name, type, selection, TRUE);
-			fbox->fitems = g_slist_insert_sorted(fbox->fitems, fi, ordering_func);
-			wrap_box_pack(WRAP_BOX(fbox), fi->widget);
-			wrap_box_reorder_child(WRAP_BOX(fbox), fi->widget, file_box_get_display_pos(fbox, fi));
-			fi->displayed = TRUE;
-			fbox->n_displayed_files++;
-		}
-		else {
-			fi = fitem_new(name, type, selection, FALSE);
-			fbox->fitems = g_slist_insert_sorted(fbox->fitems, fi, ordering_func);
-		}
+		fi = fitem_new(name, type, selection);
+		fbox->fi_slist = g_slist_insert_sorted(fbox->fi_slist, fi, ordering_func);
+	}
+
+	fi->marked = TRUE;
+	fitem_determine_display_category(fi, fbox);
+	fitem_display(fi, fbox);
+}
+
+
+
+/* Display (or not) the given FItem.
+   This involves creating and destroying widgets. */
+static void fitem_display(FItem* fi, FileBox* fbox) {
+	switch (fi->disp_cat) {
+
+		case FDC_REVEAL:
+			DEBUG((df, "."));
+			/* We display a REVEAL'd FItem if we're under the limit or if it's selected. */
+			if ( (fbox->file_display_limit == 0) || (fbox->n_displayed_files < fbox->file_display_limit) ) {
+				if ( ! fi->widget ) {
+					/* Build widgets and pack it in. */
+					fitem_build_widgets(fi);
+					wrap_box_pack(WRAP_BOX(fbox), fi->widget);
+					wrap_box_reorder_child(WRAP_BOX(fbox), fi->widget, file_box_get_display_pos(fbox, fi));
+				}
+				fbox->n_displayed_files++;
+			}
+			else if (fi->selection == FS_YES) {
+				if (!fi->widget) {
+					/* It's not under the limit, but it's been selected.
+					   Doesn't have any widgets (if it does it's already displayed), so we make them. */
+					fitem_build_widgets(fi);
+					wrap_box_pack(WRAP_BOX(fbox), fi->widget);
+					wrap_box_reorder_child(WRAP_BOX(fbox), fi->widget, file_box_get_display_pos(fbox, fi));
+				}
+			}
+			else if (fi->widget) {
+				/* Remove the widgets since this is over the limit and not selected. */
+				gtk_widget_destroy(fi->widget);
+				fi->widget = NULL;
+			}
+			break;
+
+		case FDC_MASK:
+			if (fi->peek) {
+				if (! fi->widget )  {
+					/* We're peeking at this FItem, but it doesn't have any widgets yet. */
+					DEBUG((df, "!"));
+					fitem_build_widgets(fi);
+					wrap_box_pack(WRAP_BOX(fbox), fi->widget);
+					wrap_box_reorder_child(WRAP_BOX(fbox), fi->widget, file_box_get_display_pos(fbox, fi));
+				}
+				else
+					DEBUG((df, "?"));
+
+			}
+			else if (fi->widget) {
+				DEBUG((df, "x"));
+				/* No peeking.  Destroy the FItem's widgets if present. */
+				gtk_widget_destroy(fi->widget);
+				fi->widget = NULL;
+			}
+			else
+				DEBUG((df, "_"));
+			break;
 	}
 }
+
 
 
 /* Get the position of this fitem in the box. */
@@ -274,16 +356,18 @@ static gint file_box_get_display_pos(FileBox* fbox, FItem* fitem) {
 	FItem* fi;
 	gint pos = 0;
 
-	for (fi_iter = fbox->fitems; fi_iter; fi_iter = g_slist_next(fi_iter)) {
+	for (fi_iter = fbox->fi_slist; fi_iter; fi_iter = g_slist_next(fi_iter)) {
 		fi = fi_iter->data;
 		if (fi == fitem)
 			break;
-		else if (fi->displayed)
+		//else if ( (fi->disp_cat == FDC_REVEAL || fi->peek) && fi->widget )
+		else if ( (fi->disp_cat == FDC_REVEAL || fi->selection == FS_YES) && fi->widget )
 			pos++;
 	}
 
 	return pos;
 }
+
 
 
 /* Unmark all the FItems.  This is called just before reading in a new bunch of data. */
@@ -293,11 +377,15 @@ void file_box_unmark_all(FileBox* fbox) {
 	GSList* fi_iter;
 	FItem* fi;
 
-	for (fi_iter = fbox->fitems; fi_iter; fi_iter = g_slist_next(fi_iter)) {
+	for (fi_iter = fbox->fi_slist; fi_iter; fi_iter = g_slist_next(fi_iter)) {
 		fi = fi_iter->data;
 		fi->marked = FALSE;
 	}
+
+	fbox->n_displayed_files = 0;   /* This isn't really true, but n_displayed_files needs to be
+									  redefined during processing. */
 }
+
 
 
 /* Delete all fitems which are not marked. */
@@ -308,22 +396,23 @@ void file_box_cull(FileBox* fbox) {
 	GSList* tmp;
 	FItem* fi;
 
-	fi_iter = fbox->fitems;
+	fi_iter = fbox->fi_slist;
 	while (fi_iter) {
 		fi = fi_iter->data;
 		if ( ! fi->marked ) {
 			/* Not marked -- no holds barred. */
-			if (fi->displayed)
+			if (fi->disp_cat == FDC_REVEAL && fi->widget)
 				fbox->n_displayed_files--;
 			tmp = fi_iter;
 			fi_iter = g_slist_next(fi_iter);
-			fbox->fitems = g_slist_delete_link(fbox->fitems, tmp);
+			fbox->fi_slist = g_slist_delete_link(fbox->fi_slist, tmp);
 			fitem_free(fi, TRUE);
 			continue;
 		}
 		fi_iter = g_slist_next(fi_iter);
 	}
 }
+
 
 
 static void file_box_size_request(GtkWidget* widget, GtkRequisition* requisition) {
@@ -333,26 +422,24 @@ static void file_box_size_request(GtkWidget* widget, GtkRequisition* requisition
 }
 
 
-static FItem* fitem_new(const GString* name, FileType type, FileSelection selection, gboolean build_widgets) {
+
+static FItem* fitem_new(const GString* name, FileType type, FileSelection selection) {
 	FItem* new_fitem;
 
 	new_fitem = g_new(FItem, 1);
 	new_fitem->name = g_string_new(name->str);
 	new_fitem->type = type;
 	new_fitem->selection = selection;
-	new_fitem->marked = TRUE;
-	new_fitem->displayed = FALSE;
+	new_fitem->disp_cat = FDC_INDETERMINATE;
+	new_fitem->peek = FALSE;
 	new_fitem->widget = NULL;
-
-	/* Create the widgets. */
-	if (build_widgets)
-		fitem_rebuild_widgets(new_fitem);
 
 	return new_fitem;
 }
 
 
-static void fitem_rebuild_widgets(FItem* fi) {
+
+static void fitem_build_widgets(FItem* fi) {
 
 	GtkWidget* label;
 	GtkWidget* hbox;
@@ -364,7 +451,6 @@ static void fitem_rebuild_widgets(FItem* fi) {
 
 	/* Event Box (to show selection) */
 	eventbox = gtk_event_box_new();
-	g_printerr("selection: %d\n", fi->selection);
 	gtk_widget_set_state(eventbox, fi->selection);
 
 	/* HBox */
@@ -391,15 +477,10 @@ static void fitem_rebuild_widgets(FItem* fi) {
 	gtk_widget_show(label);
 	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
 
-	/* Remove the old widgets if present. */
-	if (fi->widget) {
-		gtk_widget_destroy(fi->widget);
-		fi->displayed = FALSE;
-	}
-
 	fi->widget = eventbox;
 	gtk_widget_show(eventbox);
 }
+
 
 
 /* Remove all memory associated with this FItem. */
@@ -418,32 +499,58 @@ static void fitem_free(FItem* fi, gboolean destroy_widgets) {
 }
 
 
-/* Returns true if the update requires external changes, false otherwise. */
-static gboolean fitem_update_type_and_selection(FItem* fi, FileType t, FileSelection s) {
 
-	gboolean widgets_changed = FALSE;
+/* Determine the FileDisplayCategory of this fitem. */
+static void fitem_determine_display_category(FItem* fi, FileBox* fbox) {
+	fi->peek = FALSE;
+	if (fitem_is_hidden(fi)) {
+		if (fbox->show_hidden_files)
+			fi->disp_cat = FDC_REVEAL;
+		else {
+			fi->disp_cat = FDC_MASK;
+			if (fi->selection == FS_YES)
+				fi->peek = TRUE;
+		}
+	}
+	else
+		fi->disp_cat = FDC_REVEAL;
+}
 
-	/* TODO if selected, always show; if becomes unselected, hide if hidden file. */
+
+
+static void fitem_update_type_selection_and_order(FItem* fi, FileType t, FileSelection s, FileBox* fbox) {
+
+	/* File type. */
+	if (fi->type != t) {
+		DEBUG((df, "%s type changed.\n", fi->name->str));
+		fi->type = t;
+
+		/* Remove the widgets for this fitem (if it has any).
+		   They'll be remade later if need be. */
+		if (fi->widget) {
+			gtk_widget_destroy(fi->widget);
+			fi->widget = NULL;
+		}
+
+		/* Reposition this FItem. */
+		fbox->fi_slist = g_slist_remove(fbox->fi_slist, fi);
+		fbox->fi_slist = g_slist_insert_sorted(fbox->fi_slist, fi, ordering_func);
+	}
+
+	/* File selection state. */
 	if (fi->selection != s) {
 		fi->selection = s;
 		if (fi->widget)
 			gtk_widget_set_state(fi->widget, fi->selection);
 	}
-
-	if (fi->type != t) {
-		DEBUG((df, "%s type changed.\n", fi->name->str));
-		fi->type = t;
-
-		/* We'll have to make new widgets for this particular FItem... */
-		/* (But only if it already has widgets). */
-		if (fi->displayed && fi->widget) {
-			fitem_rebuild_widgets(fi);
-			widgets_changed = TRUE;
-		}
-	}
-
-	return widgets_changed;
 }
+
+
+
+static gboolean fitem_is_hidden(FItem* fi) {
+	return *(fi->name->str) == '.';
+}
+
 
 
 static gint cmp_same_name(gconstpointer a, gconstpointer b) {
@@ -452,6 +559,7 @@ static gint cmp_same_name(gconstpointer a, gconstpointer b) {
 
 	return strcmp( aa->name->str, bb->str );
 }
+
 
 
 /* Sort by type (dir first), then by name (default Windows style). */
@@ -474,6 +582,7 @@ static gint cmp_ordering_win(gconstpointer a, gconstpointer b) {
 }
 
 
+
 /* Sort strictly by name (default ls style). */
 static gint cmp_ordering_ls(gconstpointer a, gconstpointer b) {
 	const FItem* aa = a;
@@ -481,5 +590,4 @@ static gint cmp_ordering_ls(gconstpointer a, gconstpointer b) {
 
 	return strcmp( aa->name->str, bb->name->str );
 }
-
 

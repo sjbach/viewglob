@@ -22,7 +22,6 @@
 
 #include <gtk/gtk.h>
 #include <gdk/gdk.h>
-//#include "fitem.h"
 #include "file_box.h"
 #include "dlisting.h"
 
@@ -32,9 +31,6 @@
 G_BEGIN_DECLS
 
 struct viewable_preferences {
-	GdkPixbuf* file_pixbuf;
-	GdkPixbuf* dir_pixbuf;
-
 	GdkPixbuf* show_hidden_pixbuf;
 	GdkPixbuf* show_all_pixbuf;
 
@@ -43,9 +39,7 @@ struct viewable_preferences {
 	/* Options */
 	gboolean show_icons;
 	gboolean show_hidden_files;
-	glong file_display_limit;
-	//GCompareFunc sort_function;
-	FileBoxOrdering ordering;
+	guint file_display_limit;
 
 	/* Input Fifos */
 	gchar* glob_fifo;
@@ -56,7 +50,7 @@ struct viewable_preferences {
 typedef struct _Exhibit Exhibit;
 struct _Exhibit {
 	GSList* dl_slist;    /* This is for DListing structs. */
-	GtkWidget* display;  /* This is the vbox holding the dir/file listings. */
+	GtkWidget* listings_box;  /* This is the vbox holding the dir/file listings. */
 
 	GtkWidget* cmdline;  /* The textview holding the cmdline. */
 
@@ -91,25 +85,20 @@ static GString* read_string(const gchar* buff, gsize* start, gsize n, gchar deli
 static void        set_icons(Exhibit* e);
 static GdkPixbuf*  make_pixbuf_scaled(const guint8 icon_inline[]);
 
-static gboolean parse_args(int argc, char** argv);
-static void report_version(void);
+static gboolean  parse_args(int argc, char** argv);
+static void      report_version(void);
 
 static void process_cmd_data(const gchar* buff, gsize bytes, Exhibit* e);
 static void process_glob_data(const gchar* buff, gsize bytes, Exhibit* e);
-static void rearrange_and_show(Exhibit* e);
-static void delete_old_dlistings(Exhibit* e);
 
-//static enum selection_state  map_selection_state(const GString* string);
+static void exhibit_rearrange_and_show(Exhibit* e);
+static void exhibit_cull(Exhibit* e);
+
 static FileSelection  map_selection_state(const GString* string);
-//static enum file_type        map_file_type(const GString* string);
 static FileType       map_file_type(const GString* string);
 
 static gint cmp_dlisting_same_name(gconstpointer a, gconstpointer b);
 static gint cmp_dlisting_same_rank(gconstpointer a, gconstpointer b);
-//static gint cmp_fitem_same_name(gconstpointer a, gconstpointer b);
-
-//static gint cmp_fitem_ordering_type_alphabetical(gconstpointer a, gconstpointer b);
-//static gint cmp_fitem_ordering_alphabetical(gconstpointer a, gconstpointer b);
 
 static void listing_resize_event(GtkWidget* widget, GtkAllocation* allocation, Exhibit* e);
 

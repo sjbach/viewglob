@@ -104,10 +104,7 @@ DListing* dlisting_new(const GString* name, gint rank, const GString* selected_c
 	new_dl->selected_count = g_string_new(selected_count->str);
 	new_dl->total_count = g_string_new(total_count->str);
 	new_dl->hidden_count = g_string_new(hidden_count->str);
-	//new_dl->n_v_fis = 0;
 
-	//new_dl->fi_slist = NULL;
-	//new_dl->update_file_table = TRUE;
 	new_dl->file_table = NULL;
 
 	new_dl->force_show_hidden = v.show_hidden_files;
@@ -116,7 +113,6 @@ DListing* dlisting_new(const GString* name, gint rank, const GString* selected_c
 	/* This is the vbox for this whole listing. */
 	vbox = gtk_vbox_new(FALSE, 0);
 	gtk_box_set_homogeneous(GTK_BOX(vbox), FALSE);
-	gtk_widget_show(vbox);
 
 	/* Event box for the directory header (so it can be a different color). */
 	dir_heading_event_box = gtk_event_box_new();
@@ -158,12 +154,12 @@ DListing* dlisting_new(const GString* name, gint rank, const GString* selected_c
 	gtk_box_pack_start(GTK_BOX(dir_heading_vbox), file_num_label, FALSE, FALSE, 0);
 	gtk_widget_show(file_num_label);
 
-	/* Create the file table (actually it's a wrap box). */
-	//new_dl->file_table = wrap_box_new();
+	/* Create the file box. */
 	new_dl->file_table = file_box_new();
 	/* wrap_box_set_optimal_width(WRAP_BOX(new_dl->file_table), width - 4); */
-	//wrap_box_set_optimal_width(WRAP_BOX(new_dl->file_table), width);
 	file_box_set_optimal_width(FILE_BOX(new_dl->file_table), width);
+	file_box_set_show_hidden_files(FILE_BOX(new_dl->file_table), new_dl->force_show_hidden);    /* TODO does a dl need force_show_hidden variable? */
+	file_box_set_file_display_limit(FILE_BOX(new_dl->file_table), v.file_display_limit);        /* Or a file_display_limit variable? */
 	wrap_box_set_hspacing(WRAP_BOX(new_dl->file_table), 5);
 	wrap_box_set_line_justify(WRAP_BOX(new_dl->file_table), GTK_JUSTIFY_LEFT);
 	gtk_box_pack_start(GTK_BOX(vbox), new_dl->file_table, FALSE, FALSE, 0);
@@ -201,7 +197,7 @@ DListing* dlisting_new(const GString* name, gint rank, const GString* selected_c
 	gtk_widget_show(menu);
 	g_signal_connect_swapped(vbox, "button_press_event", G_CALLBACK(show_context_menu), menu);
 
-	new_dl->listing_vbox = vbox;
+	new_dl->widget = vbox;
 	new_dl->name_label = dir_label;
 	new_dl->menu = menu;
 
@@ -303,80 +299,22 @@ gboolean dlisting_is_new(const DListing* dl) {
 
 /* Remove all memory associated with this DListing. */
 void dlisting_free(DListing* dl) {
-	/* FIXME does this in fact get all data associated with the file box? */
 
-	gtk_widget_destroy(dl->listing_vbox);  /* This should take care of all widgets,
-	                                          Including in the FItems. */
+	gtk_widget_hide(dl->widget);
 
-	gtk_widget_destroy(dl->menu);          /* Delete the menu.  This should get the
-											  menu items too. */
+	file_box_destroy(FILE_BOX(dl->file_table));  /* This also gets the FItems associated with the file box. */
+	gtk_widget_destroy(dl->widget);              /* Should take care of everything else. */
+
+
+	gtk_widget_destroy(dl->menu);          /* Delete the menu.  This should get the menu items too. */
 
 	g_string_free(dl->name, TRUE);
 	g_string_free(dl->selected_count, TRUE);
 	g_string_free(dl->total_count, TRUE);
 	g_string_free(dl->hidden_count, TRUE);
 
-	/* Free the FItems.
-	   We've already destroyed all the widgets, so don't try to delete them again. */
-	/*
-	g_slist_foreach(dl->fi_slist, (GFunc) fitem_free, (gpointer) FALSE);
-	g_slist_free(dl->fi_slist);
-	*/
-
 	g_free(dl);
 }
-
-
-#if 0
-void dlisting_file_table_update(DListing* dl) {
-	FItem* fi;
-	GSList* fi_iter;
-	gint pos = 0;
-
-	fi_iter = dl->fi_slist;
-	while (fi_iter) {
-		fi = fi_iter->data;
-		/*DEBUG((df, "(%s", fi->name->str));*/
-
-		if ( ! fi->marked ) {
-			/*DEBUG((df, "!)"));*/
-			/* Marked for death - No holds barred. */
-			GSList* tmp;
-			tmp = fi_iter;
-			fi_iter = g_slist_next(fi_iter);
-			dl->fi_slist = g_slist_delete_link(dl->fi_slist, tmp);
-			fitem_free(fi, TRUE);
-			continue;
-		}
-		else if (fi->is_new) {
-			/*DEBUG((df, "?"));*/
-
-			/* Pack it (in the correct position) if it has widgets. */
-			if (fi->widget) {
-				/*DEBUG((df, "x"));*/
-				wrap_box_pack(WRAP_BOX(dl->file_table), fi->widget);
-				wrap_box_reorder_child(WRAP_BOX(dl->file_table), fi->widget, pos);
-
-				/* Show this file if:
-				   - we should show all files, or
-				   - we should show hidden files on this DListing, or
-				   - the file isn't hidden. */
-				if (v.show_hidden_files || dl->force_show_hidden || !g_str_has_prefix(fi->name->str, ".")) {
-					/*DEBUG((df, "y"));*/
-					gtk_widget_show(fi->widget);
-					gtk_widget_queue_resize(dl->file_table);
-				}
-
-			}
-			fi->is_new = FALSE;
-		}
-		if (fi->widget)
-			pos++;
-		/*DEBUG((df, ")\n"));*/
-		fi_iter = g_slist_next(fi_iter);
-	}
-}
-#endif
 
 
 static void dlisting_create_and_show_fitem_widgets_hidden(DListing* dl) {
