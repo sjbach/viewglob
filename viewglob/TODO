@@ -1,6 +1,7 @@
 seer:
 	- zsh functionality
 	- screen compatibility
+	- integration with bash-completion, if viable
 	- test and fix command-line parsing for wrapped lines.
 		- periodically run a ^M cleaning function?
 	- Keep track of variable changes by running env in PROMPT_COMMAND?
