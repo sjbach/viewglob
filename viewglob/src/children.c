@@ -24,7 +24,7 @@
 #include "common.h"
 #include "viewglob-error.h"
 #include "children.h"
-#include "ptutil.viewglob.h"
+#include "ptytty.h"
 #include <sys/stat.h>
 #include <signal.h>
 #include <fcntl.h>
@@ -45,6 +45,7 @@ extern FILE* df;
 
 static bool create_fifo(char* name);
 static bool waitpid_wrapped(pid_t pid);
+static bool wait_for_data(int master_fd);
 
 static bool create_fifo(char* name) {
 	int i;
@@ -312,7 +313,10 @@ bool display_cleanup(struct display* d) {
 /* Fork a new child with a pty. */
 bool pty_child_fork(struct pty_child* c, int new_stdin_fd, int new_stdout_fd, int new_stderr_fd) {
 
-	PTINFO* p;
+	int pty_slave_fd = -1;
+	int pty_master_fd = -1;
+	const char* pty_slave_name = NULL;
+
 	bool ok = true;
 
 	c->a.argv[0] = c->name;
@@ -321,16 +325,20 @@ bool pty_child_fork(struct pty_child* c, int new_stdin_fd, int new_stdout_fd, in
 	args_add(&(c->a), NULL);
 
 	/* Setup a pty for the new shell. */
-	p = pt_open_master();
-	if (p == NULL) {
-		viewglob_error("Could not open master side of pty");
+	/* get master (pty) */
+	if ((pty_master_fd = rxvt_get_pty(&pty_slave_fd, &pty_slave_name)) < 0) {
+		viewglob_fatal("Could not open master side of pty");
 		c->pid = -1;
 		c->fd = -1;
 		return false;
 	}
 
+	/* Turn on non-blocking -- this is used in rxvt, but I can't see why,
+	   so I've disabled it. */
+	/*fcntl(pty_master_fd, F_SETFL, O_NDELAY);*/
+
 	/* This will be the interface with the new shell. */
-	c->fd = PT_GET_MASTER_FD(p);
+	c->fd = pty_master_fd;
 
 	switch ( c->pid = fork() ) {
 		case -1:
@@ -339,8 +347,18 @@ bool pty_child_fork(struct pty_child* c, int new_stdin_fd, int new_stdout_fd, in
 			/*break;*/
 
 		case 0:
-			if ( ! pt_open_slave(p) ) {
-				viewglob_error("Could not open slave side of pty");
+
+			/* get slave (tty) */
+			if (pty_slave_fd < 0) {
+				if ((pty_slave_fd = rxvt_get_tty(pty_slave_name)) < 0) {
+					close(pty_master_fd);
+					viewglob_error("Could not open slave tty");
+					viewglob_error(pty_slave_name);
+					goto child_fail;
+				}
+			}
+			if (rxvt_control_tty(pty_slave_fd, pty_slave_name) < 0) {
+				viewglob_error("Could not obtain control of tty");
 				goto child_fail;
 			}
 
@@ -348,11 +366,11 @@ bool pty_child_fork(struct pty_child* c, int new_stdin_fd, int new_stdout_fd, in
 			/* A parameter of CLOSE_FD means to just close that fd right out. */
 
 			if (new_stdin_fd == NEW_PTY_FD)
-				new_stdin_fd = PT_GET_SLAVE_FD(p);
+				new_stdin_fd = pty_slave_fd;
 			if (new_stdout_fd == NEW_PTY_FD)
-				new_stdout_fd = PT_GET_SLAVE_FD(p);
+				new_stdout_fd = pty_slave_fd;
 			if (new_stderr_fd == NEW_PTY_FD)
-				new_stderr_fd = PT_GET_SLAVE_FD(p);
+				new_stderr_fd = pty_slave_fd;
 
 			if (new_stdin_fd == CLOSE_FD)
 				(void)close(STDIN_FILENO);
@@ -375,7 +393,7 @@ bool pty_child_fork(struct pty_child* c, int new_stdin_fd, int new_stdout_fd, in
 				goto child_fail;
 			}
 
-			(void)close(PT_GET_SLAVE_FD(p));
+			(void)close(pty_slave_fd);
 			execvp(c->name, c->a.argv);
 
 			child_fail:
@@ -387,7 +405,7 @@ bool pty_child_fork(struct pty_child* c, int new_stdin_fd, int new_stdout_fd, in
 	}
 
 	/* Wait for user shell to set itself up. */
-	if ( ! pt_wait_master(p) ) {
+	if ( ! wait_for_data(pty_master_fd) ) {
 		viewglob_error("Did not receive go-ahead from child");
 		ok = false;
 	}
@@ -423,4 +441,15 @@ bool pty_child_terminate(struct pty_child* c) {
 
 	return ok;
 }
+
+static bool wait_for_data(int master_fd) {
+	fd_set fd_set_write;
+
+	FD_ZERO(&fd_set_write);
+	FD_SET(master_fd, &fd_set_write);
+	if ( select(master_fd + 1, NULL, &fd_set_write, NULL, NULL) == -1 )
+		return false;
+	return true;
+}
+
 

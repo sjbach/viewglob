@@ -1,3 +1,13 @@
+2004-11-16 15:38  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* ptutil.c, ptutil.c.diff, ptutil.c.viewglob, ptutil.diff,
+	  ptutil.h, ptutil.h.diff, ptutil.h.viewglob:
+	  Removed
+	* ptytty.c, ptytty.h: added (from rxvt)
+	* configure.ac, src/Makefile.am, children.c:
+	  Using pseudo terminal code from rxvt instead of from Advanced
+	  Unix Programming.  Hopefully this will improve portability.
+
 2004-11-15 21:39  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* gviewglob/Makefile.am, file_box.c, file_box.h, gviewglob.c:
