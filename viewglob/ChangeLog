@@ -1,3 +1,11 @@
+2004-08-25 00:41  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* dlisting.c, file_box.c, file_box.h, gviewglob.c, gviewglob.h,
+	  wrap_box.c, wrap_box.h:
+	  - Fixed the scrollbar-not-rescaling issue.
+	  - Large performance increase when dealing with directories with many
+	    files.
+
 2004-08-23 00:00  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* AUTHORS, NEWS, README, README.ms, configure.ac, viewglob.1, gviewglob.h,
