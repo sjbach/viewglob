@@ -1,5 +1,7 @@
 Stephen Bach <sjbach@users.sourceforge.net>
 
+Kevin B. McCarty submitted a patch to fix a bunch of compiler warnings.
+
 Pavel Tavoda had a great idea for a more intuitive way to list directories,
 which was incorporated into the program.
 
