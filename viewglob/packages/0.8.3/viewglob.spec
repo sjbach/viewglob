@@ -50,8 +50,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/%{name}/gviewglob
 
 %changelog
-* Mon Aug 23 2004 Stephen Bach <sjbach@users.sourceforge.net> 0.8.2-1
-- Creating initial package
-
 * Thu Aug 26 2004 Stephen Bach <sjbach@users.sourceforge.net> 0.8.3-1
 - Update to 0.8.3
+
+* Mon Aug 23 2004 Stephen Bach <sjbach@users.sourceforge.net> 0.8.2-1
+- Creating initial package
