@@ -20,6 +20,7 @@
 #include "common.h"
 #include "file_box.h"
 #include "wrap_box.h"
+#include "dlisting.h"
 #include <gtk/gtk.h>
 #include <string.h>      /* For strcmp */
 
@@ -55,6 +56,7 @@ static void      fitem_determine_display_category(FItem* fi, FileBox* fbox);
 static void      fitem_display(FItem* fi, FileBox* fbox);
 
 static gboolean size_request_kludge(GtkWidget* widget, GtkRequisition* allocation, gpointer user_data);
+static gboolean fitem_button_press_event(GtkWidget* widget, GdkEventButton* event, FItem* fi);
 
 static gint cmp_same_name(gconstpointer a, gconstpointer b);
 static gint cmp_ordering_ls(gconstpointer a, gconstpointer b);
@@ -65,6 +67,7 @@ static gint cmp_ordering_win(gconstpointer a, gconstpointer b);
 static gpointer parent_class = NULL;
 static GdkPixbuf* file_type_icons[8] = { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
 static GCompareFunc ordering_func = cmp_ordering_ls;
+static GIOChannel* out_channel = NULL;
 
 
 /* --- functions --- */
@@ -326,6 +329,12 @@ void file_box_set_icon(FileType type, GdkPixbuf* icon) {
 }
 
 
+void file_box_set_out_channel(GIOChannel* channel) {
+	g_return_if_fail(channel != NULL);
+	out_channel = channel;
+}
+
+
 gboolean file_box_get_show_hidden_files(FileBox* fbox) {
 	g_return_val_if_fail(IS_FILE_BOX(fbox), FALSE);
 	return fbox->show_hidden_files;
@@ -523,9 +532,6 @@ static void fitem_build_widgets(FItem* fi) {
 	GtkWidget* hbox;
 	GtkWidget* eventbox;
 
-	//PangoAttrList* list;
-
-
 	gchar* temp;
 
 	/* Event Box (to show selection) */
@@ -548,21 +554,74 @@ static void fitem_build_widgets(FItem* fi) {
 	}
 
 	/* Label -- must convert the text to utf8. */
-	//label = gtk_label_new(NULL);
 	temp = g_filename_to_utf8(fi->name, strlen(fi->name), NULL, NULL, NULL);
-	//temp = g_strconcat("<span foreground=\"black\">", temp, "</span>", NULL);
-	//gtk_label_set_text(GTK_LABEL(label), temp);
 	label = gtk_label_new(temp);
-	//gtk_label_set_markup(GTK_LABEL(label), temp);
 	g_free(temp);
 	gtk_misc_set_padding(GTK_MISC(label), 1, 0);
 	gtk_widget_show(label);
 	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
 
+	/* Connect to button click on the eventbox. */
+	g_signal_connect(eventbox, "button-press-event", G_CALLBACK(fitem_button_press_event), fi);
+
 	fi->widget = eventbox;
 	/*gtk_widget_show(eventbox);*/
 }
 
+
+static gboolean fitem_button_press_event(GtkWidget* widget, GdkEventButton* event, FItem* fi) {
+
+	GError* error = NULL;
+	gsize bytes_written;
+	gboolean in_loop = TRUE;
+	GString* data;
+
+	/* Write out the FItem's name opon a double click. */
+	if (event->type == GDK_2BUTTON_PRESS && event->button == 1) {
+		if (out_channel) {
+
+			data = g_string_new("file:");
+
+			/* If shift is held, write out the full path. */
+			if ( (event->state & GDK_SHIFT_MASK) && fi->widget->parent && fi->widget->parent->parent) {
+				data = g_string_append(data, DLISTING(fi->widget->parent->parent)->name->str);
+
+				/* If the parent dir is / (root), it already has a '/' on the end. */
+				if ( *(data->str + strlen(data->str) - 1) != '/')
+					data = g_string_append(data, "/");
+			}
+
+			data = g_string_append(data, fi->name);
+
+			/* Write out the file name. */
+			while (in_loop) {
+				switch (g_io_channel_write_chars(out_channel, data->str, strlen(data->str) + 1,  &bytes_written, &error)) {
+					case (G_IO_STATUS_ERROR):
+						g_printerr("gviewglob: %s\n", error->message);
+						in_loop = FALSE;
+						break;
+
+					case (G_IO_STATUS_NORMAL):
+						in_loop = FALSE;
+						break;
+
+					case (G_IO_STATUS_AGAIN):
+						break;
+
+					default:
+						g_warning("Unexpected result from g_io_channel_write_chars.");
+						in_loop = FALSE;
+						break;
+				}
+			}
+
+			g_string_free(data, TRUE);
+		}
+
+	}
+
+	return TRUE;
+}
 
 
 /* Remove all memory associated with this FItem. */

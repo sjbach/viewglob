@@ -171,8 +171,6 @@ void exhibit_do_order(Exhibit* e, GString* order) {
 	/* Otherwise we scroll down into a page of black. */
 	upper = e->vadjustment->upper - page_increment - step_increment;
 
-	g_print("(order: %s)", order->str);
-
 	if (strcmp(order->str, "lost") == 0) {
 		/* Do something. */
 		/*gtk_entry_set_text(GTK_ENTRY(e->cmdline), "I give up!");*/

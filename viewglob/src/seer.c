@@ -55,6 +55,8 @@ static bool user_activity(void);
 static bool scan_for_newline(const Buffer* b);
 static bool process_input(Buffer* b);
 
+static char* convert_file_name(Buffer* b);
+
 static void send_sane_cmd(struct display* d);
 static void send_order(struct display* d, Action a);
 
@@ -435,6 +437,7 @@ static bool user_activity(void) {
 	static Buffer sandbox_b = { NULL, BUFSIZ, 0, 0, 0, PL_EXECUTING, MS_NO_MATCH, NULL };
 	static Buffer display_b = { NULL, BUFSIZ, 0, 0, 0, PL_TERMINAL, MS_NO_MATCH, NULL };
 
+	char* filename;
 	fd_set fdset_read;
 	bool ok = true;
 	int max_fd;
@@ -502,6 +505,26 @@ static bool user_activity(void) {
 				action_queue(A_TOGGLE);
 				goto done;
 			}
+			else {
+				#if DEBUG_ON
+					size_t x;
+					DEBUG((df, "read %d bytes from display:\n===============\n", display_b.filled));
+					for (x = 0; x < display_b.filled; x++)
+						DEBUG((df, "%c", display_b.buf[x]));
+					DEBUG((df, "\n===============\n"));
+				#endif
+
+				/* Create and write the filename. */
+				filename = convert_file_name(&display_b);
+				if (filename) {
+					if (!hardened_write(u.s.fd, filename, strlen(filename))) {
+						viewglob_error("Problem writing to shell");
+						ok = false;
+						goto done;
+					}
+				}
+			}
+
 		}
 	}
 
@@ -642,6 +665,102 @@ static bool scan_for_newline(const Buffer* b) {
 	}
 
 	return false;
+}
+
+
+/* Create a formatted (or not) filename from the buffer. */
+static char* convert_file_name(Buffer* b) {
+	char* filename;
+	size_t i, j, size = 0;
+	char c;
+
+	/* Locate the ':' delimiter. */
+	while ( *(b->buf + i) != ':')
+		i++;
+	i++;
+
+	/* Get size. */
+	for (j = i; j < b->filled && (c = *(b->buf + j)) != '\0'; j++) {
+		switch(c) {
+			/* Shell special characters. */
+			case '*':
+			case '?':
+			case '$':
+			case '|':
+			case '&':
+			case ';':
+			case '(':
+			case ')':
+			case '<':
+			case '>':
+			case ' ':
+			case '\t':
+			case '\n':
+			case '[':
+			case ']':
+			case '#':
+			case '\'':
+			case '\"':
+			case '`':
+			case ',':
+			case ':':
+			case '{':
+			case '}':
+			case '~':
+			case '/':
+			case '\\':
+			case '!':
+				size++;   /* One for the backslash. */
+			default:
+				size++;   /* One for the character. */
+				break;
+		}
+	}
+
+	filename = XMALLOC(char, size + 1);
+	*(filename + size) = '\0';
+
+	/* Fill in the filename. */
+	for (j = 0; i < b->filled && (c = *(b->buf + i)) != '\0'; i++) {
+		switch(c) {
+			/* Shell special characters. */
+			case '*':
+			case '?':
+			case '$':
+			case '|':
+			case '&':
+			case ';':
+			case '(':
+			case ')':
+			case '<':
+			case '>':
+			case ' ':
+			case '\t':
+			case '\n':
+			case '[':
+			case ']':
+			case '#':
+			case '\'':
+			case '\"':
+			case '`':
+			case ',':
+			case ':':
+			case '{':
+			case '}':
+			case '~':
+			case '/':
+			case '\\':
+			case '!':
+				*(filename + j) = '\\';
+				j++;
+			default:
+				*(filename + j) = c;
+				j++;
+				break;
+		}
+	}
+
+	return filename;
 }
 
 
