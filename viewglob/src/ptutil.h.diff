@@ -1,0 +1,22 @@
+--- ptutil.h	2004-08-05 02:15:41.000000000 -0400
++++ ptutil.h.viewglob	2004-07-08 18:27:42.000000000 -0400
+@@ -1,6 +1,8 @@
+ #ifndef _PTUTIL_H_
+ #define _PTUTIL_H_
+ 
++#include "common.h"
++
+ /*
+ 	Assumes "defs.h" is already included to get definition of bool.
+ */
+@@ -17,8 +19,8 @@
+ #define PT_GET_MASTER_FD(p)		((p)->pt_fd_m)
+ #define PT_GET_SLAVE_FD(p)		((p)->pt_fd_s)
+ /*[]*/
+-//#define PT_GET_MASTER_NAME(p)	((p)->pt_name_m)
+-//#define PT_GET_SLAVE_NAME(p)	((p)->pt_name_s)
++/*#define PT_GET_MASTER_NAME(p)	((p)->pt_name_m)*/
++/*#define PT_GET_SLAVE_NAME(p)	((p)->pt_name_s)*/
+ PTINFO *pt_open_master(void);
+ bool pt_wait_master(PTINFO *p);
+ bool pt_open_slave(PTINFO *p);

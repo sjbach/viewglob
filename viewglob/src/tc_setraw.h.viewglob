@@ -1,0 +1,11 @@
+#ifndef _TC_SETRAW_H_
+#define _TC_SETRAW_H_
+
+BEGIN_C_DECLS
+
+bool tc_setraw(void);
+bool tc_restore(void);
+
+END_C_DECLS
+
+#endif /* _TC_SETRAW_H_ */

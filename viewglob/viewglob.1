@@ -1,0 +1,153 @@
+.TH VIEWGLOB 1 "8 August 2004"
+.SH NAME
+viewglob, gviewglob \- display shell expansion and globbing dynamically
+.SH SYNOPSIS
+.B viewglob
+.RI [ options ]
+.br
+.B gviewglob
+.RI [ options ]
+
+.SH DESCRIPTION
+\fIviewglob\fP is a utility which supervises your shell activity and tracks the glob and expansion data in a display showing the file layout of relevant directories.  The display is written in GTK+, so \fIviewglob\fP is only useful in an X terminal (e.g. \fIxterm\fP, \fIrxvt\fP, etc.).
+.PP
+Currently \fIviewglob\fP is written towards \fIbash\fP, but \fIzsh\fP functionality is forthcoming.   \fIviewglob\fP does not assume a particular version or configuration of \fIbash\fP.
+.PP
+Note: either name is equivalent for calling the program.
+
+.SH OPTIONS
+This program follows the usual GNU command\-line syntax, with long options starting with two dashes.  A summary is included below.
+.TP
+.B \-d, \-\-display=name
+Use an alternate display program.
+.TP
+.B \-f, \-\-config\-file=path
+Use an alternate config file (\fI~/.viewglobrc\fP is the default).
+.TP
+.B \-p, \-\-shell\-output=filename
+Copy a transcript of the shell's output to the given file.  Note that this keeps the terminal sequences intact, so a cat of the file will be a perfect repeat of the session.  Be careful, the file will grow quickly!
+.TP
+.B \-p, \-\-term\-output=filename
+Output a transcript of the terminal's input to the given file.  This is the stuff that you've typed, without any of the shell interpretation.
+.TP
+.B \-n, \-\-compare\-mode=<name|inode>
+Compare directories on the command\-line by name, or by inode and device id.  Inode mode is the more useful of the two, and is the default.  See \fBUSAGE\fP below.
+.TP
+.B \-s, \-\-sort-style=<windows|ls>
+Sort files with dirs first (Windows) or purely by name (ls).  ls mode is the default.
+.TP
+.B \-n, \-\-show-max=number
+Maximum number of files to show in the display for each directory.  A [Results Truncated] indicator will show if the max has been reached.  Note that you can always force show all files with the context menu.  If --show-max is passed 0, there is no limit.
+.TP
+.B \-b, \-\-disable\-icons
+Don't show file/directory icons in the display.
+.TP
+.B \-t, \-\-disable\-star
+Disable the asterisk icon at the beginning of your shell prompt when in a viewglob\-supervised shell.
+.TP
+.B \-w, \-\-show\-hidden
+Never hide hidden files (ha).
+.TP
+.B \-e, \-\-executable=path
+Use the given executable as the shell instead of the first reference to bash in the path.  Note that if this isn't a version of bash, it won't do you much good, and could be harmful.
+.TP
+.B \-h, \-\-help
+Show summary of options.
+.TP
+.B \-V, \-\-version
+Show the version of the program.
+
+.SH USAGE
+When you start viewglob, you'll be presented with your familiar bash prompt and a new window showing the file layout of the current directory.  As you begin to type a command, the display window will highlight to show potential filename completions (dull highlight) and file selections and globs/expansions (vibrant highlight).  Also, if you reference files from other directories (e.g. \fI../*\fP or \fI/usr/local\fP), the display will pop in the layouts of those directories as well, with the highlighting.
+.PP
+A trick I use to quickly find out what's located in a given directory without running a new command is to reference the directory, followed by dot (.), eg: "a/dir/.".  The display will immediately pop in the layout of that directory.  This works, because "." is a file guaranteed to be in every directory.
+.PP
+The display will always show at least the layout of your current directory.
+.PP
+At the bottom of the display window is a textbox with your command\-line.  This is the actual command\-line that viewglob is globbing on; if you find the display is not showing what you expected, check to make sure the display's command\-line is the same as the one in the shell, as they can be different (see \fBNOTES\fP below).
+.PP
+If you close the display without exiting the viewglob-supervised shell, you'll get a single error mesage while viewglob figures out what's going on.  It will then mostly disable itself and you'll have a regular shell.
+.PP
+If name is passed to the \fB\-\-compare\-mode\fP option, viewglob will treat the same directory referenced in different ways as different directories.  For example, with this option set, the following are all different:
+.IP
+/usr/local/lib/
+.br
+/usr/local/lib/./
+.br
+/usr/local/lib/../lib/
+.PP
+(But a leading slash does not differentiate a directory from one without a leading slash.)
+.PP
+If inode mode is set (the default), directories referenced in several different ways will always be interpreted as the same directory if they're on the same device and have the same inode (i.e. they're the same).  So in the previous example, all three references to /usr/local/lib are equivalent.  However, the name of the first reference will be the name that appears in the viewglob display.  So if you refer to files in /usr/local/../local/lib and then /usr/local/lib on the same command\-line, viewglob understands they are the same directory, but will use the less practical name /usr/local/../local/lib, since it appears first (and is just as valid as /usr/local/lib)
+.PP
+Since people generally don't type such things as /usr/local/../local/lib, this shouldn't be an issue.
+
+.SH FILES
+.I ~/.viewglobrc
+.IP
+If present, this file specifies a default configuration for viewglob.  The file syntax is:
+.IP
+\fI<long option name>\fP \fI[ <whitespace>\fP \fI<value> ]\fP
+.IP
+So, to permanently disable the asterisk at the prompt, use a display limit of 500, show hidden files, and use windows-style sorting, the file should contain:
+.IP
+disable\-star
+.br
+show-max 500
+.br
+show-hidden
+.br
+sort-style windows
+.IP
+The configuration file has a lower priority than options specified on the command\-line, and can be disregarded completely with \-f.
+
+.SH NOTES
+First of all, when I say below "such\-and\-such feature of bash doesn't work in viewglob", I mean that the viewglob display will not show expansion information for that feature.  But bash is bash, and by running viewglob you are not running a watered\-down version of it.  The functionality of the shell itself is unchanged by running viewglob.  Anyhow.
+.PP
+Unfortunately, I haven't found a good way to predict history expansion (stuff involving the special char "!").  If this makes you sad, I feel your pain, as I find !$ very useful.  If you've got any ideas, I'd like to hear from you.  For now, the viewglob display will pretend any construction starting with an unescaped ! does not exist.  Exceptions: a ! by itself, or the !(foo) pattern match.
+.PP
+A viewglob'd shell session will not extend to subshells.  That is, if while in a viewglob session you run "\fIbash\fP" or "\fIsu\fP", viewglob will probably be temporarily disabled until you exit the new shell.  This is a consequence of viewglob's implementation, but I'd probably keep this behaviour even if I could get around it.
+.PP
+Since viewglob doesn't track changes in shell variables, I've decided to take out variable interpretation entirely.  If viewglob sees what it thinks is a variable in its command line, it'll stop processing it until it's removed.  The variables will of course work fine in the shell itself.
+.PP
+While running viewglob, don't unset or change the following variables.
+.IP
+In bash: \fIPS1\fP, \fIPROMPT_COMMAND\fP;
+.PP
+Doing so will probably confuse viewglob.  Note that if you do change one of these variables (maybe you were curious, or you just forgot), it won't affect the shell you were using, just the viewglob display.
+.br
+If you want to modify these variables, do so outside of a viewglob session, or put your changes in the shell's run control file.
+.PP
+Only the first command in a compound command will be interpreted by viewglob.  For example, as you type:
+.IP
+$ mv *.jp{e,}g ~/photos/ && rm *
+.PP
+viewglob will stop listening when it sees "&&", and the display will only register *.jp{e,}g.  This is not an implementation problem \- showing globbing for the subsequence commands could be deceptive, as the filesystem could be changed by executing the first command (as it is in this case).
+.PP
+Command substitution (stuff with backticks (`) or $(command)) is ignored by viewglob for the reason given above.  Works fine in your shell though.
+.PP
+For more information, please visit:
+.IP
+\fIhttp://viewglob.sourceforge.net/\fP
+
+.SH "ENVIRONMENT VARIABLES"
+.TP
+.SM HOME
+The location of the default configuration file.
+.SH BUGS
+Sometimes the heading labels in the display disallow shrinking past a certain point, sometimes they don't.  I haven't figured out why.
+.PP
+Window resizing can be very slow in directories with many files (give /usr/bin or /usr/local/bin a shot to see what I mean).  This is something that can be improved.
+.PP
+Resizing the terminal window will often cause viewglob's command\-line to become out of sync with the true command\-line, though it tries really hard to keep up.
+.PP
+In FreeBSD I couldn't get Ctrl-C to work in terminals.  At this point I'm not positive that it's not just my configuration.
+.PP
+And there are certainly others.  If you spot any bugs (and they aren't explained by \fBNOTES\fP above), send me a message, okay?  Contributions are also very welcome.
+.SH AUTHORS
+Stephen Bach <sjbach@users.sourceforge.net>
+.SH SEE ALSO
+.BR bash (1),
+.BR ls (1),
+.BR glob (7).
+

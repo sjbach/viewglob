@@ -1,0 +1,59 @@
+# Only the viewglob script should be in the path.
+bin_SCRIPTS = viewglob gviewglob
+
+viewglob: Makefile
+	rm -f viewglob.tmp
+	sed -e 's,@datadir\@,$(pkgdatadir),g' \
+		-e 's,@BASH_FULL_PATH\@,$(BASH_FULL_PATH),g' \
+		viewglob.in > viewglob.tmp
+	chmod a+x viewglob.tmp
+	mv viewglob.tmp viewglob
+
+getopt.sh: Makefile
+	rm -f getopt.sh.tmp
+	sed -e 's,@BASH_FULL_PATH\@,$(BASH_FULL_PATH),g' \
+		getopt.sh.in > getopt.sh.tmp
+	chmod a+x getopt.sh.tmp
+	mv getopt.sh.tmp getopt.sh
+
+gviewglob: Makefile
+	$(LN_S) viewglob gviewglob
+
+# Very slight modifications to these files from Marc J. Rochkind's
+# book Advanced Unix Programming 2nd ed.  You can get them on the
+# web at: http://www.basepath.com/aup/
+BUILT_SOURCES = ptutil.viewglob.c ptutil.viewglob.h \
+                tc_setraw.viewglob.c tc_setraw.viewglob.h
+ptutil.viewglob.c: Makefile
+	rm -f ptutil.viewglob.c
+	patch -i ptutil.c.diff -o ptutil.viewglob.c ptutil.c
+ptutil.viewglob.h: Makefile
+	rm -f ptutil.viewglob.h
+	patch -i ptutil.h.diff -o ptutil.viewglob.h ptutil.h
+tc_setraw.viewglob.c: Makefile
+	rm -f tc_setraw.viewglob.c
+	patch -i tc_setraw.c.diff -o tc_setraw.viewglob.c tc_setraw.c
+tc_setraw.viewglob.h: Makefile
+	rm -f tc_setraw.viewglob.h
+	patch -i tc_setraw.h.diff -o tc_setraw.viewglob.h tc_setraw.h
+
+CLEANFILES = viewglob getopt.sh ptutil.viewglob.c ptutil.viewglob.h \
+             tc_setraw.viewglob.c tc_setraw.viewglob.h gviewglob
+
+pkgdata_DATA = getopt.sh init-viewglob.sh
+pkgdata_PROGRAMS = seer glob-expand
+seer_SOURCES = seer.c children.c cmdline.c sequences.c   \
+               sanitize.c tc_setraw.viewglob.c ptutil.viewglob.c xmalloc.c \
+               viewglob-error.c hardened_io.c misc.c
+glob_expand_SOURCES = glob-expand.c xmalloc.c \
+                      viewglob-error.c
+
+noinst_HEADERS = seer.h children.h cmdline.h sequences.h \
+                 sanitize.h tc_setraw.h ptutil.h \
+                 viewglob-error.h hardened_io.h common.h \
+                 glob-expand.h
+EXTRA_DIST = ptutil.h ptutil.h.diff ptutil.c \
+             ptutil.c.diff tc_setraw.h tc_setraw.h.diff \
+			 tc_setraw.c tc_setraw.c.diff viewglob.in \
+			 getopt.sh.in init-viewglob.sh
+

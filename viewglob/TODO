@@ -1,0 +1,25 @@
+seer:
+	- zsh functionality
+	- screen compatibility
+	- test and fix command-line parsing for wrapped lines.
+		- periodically run a ^M cleaning function?
+	- Keep track of variable changes by running env in PROMPT_COMMAND?
+
+	Future:
+	- many terminals linking to the same display, with the display showing the info of the focused terminal only?
+	- commands from terminal to navigate display window.
+
+gviewglob:
+	- DIR_COLORS
+	- fix scrollbar width assumption
+	- slight highlighting difference between files named explicitly and files expanded from a glob?
+	- don't focus on gtk window when opened (is this viable?)
+	- wait indicator?
+	- fix command line forcing width minimum.
+	- sometimes (but not always) the wrapboxes or DListing headers force a width minimum.
+	- Truncate directory path label if it's too big.
+		- like this: "/path/to/dir/blah/" --> "/path/to/d..."
+	- convert "2 selected, 10 total (4 hidden)" to "2, 10 (4)" if window size is too small
+		- then use "2, 10..." if it's really really small?
+	- Wrapbox resizing works (barely), but is achieved in an ugly way.
+

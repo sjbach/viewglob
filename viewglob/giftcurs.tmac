@@ -1,0 +1,47 @@
+.\" Useful/evil groff macros and the sorts. Improvements welcome.
+.\"
+.\" Copyright (C) 2004 Goran Weinholt <weinholt@dtek.chalmers.se>.
+.\"
+.\" Copying and distribution of this file, with or without modification,
+.\" are permitted in any medium without royalty provided the copyright
+.\" notice and this notice are preserved.
+.\"
+.\" $Id$
+.
+.
+.\" This one makes a section header with a line under it, if nroff'ed.
+.de Sh
+.  SH
+.  nop \\$*
+.  if n .if !'\*[.T]'html' \{\
+.    ie '\*[.T]'utf8' .ds *dash "\[em]
+.    el .ds *dash "\-
+.    ds *dashes "
+.    nr *count 0
+.    length *length \\$*
+.    while (\\n[*count]<\\n[*length]) \{\
+.      as *dashes \\*[*dash]
+.      nr *count +1
+.    \}
+.    br
+.    nop \\*[*dashes]
+.  \}
+..
+.
+.\" These are like <pre> and </pre> in HTML.
+.de Vs
+.  DS
+.  if t .ft CW
+..
+.de Ve
+.  if t .ft R
+.  DE
+..
+.
+.\" Define the fine letters in our names, but in ascii and without the dots.
+.if '\*[.T]'ascii' \{\
+.  char \[:a] a
+.  char \[:o] o
+.\}
+.\" Define the soft hyphen before line break as a SOFT HYPHEN from iso-8859-1.
+.if '\*[.T]'latin1' .shc \N'173'

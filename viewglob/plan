@@ -1,0 +1,10 @@
+In seer:
+	- Able to navigate gviewglob with Ctrl sequences (vi or emacs style?)
+
+	zsh:
+		- unset chpwd precmd preexec TRAPNAL TRAPDEBUG TRAPEXIT TRAPZERR
+		- rename precmd, create new precmd calling renamed precmd + viewglob sequence
+		- noglob
+		- aliasing (disable global aliases?)
+		- for getting/modifying precmd/chpwd: typeset -f precmd/chpwd outputs the function.
+

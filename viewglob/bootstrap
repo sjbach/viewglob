@@ -1,0 +1,10 @@
+#! /bin/sh
+
+set -x
+#aclocal -I config
+aclocal-1.6
+autoheader
+automake --add-missing --copy
+autoconf
+set -
+

@@ -1,0 +1,249 @@
+#! @BASH_FULL_PATH@
+# Copyright (C) 2004 Stephen Bach
+# This is the configurator for the program seer from the viewglob package.
+#
+# viewglob is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# viewglob is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with viewglob; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+SCRIPT_NAME="${0##*/}"
+VG_DIR="@datadir@"
+
+shopt -s extglob
+
+vg_usage() {
+	cat >&2 << EOF
+usage: $SCRIPT_NAME [-d <display program>] [-f <config file>]
+                   [-o <shell output file>] [-O <terminal output file]
+                   [-p <name|inode>] [-s <ls|windows>] [-n <##>]
+                   [-b] [-t] [-w] [ -e <executable>]
+-d, --display       Name or path to a display program to use instead of the
+                    default.
+-f, --config-file   Alternate config file.
+-o, --shell-output  Output a transcript of the shell's output to the given file.
+-O, --term-output   Output a transcript of the terminal's input to given file.
+                    (i.e. the stuff you type into the shell)
+-p, --compare-mode  Method for directory comparison (see man page).
+-s, --sort-style    File sorting style.
+-n, --show-max      Maximum number of files to show per directory
+                    (you can still force show if max is reached).
+-b, --disable-icons Don't show file/directory icons in display.
+-t, --disable-star  Don't show the viewglob asterisk indicator in the shell.
+-w, --show-hidden   Display hidden files by default.
+-e, --executable    Alternate shell to run
+                    (you probably don't want to use this).
+-h, --help          This usage.
+-V, --version       Print the version.
+EOF
+
+	exit 0
+}
+
+vg_error() {
+	echo "$SCRIPT_NAME: $1" >&2
+	exit $2
+}
+
+vg_version() {
+cat << EOF
+viewglob 0.8.0
+Released August 8, 2004
+EOF
+	exit 0
+}
+
+vg_test_executable() {
+	if [ ! "$1" ]
+		then vg_error "No executable specified" 1
+	elif [ ! -x "$1" ]
+		then vg_error "$1 is not present or not executable" 1
+	fi
+}
+
+vg_test_display() {
+	if [ ! "$1" ]
+		then vg_error "No display program specified" 1
+	elif [ ! -x "$1" ]
+		then vg_error "$1 is not present or not executable" 1
+	fi
+}
+
+vg_test_config_file() {
+	if [ ! "$1" ]
+		then vg_error "No file specified" 1
+	elif [ ! -e "$1" ]
+		then vg_error "$1 does not exist" 1
+	fi
+}
+
+vg_test_output_file() {
+	if [ ! "$1" ]
+		then vg_error "No output file specified" 1
+	fi
+}
+
+vg_test_compare_mode() {
+	if [ "$1" != name ] && [ "$1" != inode ]
+		then vg_error "Compare mode must be \"name\" or \"inode\"" 1
+	fi
+}
+
+vg_test_sort_style() {
+	if [ "$1" != ls ] && [ "$1" != win ]
+		then vg_error "Unknown sort style \"$1\"" 1
+	fi
+}
+
+vg_test_show_max() {
+	if [[ "$1" != *([0-9]) ]]
+		then vg_error "Argument to show-max must be a real number" 1
+	fi
+}
+
+if [[ -z "$DISPLAY" ]]
+	then vg_error "Must be run from a graphical environment" 2
+fi
+
+VG_CONFIG_FILE="$HOME/.viewglobrc"
+
+# This is an excellent script to replace bash's getopts with one which allows long names.
+# I found it on Google Groups.  It's written by "Grigoriy Strokin (grg@philol.msu.ru)".
+# The script is also available in the bash package under examples/functions/getoptx.bash.
+. $VG_DIR/getopt.sh
+
+# Parse the options.
+# --dir-colors?
+#
+while getoptex "b; c; e: d: f: n: o: O: p: s: t; w; h; v; V; executable: display: config-file: shell-output: show-hidden; show-max: sort-style: term-output: disable-star; disable-icons; compare-mode; help; version;" "$@"
+	do case "$OPTOPT" in
+
+		b|disable-icons)
+			VG_DISPLAY_OPTS="${VG_DISPLAY_OPTS} -b"
+			;;
+
+		c)
+			# Ignored for now.
+			;;
+
+		e|executable)
+			vg_test_executable "$OPTARG"
+			VG_EXECUTABLE="$OPTARG"
+			;;
+
+		d|display)
+			vg_test_display "$OPTARG"
+			VG_DISPLAY="$OPTARG"
+			;;
+
+		f|config-file)
+			vg_test_config_file "$OPTARG"
+			VG_CONFIG_FILE="$OPTARG"
+			;;
+
+		o|shell-output)
+			vg_test_output_file "$OPTARG"
+			VG_OPTS="$VG_OPTS -o \"$OPTARG\""
+			;;
+
+		O|term-output)
+			vg_test_output_file "$OPTARG"
+			VG_OPTS="$VG_OPTS -O \"$OPTARG\""
+			;;
+
+		p|compare-mode)
+			vg_test_compare_mode "$OPTARG"
+			VG_COMPARE_MODE=$OPTARG
+			;;
+
+		s|sort-style)
+			[ "$OPTARG" == windows ] && OPTARG=win
+			vg_test_sort_style "$OPTARG"
+			VG_SORT_STYLE=$OPTARG
+			;;
+
+		t|disable-star)
+			VG_INIT_OPTS="${VG_INIT_OPTS} -t"
+			;;
+
+		n|show-max)
+			vg_test_show_max "$OPTARG"
+			VG_SHOW_MAX=$OPTARG
+			;;
+
+		w|show-hidden)
+			VG_DISPLAY_OPTS="${VG_DISPLAY_OPTS} -w"
+			;;
+		
+		h|help) vg_usage ;;
+
+		v|V|version) vg_version ;;
+
+		*) vg_error "invalid argument" 4 ;;
+	esac
+done
+shift $((OPTIND - 1))
+if [ "$OPTOPT" = \? ]
+	# getopt.sh already emitted an error message.
+	then exit 5
+fi
+
+# Parse the config file.  These options will not override the command-line options.
+if [ -r "$VG_CONFIG_FILE" ]; then
+	while read opt arg; do
+		case "$opt" in
+			display)
+				[[ -z "$VG_DISPLAY" ]] && vg_test_display "$arg" && VG_DISPLAY="$arg"
+				;;
+			executable)
+				[[ -z "$VG_EXECUTABLE" ]] && vg_test_executable "$arg" && VG_EXECUTABLE="$arg"
+				;;
+			disable-icons)
+				VG_DISPLAY_OPTS="${VG_DISPLAY_OPTS} -b"
+				;;
+			disable-star)
+				VG_INIT_OPTS="${VG_INIT_OPTS} -t"
+				;;
+			compare-mode)
+				[[ -z "$VG_COMPARE_MODE" ]] && vg_test_compare_mode "$arg" && VG_COMPARE_MODE=$arg
+				;;
+			show-max)
+				[[ -z "$VG_SHOW_MAX" ]] && vg_test_show_max "$arg" && VG_SHOW_MAX=$arg
+				;;
+			show-hidden)
+				VG_DISPLAY_OPTS="${VG_DISPLAY_OPTS} -w"
+				;;
+			sort-style)
+				[ "$arg" == windows ] && arg="win"
+				[[ -z "$VG_SORT_STYLE" ]] && vg_test_sort_style "$arg" && VG_SORT_STYLE=$arg
+				;;
+		esac
+	done < "$VG_CONFIG_FILE"
+fi
+
+# These are the default values.
+[[ -z "$VG_DISPLAY" ]] && VG_DISPLAY="$VG_DIR/gviewglob"
+[[ -z "$VG_EXECUTABLE" ]] && VG_EXECUTABLE=bash
+[[ -z "$VG_COMPARE_MODE" ]] && VG_COMPARE_MODE=inode
+[[ -z "$VG_SHOW_MAX" ]] && VG_SHOW_MAX=200
+[[ -z "$VG_SORT_STYLE" ]] && VG_SORT_STYLE=ls
+
+if [ $VG_COMPARE_MODE = name ]; then
+	VG_EXPAND_OPTS="${VG_EXPAND_OPTS} -n"
+fi
+
+# Exec seer.  The eval is required to make my very awkward quoting work.
+eval exec \"$VG_DIR\"/seer $VG_OPTS -d \"$VG_DISPLAY\" -e \"$VG_EXECUTABLE\" -f \"$VG_CONFIG_FILE\"   \
+                           $VG_DISPLAY_OPTS -n $VG_SHOW_MAX -s $VG_SORT_STYLE     \
+                           -i \". "$VG_DIR/init-viewglob.sh $VG_INIT_OPTS"\"                          \
+						   -x \""$VG_DIR/glob-expand $VG_EXPAND_OPTS --"\"
+

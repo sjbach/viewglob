@@ -1,0 +1,103 @@
+--- tc_setraw.c	2004-08-06 02:23:17.000000000 -0400
++++ tc_setraw.c.viewglob	2004-08-06 17:56:46.852272640 -0400
+@@ -18,47 +18,15 @@
+ 	are to be used.
+ 
+ */
+-#include "defs.h"
+-#include "tc_setraw.h"
++
++#include "common.h"
+ #include <termios.h>
++#include "tc_setraw.viewglob.h"
+ 
+ /*[tc_keystroke]*/
+ static struct termios tbufsave;
+ static bool have_attr = false;
+ 
+-int tc_keystroke(void)
+-{
+-	static unsigned char buf[10];
+-	static ssize_t total = 0, next = 0;
+-	static bool first = true;
+-	struct termios tbuf;
+-
+-	if (first) {
+-		first = false;
+-		ec_neg1( tcgetattr(STDIN_FILENO, &tbuf) )
+-		have_attr = true;
+-		tbufsave = tbuf;
+-		tbuf.c_lflag &= ~ICANON;
+-		tbuf.c_cc[VMIN] = sizeof(buf);
+-		tbuf.c_cc[VTIME] = 2;
+-		ec_neg1( tcsetattr(STDIN_FILENO, TCSAFLUSH, &tbuf) )
+-	}
+-	if (next >= total)
+-		switch (total = read(0, buf, sizeof(buf))) {
+-		case -1:
+-			syserr("read");
+-		case 0:
+-			fprintf(stderr, "Mysterious EOF\n");
+-			exit(EXIT_FAILURE);
+-		default:
+-			next = 0;
+-		}
+-	return buf[next++];
+-
+-EC_CLEANUP_BGN
+-	return -1;
+-EC_CLEANUP_END
+-}
+ /*[tc_setraw]*/
+ bool tc_setraw(void)
+ {
+@@ -70,9 +38,12 @@
+ 	disable = _POSIX_VDISABLE;
+ #else
+ 	/* treat undefined as error with errno = 0 */
+-	ec_neg1( (errno = 0, disable = fpathconf(STDIN_FILENO, _PC_VDISABLE)) )
++	errno = 0;
++	if ( (disable = fpathconf(STDIN_FILENO, _PC_VDISABLE)) == -1)
++		goto failure;
+ #endif
+-	ec_neg1( tcgetattr(STDIN_FILENO, &tbuf) )
++	if (tcgetattr(STDIN_FILENO, &tbuf) == -1)
++		goto failure;
+ 	have_attr = true;
+ 	tbufsave = tbuf;
+ 	tbuf.c_cflag &= ~(CSIZE | PARENB);
+@@ -82,24 +53,25 @@
+ 	tbuf.c_lflag &= ~(ICANON | ISIG | IEXTEN | ECHO);
+ 	for (i = 0; i < NCCS; i++)
+ 		tbuf.c_cc[i] = (cc_t)disable;
+-	tbuf.c_cc[VMIN] = 5;
+-	tbuf.c_cc[VTIME] = 2;
+-	ec_neg1( tcsetattr(STDIN_FILENO, TCSAFLUSH, &tbuf) )
++	tbuf.c_cc[VMIN] = 1;
++	tbuf.c_cc[VTIME] = 0;
++	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &tbuf) == -1)
++		goto failure;
+ 	return true;
+ 
+-EC_CLEANUP_BGN
++failure:
+ 	return false;
+-EC_CLEANUP_END
+ }
+ /*[tc_restore]*/
+ bool tc_restore(void)
+ {
+-	if (have_attr)
+-		ec_neg1( tcsetattr(STDIN_FILENO, TCSAFLUSH, &tbufsave) )
++	if (have_attr) {
++		if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &tbufsave) == -1)
++			goto failure;
++	}
+ 	return true;
+ 
+-EC_CLEANUP_BGN
++failure:
+ 	return false;
+-EC_CLEANUP_END
+ }
+ /*[]*/

@@ -1,0 +1,15 @@
+--- tc_setraw.h	2004-08-06 02:23:17.000000000 -0400
++++ tc_setraw.h.viewglob	2004-08-06 02:22:01.000000000 -0400
+@@ -1,8 +1,11 @@
+ #ifndef _TC_SETRAW_H_
+ #define _TC_SETRAW_H_
+ 
++BEGIN_C_DECLS
++
+ bool tc_setraw(void);
+ bool tc_restore(void);
+-int tc_keystroke(void);
++
++END_C_DECLS
+ 
+ #endif /* _TC_SETRAW_H_ */
