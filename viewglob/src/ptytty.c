@@ -21,8 +21,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *---------------------------------------------------------------------*/
 
-//#include "../config.h"		/* NECESSARY */
-#include "config.h"		/* NECESSARY */
+#include "config.h"
+#include "ptytty.h"
 
 /*
  * Try to be self-contained except for the above autoconfig'd defines
