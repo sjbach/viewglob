@@ -25,6 +25,7 @@
 #endif
 
 #include "common.h"
+#include <X11/Xlib.h>
 
 BEGIN_C_DECLS
 
@@ -47,6 +48,7 @@ struct display {
 	char* name;
 	struct args a;
 	pid_t pid;
+	Window xid;
 	char* glob_fifo_name;
 	char* cmd_fifo_name;
 	char* feedback_fifo_name;
@@ -72,3 +74,4 @@ void args_add(struct args* a, char* new_arg);
 END_C_DECLS
 
 #endif /* !CHILDREN_H */
+

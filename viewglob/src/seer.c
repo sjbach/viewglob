@@ -27,6 +27,7 @@
 #include "sanitize.h"
 #include "actions.h"
 #include "buffer.h"
+#include "x11-stuff.h"
 #include "seer.h"
 
 #include <signal.h>
@@ -58,8 +59,10 @@ static bool process_input(Buffer* b);
 
 static bool  is_key(Buffer* b);
 static bool  is_filename(Buffer* b);
+static bool  is_xid(Buffer* b);
 static bool  convert_to_filename(enum process_level pl, char* holdover, Buffer* src_b, Buffer* dest_b);
 static bool  convert_to_key(Buffer* src_b, Buffer* dest_b);
+static bool  convert_to_xid(Buffer* src_b, struct display* d);
 
 static void send_sane_cmd(struct display* d);
 static void send_order(struct display* d, Action a);
@@ -67,11 +70,15 @@ static void send_order(struct display* d, Action a);
 static void parse_args(int argc, char** argv);
 static void report_version(void);
 
+static void set_term_title(char* title);
 static void disable_viewglob(void);
 
 
 /* Globals */
 struct options opts;
+
+Display* xDisp;         /* Our connection to the X server. */
+Window   term_xid;      /* The window id of the terminal running this program. */
 
 struct user_shell u;    /* Almost everything revolves around this. */
 struct glob_shell x;
@@ -98,6 +105,7 @@ int main(int argc, char* argv[]) {
 	/* Initialize the shell and display structs. */
 	u.s.pid = x.s.pid = disp.pid = -1;
 	u.s.fd = x.s.fd = -1;
+	disp.xid = term_xid = 0;
 	disp.glob_fifo_fd = disp.cmd_fifo_fd = disp.feedback_fifo_fd = -1;
 	disp.glob_fifo_name = x.glob_cmd = NULL;
 
@@ -156,12 +164,27 @@ int main(int argc, char* argv[]) {
 	if (u.term_transcript_fd == -1)
 		XFREE(opts.term_out_file);
 
+	/* Open the connection to the X server. */
+	if ( (xDisp = XOpenDisplay(NULL)) == NULL)
+		viewglob_warning("Could not connect to the X server");
+
 	/* Setup a shell for the user. */
-	if ( ! pty_child_fork(&(u.s), NEW_PTY_FD, NEW_PTY_FD, NEW_PTY_FD) ) {
+	if ( !pty_child_fork(&(u.s), NEW_PTY_FD, NEW_PTY_FD, NEW_PTY_FD) ) {
 		viewglob_error("Could not create user shell");
 		ok = false;
 		goto done;
 	}
+
+	/* Attempt to get the window id of the terminal running this program. */
+	char* title;
+	title = XMALLOC(char, 100);
+	sprintf(title, "viewglob%d", u.s.pid);
+	set_term_title(title);
+	term_xid = get_xid_from_title(xDisp, title);
+	DEBUG((df, "term xid: %lu\n", term_xid));
+	set_term_title("viewglob");
+	if (!term_xid)
+		viewglob_warning("Could not get window id of terminal");
 
 	/* Setup another shell to glob stuff in. */
 	putenv("VG_SANDBOX=yep");
@@ -171,7 +194,7 @@ int main(int argc, char* argv[]) {
 		goto done;
 	}
 
-	/* Open the display. */
+	/* Open the gviewglob display. */
 	if ( (!display_init(&disp)) || (!display_fork(&disp)) ) {
 		viewglob_error("Could not create display");
 		ok = false;
@@ -412,6 +435,17 @@ static bool main_loop(struct display* disp) {
 					}
 					break;
 
+				case A_REFOCUS:
+					DEBUG((df, "A_REFOCUS"));
+					if (viewglob_enabled && display_running(disp) && xDisp) {
+						DEBUG((df, "okay"));
+						if (disp->xid)
+							activate_window(xDisp, disp->xid, false);
+						if (term_xid)
+							activate_window(xDisp, term_xid, false);
+					}
+					break;
+
 				case A_SEND_LOST:
 				case A_SEND_UP:
 				case A_SEND_DOWN:
@@ -531,6 +565,10 @@ static bool user_activity(void) {
 					data_converted = convert_to_filename(shell_b.pl, shell_b.holdover, &display_b, &term_b);
 				else if (is_key(&display_b))
 					data_converted = convert_to_key(&display_b, &term_b);
+				else if (is_xid(&display_b)) {
+					convert_to_xid(&display_b, &disp);
+					data_converted = false;          /* We're not writing anything. */
+				}
 				else
 					data_converted = false;
 
@@ -726,6 +764,15 @@ static bool convert_to_key(Buffer* src_b, Buffer* dest_b) {
 }
 
 
+static bool convert_to_xid(Buffer* src_b, struct display* d) {
+	char* xid_string;
+
+	xid_string = src_b->buf + strlen("xid:");
+	d->xid = strtoul(xid_string, NULL, 10);
+	return true;
+}
+
+
 static bool write_to_shell(Buffer* b) {
 	bool ok = true;
 
@@ -852,6 +899,17 @@ static bool is_key(Buffer* b) {
 }
 
 
+static bool is_xid(Buffer* b) {
+	bool result;
+
+	if (*(b->buf) != 'x' || b->filled < 5)
+		result = false;
+	else
+		result = !strncmp("xid:", b->buf, 4);
+
+	return result;
+}
+
 /* This function writes out stuff that looks like this:
    cmd:<sane_command>
    cd "<u.pwd>" && <glob-command> <sane_cmd> >> <glob fifo> ; cd / */
@@ -936,6 +994,22 @@ static void disable_viewglob(void) {
 }
 
 
+/* Set the title of the current terminal window (hopefully). */
+static void set_term_title(char* title) {
+
+	char* full_title;
+
+	/* These are escape sequences that most terminals use to delimit the title. */
+	full_title = XMALLOC(char, strlen("\033]0;") + strlen(title) + strlen("\007"));
+	strcpy(full_title, "\033]0;");
+	strcat(full_title, title);
+	strcat(full_title, "\007");
+
+	hardened_write(STDOUT_FILENO, full_title, strlen(full_title));
+	XFREE(full_title);
+}
+
+
 void sigwinch_handler(int signum) {
 	/* Don't need to do much here. */
 	u.term_size_changed = true;
@@ -954,4 +1028,5 @@ void sigterm_handler(int signum) {
 	printf("[Exiting viewglob]\n");
 	_exit(EXIT_FAILURE);
 }
+
 

@@ -28,6 +28,7 @@
 
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
+#include <gdk/gdkx.h>
 #include <string.h>       /* For strcmp. */
 #include <unistd.h>       /* For getopt. */
 #include <stdio.h>        /* For BUFSIZ. */
@@ -36,6 +37,7 @@
 /* Prototypes. */
 static gboolean  receive_data(GIOChannel* source, gchar* buff, gsize size, gsize* bytes_read);
 static GString*  read_string(const gchar* buff, gsize* start, gsize n, gchar delim, struct holdover* ho, gboolean* finished);
+static void      write_xwindow_id(GtkWidget* gtk_window);
 
 static void        set_icons(void);
 
@@ -568,7 +570,6 @@ static gboolean window_key_press_event(GtkWidget* window, GdkEventKey* event, gp
 			break;
 
 		default:
-
 			/* The rest are passed to the terminal. */
 			temp1 = g_malloc(2);
 			*temp1 = event->keyval;
@@ -604,6 +605,25 @@ static gboolean window_key_press_event(GtkWidget* window, GdkEventKey* event, gp
 	}
 
 	return result;
+}
+
+
+/* Send the id of the display's X window to seer. */
+static void write_xwindow_id(GtkWidget* gtk_window) {
+
+	GdkWindow* gdk_window = gtk_window->window;
+
+	if (gdk_window) {
+		GString* xwindow_string = g_string_new(NULL);
+
+		g_string_printf(xwindow_string, "xid:%lu", GDK_WINDOW_XID(gdk_window));
+		feedback_write_string(xwindow_string->str, xwindow_string->len);
+
+		g_string_free(xwindow_string, TRUE);
+	}
+	else
+		g_warning("Couldn't find an id for the display's window.\n"
+		          "Therefore the focus shortcut won't work :-(");
 }
 
 
@@ -809,6 +829,9 @@ int main(int argc, char *argv[]) {
 
 	/* And we're off... */
 	gtk_widget_show(e.window);
+
+	/* Pass the window ID back to seer. */
+	write_xwindow_id(e.window);
 
 	gtk_main();
 

@@ -45,7 +45,7 @@ extern FILE* df;
 
 static bool create_fifo(char* name);
 static bool waitpid_wrapped(pid_t pid);
-static bool wait_for_data(int master_fd);
+static bool wait_for_data(int fd);
  
 
 /* Make five attempts at creating a fifo with the given name. */
@@ -129,6 +129,7 @@ bool display_init(struct display* d) {
 	bool ok = true;
 
 	d->a.argv[0] = d->name;
+	d->xid = 0;              /* We'll get this from the display when it's started. */
 
 	/* Get the current pid and turn it into a string. */
 	pid_str = XMALLOC(char, 10 + 1);    /* 10 for the length of the pid, 1 for \0. */
@@ -238,6 +239,7 @@ bool display_terminate(struct display* d) {
 			case 0:
 				ok &= waitpid_wrapped(d->pid);
 				d->pid = -1;
+				d->xid = 0;
 				break;
 			default:
 				viewglob_error("Could not close display");
@@ -412,9 +414,8 @@ bool pty_child_fork(struct pty_child* c, int new_stdin_fd, int new_stdout_fd, in
 			break;
 	}
 
-	/* Wait for user shell to set itself up. */
-	if ( ! wait_for_data(pty_master_fd) ) {
-		viewglob_error("Did not receive go-ahead from child");
+	if (!wait_for_data(c->fd)) {
+		viewglob_error("Did not receive go-ahead from child shell");
 		ok = false;
 	}
 
@@ -451,12 +452,12 @@ bool pty_child_terminate(struct pty_child* c) {
 }
 
 
-static bool wait_for_data(int master_fd) {
+static bool wait_for_data(int fd) {
 	fd_set fd_set_write;
 
 	FD_ZERO(&fd_set_write);
-	FD_SET(master_fd, &fd_set_write);
-	if ( select(master_fd + 1, NULL, &fd_set_write, NULL, NULL) == -1 )
+	FD_SET(fd, &fd_set_write);
+	if ( select(fd + 1, NULL, &fd_set_write, NULL, NULL) == -1 )
 		return false;
 	return true;
 }

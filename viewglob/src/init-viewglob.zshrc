@@ -32,8 +32,8 @@ if [ "$VG_SANDBOX" = yep ]; then
 	#   disabled without disabling all aliases (AFAIK).
 	# No spell check!
 	# BAD_PATTERN can prevent glob-expand from running.
-	# The sandbox should NEVER modify the file system, but turn off clobbering
-	#   and star_silent just in case.
+	# The sandbox should NEVER modify the file system, but turn off
+	#   clobbering and star_silent just in case.
 	# Don't save history in the sandbox.
 	# The user could put setopt zle in their .zshrc, overriding seer's +Z.
 	setopt \
@@ -75,7 +75,8 @@ else
 	export RPROMPT="${RPROMPT}%{"$'\e[0;34m'"%}%{"$'\e[0m'"%}%{"$'\e[0;31m'"%}%{"$'\e[0m'"%}"
 
 	if typeset -f precmd >/dev/null; then
-		# The user already has a precmd function.  Gotta do some finagling.
+		# The user already has a precmd function.
+		# Gotta do some finagling.
 
 		if [ "$TMPDIR" ]; then
 			VG_TEMP_FILE="$TMPDIR/vg$$"

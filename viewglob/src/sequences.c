@@ -72,6 +72,7 @@ static MatchEffect seq_nav_pgup(Buffer* b);
 static MatchEffect seq_nav_pgdown(Buffer* b);
 static MatchEffect seq_nav_ctrl_g(Buffer* b);
 static MatchEffect seq_nav_toggle(Buffer* b);
+static MatchEffect seq_nav_refocus(Buffer* b);
 static MatchEffect seq_nav_disable(Buffer* b);
 /*static MatchEffect seq_nav_catch_all(Buffer* b);*/
 
@@ -135,6 +136,8 @@ static char* const NAV_C_KEYBOARD_PGDOWN_SEQ = "\007\033[6^";
 static char* const NAV_CTRL_G_SEQ = "\007\007";
 static char* const NAV_TOGGLE_SEQ = "\007 ";
 static char* const NAV_C_TOGGLE_SEQ = "\007\000";
+static char* const NAV_REFOCUS_SEQ = "\007\t";
+static char* const NAV_REFOCUS_ALT_SEQ = "\007\015";
 static char* const NAV_DISABLE_SEQ = "\007q";
 /*static char* const NAV_CATCH_ALL_SEQ = "\007" ANY_S "";*/
 
@@ -257,8 +260,8 @@ void init_seqs(enum shell_type shell) {
 	else
 		viewglob_error("Unexpected shell type");
 
-	seq_groups[PL_TERMINAL].n = 28;
-	seq_groups[PL_TERMINAL].seqs = XMALLOC(Sequence, 28);
+	seq_groups[PL_TERMINAL].n = 30;
+	seq_groups[PL_TERMINAL].seqs = XMALLOC(Sequence, 30);
 	for (i = 0; i < seq_groups[PL_TERMINAL].n; i++) {
 		seq_groups[PL_TERMINAL].seqs[i].pos = 0;
 		seq_groups[PL_TERMINAL].seqs[i].enabled = false;
@@ -404,6 +407,16 @@ void init_seqs(enum shell_type shell) {
 	seq_groups[PL_TERMINAL].seqs[27].seq = NAV_DISABLE_SEQ;
 	seq_groups[PL_TERMINAL].seqs[27].length = strlen(NAV_DISABLE_SEQ);
 	seq_groups[PL_TERMINAL].seqs[27].func = seq_nav_disable;
+
+	strcpy(seq_groups[PL_TERMINAL].seqs[28].name, "Nav refocus");
+	seq_groups[PL_TERMINAL].seqs[28].seq = NAV_REFOCUS_SEQ;
+	seq_groups[PL_TERMINAL].seqs[28].length = strlen(NAV_REFOCUS_SEQ);
+	seq_groups[PL_TERMINAL].seqs[28].func = seq_nav_refocus;
+
+	strcpy(seq_groups[PL_TERMINAL].seqs[29].name, "Nav refocus alt");
+	seq_groups[PL_TERMINAL].seqs[29].seq = NAV_REFOCUS_ALT_SEQ;
+	seq_groups[PL_TERMINAL].seqs[29].length = strlen(NAV_REFOCUS_ALT_SEQ);
+	seq_groups[PL_TERMINAL].seqs[29].func = seq_nav_refocus;
 
 	/*
 	strcpy(seq_groups[PL_TERMINAL].seqs[13].name, "Nav catch all");
@@ -1211,6 +1224,14 @@ static MatchEffect seq_nav_toggle(Buffer* b) {
 	DEBUG((df, "seq_nav_toggle!\n"));
 	eat_segment(b);
 	action_queue(A_TOGGLE);
+	return ME_NO_EFFECT;
+}
+
+
+static MatchEffect seq_nav_refocus(Buffer* b) {
+	DEBUG((df, "seq_nav_refocus!\n"));
+	eat_segment(b);
+	action_queue(A_REFOCUS);
 	return ME_NO_EFFECT;
 }
 

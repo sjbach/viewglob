@@ -80,6 +80,7 @@ Action action_queue(Action o) {
 		case (A_SEND_PGUP):
 		case (A_SEND_PGDOWN):
 		case (A_TOGGLE):
+		case (A_REFOCUS):
 			al_push(o);
 			break;
 

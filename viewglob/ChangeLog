@@ -1,3 +1,12 @@
+2005-03-04 22:40  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* x11-stuff.c, x11-stuff.h: added
+	* children.c, init-viewglob.zshrc: aesthetic changes
+	* Makefile.am, actions.c, actions.h, children.h, seer.c, sequences.c,
+	  gviewglob.c:
+	  Adding key sequence that will automatically refocus both the
+	  viewglob terminal and display
+
 2005-03-02 00:49  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* glob-expand.c, viewglob-error.c, viewglob.in: aesthetic changes
