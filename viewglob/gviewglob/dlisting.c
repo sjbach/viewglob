@@ -28,13 +28,9 @@ extern FILE* df;
 
 extern struct viewable_preferences v;
 
-
 static gint show_context_menu(GtkWidget *widget, GdkEvent *event);
 static void show_hidden_files_activate_handler(GtkMenuItem* menu_item, DListing* dl);
 static void show_all_files_activate_handler(GtkMenuItem* menu_item, DListing* dl);
-
-static void dlisting_create_and_show_fitem_widgets_hidden(DListing* dl);
-static void dlisting_create_and_show_fitem_widgets_all(DListing* dl);
 
 
 static gint show_context_menu(GtkWidget *widget, GdkEvent *event) {
@@ -62,7 +58,9 @@ static gint show_context_menu(GtkWidget *widget, GdkEvent *event) {
 static void show_hidden_files_activate_handler(GtkMenuItem* menu_item, DListing* dl) { 
 
 	DEBUG((df, "in show_hidden_blah: %s\n", dl->name->str));
-	dlisting_create_and_show_fitem_widgets_hidden(dl);
+	file_box_set_show_hidden_files(FILE_BOX(dl->file_table), TRUE);
+	dl->force_show_hidden = TRUE;
+	dlisting_reset_file_count_label(dl);
 	gtk_widget_set_state(GTK_WIDGET(menu_item), GTK_STATE_INSENSITIVE);
 }
 
@@ -70,7 +68,9 @@ static void show_hidden_files_activate_handler(GtkMenuItem* menu_item, DListing*
 static void show_all_files_activate_handler(GtkMenuItem* menu_item, DListing* dl) { 
 
 	DEBUG((df, "in show_all_blah: %s\n", dl->name->str));
-	dlisting_create_and_show_fitem_widgets_all(dl);
+	file_box_set_file_display_limit(FILE_BOX(dl->file_table), 0);
+	dl->force_show_all = TRUE;
+	dlisting_reset_file_count_label(dl);
 	gtk_widget_set_state(GTK_WIDGET(menu_item), GTK_STATE_INSENSITIVE);
 }
 
@@ -316,68 +316,4 @@ void dlisting_free(DListing* dl) {
 	g_free(dl);
 }
 
-
-static void dlisting_create_and_show_fitem_widgets_hidden(DListing* dl) {
-#if 0
-	FItem* fi;
-	GSList* fi_iter;
-	gint pos = 0;
-	gboolean changes_made = FALSE;
-
-	fi_iter = dl->fi_slist;
-	while (fi_iter) {
-		fi = fi_iter->data;
-
-		if ( (! fi->widget) && g_str_has_prefix(fi->name->str, ".") ) {
-				fitem_rebuild_widgets(fi);
-
-				/* Pack the FItem in. */
-				wrap_box_pack(WRAP_BOX(dl->file_table), fi->widget);
-				wrap_box_reorder_child(WRAP_BOX(dl->file_table), fi->widget, pos);
-				gtk_widget_show(fi->widget);
-				changes_made = TRUE;
-
-		}
-		pos++;
-		fi_iter = g_slist_next(fi_iter);
-	}
-	if (changes_made)
-		gtk_widget_queue_resize(dl->file_table);
-	dl->force_show_hidden = TRUE;
-	dlisting_reset_file_count_label(dl);
-	return;
-#endif
-}
-
-
-static void dlisting_create_and_show_fitem_widgets_all(DListing* dl) {
-#if 0
-	FItem* fi;
-	GSList* fi_iter;
-	gint pos = 0;
-	gboolean changes_made = FALSE;
-
-	fi_iter = dl->fi_slist;
-	while (fi_iter) {
-		fi = fi_iter->data;
-
-		if ( ! fi->widget ) {
-			fitem_rebuild_widgets(fi);
-
-			/* Pack the FItem in. */
-			wrap_box_pack(WRAP_BOX(dl->file_table), fi->widget);
-			wrap_box_reorder_child(WRAP_BOX(dl->file_table), fi->widget, pos);
-			gtk_widget_show(fi->widget);
-			changes_made = TRUE;
-		}
-		pos++;
-		fi_iter = g_slist_next(fi_iter);
-	}
-	if (changes_made)
-		gtk_widget_queue_resize(dl->file_table);
-	dl->force_show_all = TRUE;
-	dlisting_reset_file_count_label(dl);
-	return;
-#endif
-}
 

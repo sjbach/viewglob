@@ -1,3 +1,21 @@
+/*
+	Copyright (C) 2004 Stephen Bach
+	This file is part of the viewglob package.
+
+	viewglob is free software; you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation; either version 2 of the License, or
+	(at your option) any later version.
+
+	viewglob is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with viewglob; if not, write to the Free Software
+	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*/
 
 #include "common.h"
 #include "file_box.h"
@@ -215,24 +233,21 @@ void file_box_set_show_hidden_files(FileBox* fbox, gboolean show) {
 
 	GSList* fi_iter;
 	FItem* fi;
+	FileDisplayCategory fdc;
 
 	fbox->show_hidden_files = show;
-	if (show) {
-		/* Display hidden files, but only up to file_display_limit. */
+	if (show)
+		fdc = FDC_REVEAL;
+	else
+		fdc = FDC_MASK;
 
-		for (fi_iter = fbox->fi_slist; fi_iter; fi_iter = g_slist_next(fi_iter)) {
-			fi = fi_iter->data;
-			if (fitem_is_hidden(fi)) {
-				fi->disp_cat = FDC_REVEAL;
-				
-			}
+	/* Cycle through the hidden files and reveal or mask them. */
+	for (fi_iter = fbox->fi_slist; fi_iter; fi_iter = g_slist_next(fi_iter)) {
+		fi = fi_iter->data;
+		if (fitem_is_hidden(fi)) {
+			fi->disp_cat = fdc;
+			fitem_display(fi, fbox);
 		}
-	}
-
-
-	if (fbox->show_hidden_files != show) {
-		fbox->show_hidden_files = show;
-		/* FIXME */
 	}
 }
 
@@ -242,10 +257,20 @@ void file_box_set_file_display_limit(FileBox* fbox, guint limit) {
 	g_return_if_fail(IS_FILE_BOX(fbox));
 	/* TODO: truncate results if limit is less than n_displayed_files.*/
 
-	if (fbox->file_display_limit != limit) {
-		DEBUG((df, "<new display_limit: %d>\n", limit));
-		fbox->file_display_limit = limit;
-		/* FIXME */
+	if (fbox->file_display_limit == limit)
+		return;
+
+	GSList* fi_iter;
+	FItem* fi;
+
+	fbox->file_display_limit = limit;
+
+	/* Cycle through REVEAL fitems and re-display them up to the new limit.
+	   (fitems over that limit will be truncated). */
+	for (fi_iter = fbox->fi_slist; fi_iter; fi_iter = g_slist_next(fi_iter)) {
+		fi = fi_iter->data;
+		if (fi->disp_cat == FDC_REVEAL)
+			fitem_display(fi, fbox);
 	}
 }
 
@@ -296,7 +321,6 @@ static void fitem_display(FItem* fi, FileBox* fbox) {
 	switch (fi->disp_cat) {
 
 		case FDC_REVEAL:
-			DEBUG((df, "."));
 			/* We display a REVEAL'd FItem if we're under the limit or if it's selected. */
 			if ( (fbox->file_display_limit == 0) || (fbox->n_displayed_files < fbox->file_display_limit) ) {
 				if ( ! fi->widget ) {
@@ -308,7 +332,7 @@ static void fitem_display(FItem* fi, FileBox* fbox) {
 				fbox->n_displayed_files++;
 			}
 			else if (fi->selection == FS_YES) {
-				if (!fi->widget) {
+				if ( ! fi->widget ) {
 					/* It's not under the limit, but it's been selected.
 					   Doesn't have any widgets (if it does it's already displayed), so we make them. */
 					fitem_build_widgets(fi);
@@ -324,26 +348,21 @@ static void fitem_display(FItem* fi, FileBox* fbox) {
 			break;
 
 		case FDC_MASK:
-			if (fi->peek) {
+			if (fi->selection == FS_YES) {
+				/* Selected -- we display it even though it's masked. */
 				if (! fi->widget )  {
 					/* We're peeking at this FItem, but it doesn't have any widgets yet. */
-					DEBUG((df, "!"));
 					fitem_build_widgets(fi);
 					wrap_box_pack(WRAP_BOX(fbox), fi->widget);
 					wrap_box_reorder_child(WRAP_BOX(fbox), fi->widget, file_box_get_display_pos(fbox, fi));
 				}
-				else
-					DEBUG((df, "?"));
 
 			}
 			else if (fi->widget) {
-				DEBUG((df, "x"));
-				/* No peeking.  Destroy the FItem's widgets if present. */
+				/* Not selected.  Destroy the FItem's widgets if present. */
 				gtk_widget_destroy(fi->widget);
 				fi->widget = NULL;
 			}
-			else
-				DEBUG((df, "_"));
 			break;
 	}
 }
@@ -360,7 +379,6 @@ static gint file_box_get_display_pos(FileBox* fbox, FItem* fitem) {
 		fi = fi_iter->data;
 		if (fi == fitem)
 			break;
-		//else if ( (fi->disp_cat == FDC_REVEAL || fi->peek) && fi->widget )
 		else if ( (fi->disp_cat == FDC_REVEAL || fi->selection == FS_YES) && fi->widget )
 			pos++;
 	}
@@ -431,7 +449,6 @@ static FItem* fitem_new(const GString* name, FileType type, FileSelection select
 	new_fitem->type = type;
 	new_fitem->selection = selection;
 	new_fitem->disp_cat = FDC_INDETERMINATE;
-	new_fitem->peek = FALSE;
 	new_fitem->widget = NULL;
 
 	return new_fitem;
@@ -502,15 +519,11 @@ static void fitem_free(FItem* fi, gboolean destroy_widgets) {
 
 /* Determine the FileDisplayCategory of this fitem. */
 static void fitem_determine_display_category(FItem* fi, FileBox* fbox) {
-	fi->peek = FALSE;
 	if (fitem_is_hidden(fi)) {
 		if (fbox->show_hidden_files)
 			fi->disp_cat = FDC_REVEAL;
-		else {
+		else
 			fi->disp_cat = FDC_MASK;
-			if (fi->selection == FS_YES)
-				fi->peek = TRUE;
-		}
 	}
 	else
 		fi->disp_cat = FDC_REVEAL;
