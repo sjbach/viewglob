@@ -1,3 +1,7 @@
+2004-09-21 14:56  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* children.c: wait for zombie processes
+
 2004-09-20 19:35  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* AUTHORS, NEWS, README, README.ms, viewglob.1: 

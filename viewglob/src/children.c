@@ -30,11 +30,21 @@
 #include <fcntl.h>
 #include <string.h>
 
+#include <sys/wait.h>
+#ifndef WEXITSTATUS
+#  define WEXITSTATUS(stat_val) ((unsigned)(stat_val) >> 8)
+#endif
+#ifndef WIFEXITED
+#  define WIFEXITED(stat_val) (((stat_val) & 255) == 0)
+#endif
+
+
 #if DEBUG_ON
 extern FILE* df;
 #endif
 
 static bool create_fifo(char* name);
+static bool waitpid_wrapped(pid_t pid);
 
 static bool create_fifo(char* name) {
 	int i;
@@ -63,6 +73,22 @@ static bool create_fifo(char* name) {
 			break;
 	}
 	return ok;
+}
+
+
+static bool waitpid_wrapped(pid_t pid) {
+	bool result = true;
+
+	switch (waitpid(pid, NULL, 0)) {
+		case 0:
+			/* pid has not exited. */
+		case -1:
+			/* Error. */
+			result = false;
+			break;
+	}
+
+	return result;
 }
 
 
@@ -224,15 +250,14 @@ bool display_terminate(struct display* d) {
 	}
 
 
-	/* Terminate the child's process. */
+	/* Terminate and wait the child's process. */
 	if (d->pid != -1) {
 		switch (kill(d->pid, SIGTERM)) {
-			case 0:
-				d->pid = -1;
-				break;
 			case ESRCH:
-				d->pid = -1;
 				viewglob_warning("Display already closed");
+			case 0:
+				ok &= waitpid_wrapped(d->pid);
+				d->pid = -1;
 				break;
 			default:
 				viewglob_error("Could not close display");
@@ -361,13 +386,14 @@ bool pty_child_terminate(struct pty_child* c) {
 		ok = false;
 	}
 	
-	/* Terminate the child's process. */
+	/* Terminate and wait the child's process. */
 	if (c->pid != -1) {
 		switch (kill(c->pid, SIGHUP)) {    /* SIGHUP terminates bash, but SIGTERM won't. */
-			case 0:
-				break;
 			case ESRCH:
 				viewglob_warning("Child already terminated");
+			case 0:
+				ok &= waitpid_wrapped(c->pid);
+				c->pid = -1;
 				break;
 			default:
 				viewglob_error("Could not terminate child");
@@ -378,5 +404,4 @@ bool pty_child_terminate(struct pty_child* c) {
 
 	return ok;
 }
-
 
