@@ -14,8 +14,8 @@ ing environments. It has two parts:
      1.   A tool that sits as a layer between the  shell  and  X  terminal,
           keeping track of the user's current directory and command line.
 
-     2.   A graphical display which shows the layouts of directories refer­
-          enced on the command line (including pwd).
+     2.   A  GTK+ display which shows the layouts of directories referenced
+          on the command line (including pwd).
 
 The display reveals the results of file globs and expansions  as  they  are
 typed (hence the name), highlighting selected files and potential name com­
@@ -78,6 +78,7 @@ REQUIREMENTS
 viewglob requires a version of bash (any, as far as I know) and GTK+ 2.4. A
 version of zsh is also obviously required if you  wish  to  use  zsh  under
 viewglob.
+
 
 NEW IN PREVIOUS RELEASE 1.0.1
 -----------------------------

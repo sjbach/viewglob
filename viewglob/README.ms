@@ -17,7 +17,7 @@ Stephen Bach <sjbach@users.sourceforge.net>
 .IP 1.
 A tool that sits as a layer between the shell and X terminal, keeping track of the user's current directory and command line.
 .IP 2. 
-A graphical display which shows the layouts of directories referenced on the command line (including pwd).
+A GTK+ display which shows the layouts of directories referenced on the command line (including pwd).
 .RE
 .LP
 The display reveals the results of file globs and expansions as they are typed (hence the name), highlighting selected files and potential name completions.
