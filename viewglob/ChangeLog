@@ -1,3 +1,7 @@
+2004-08-22 17:30  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* Makefile.am: create (symlink) and install gviewglob.1
+
 2004-08-22 14:10  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* hardened_io.c, seer.c: improved a commonly seen error message.
