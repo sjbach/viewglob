@@ -91,8 +91,10 @@ static MatchEffect seq_term_newline(Buffer* b);
 #define DIGIT_S "\021"
 #define PRINTABLE_C '\022'        /* Any sequence of printable characters (or none). */
 #define PRINTABLE_S "\022"
-#define NOT_LF_C '\023'           /* Any single non-linefeed, non-carriage return character. */
-#define NOT_LF_S "\023"
+#define NOT_LF_CR_C '\023'        /* Any single non-linefeed, non-carriage return character. */
+#define NOT_LF_CR_S "\023"
+#define NOT_LF_C '\024'           /* Any single non-linefeed character. */
+#define NOT_LF_S "\024"
 /*#define ANY_C '\024'*/          /* Any single character. */
 /*#define ANY_S "\024"*/
 
@@ -137,7 +139,7 @@ static char* const ZSH_COMPLETION_DONE_SEQ = "\033[0m\033[27m\033[24m\015\033[" 
 /* Terminal escape sequences that we have to watch for.
    There are many more, but in my observations only these are
    important for viewglob's purposes. */
-static char* const TERM_CMD_WRAPPED_SEQ = " \015" NOT_LF_S "";
+static char* const TERM_CMD_WRAPPED_SEQ = " \015" NOT_LF_CR_S "";
 static char* const TERM_CARRIAGE_RETURN_SEQ = "\015" NOT_LF_S "";
 static char* const TERM_NEWLINE_SEQ = "\015\n";
 static char* const TERM_BACKSPACE_SEQ  = "\010";
@@ -701,14 +703,23 @@ static MatchStatus check_seq(char c, Sequence* sq) {
 			break;
 
 		case NOT_LF_C:
-			if (c == '\n' || c == '\015') {   /* Linefeed or carriage return. */
+			if (c == '\012') {
 				sq->pos = 0;
 				disable_seq(sq);
 				return MS_NO_MATCH;
 			}
-			else {
+			else
 				sq->pos++;
+			break;
+
+		case NOT_LF_CR_C:
+			if (c == '\012' || c == '\015') {   /* Linefeed or carriage return. */
+				sq->pos = 0;
+				disable_seq(sq);
+				return MS_NO_MATCH;
 			}
+			else
+				sq->pos++;
 			break;
 
 #if 0

@@ -1,3 +1,16 @@
+New in 0.9, released 2004-09-09:
+	* Added support for zsh (please send bug reports!).
+	* Added functionality to navigate the display from the terminal.
+	* Changed the appearance of restriced directories in the display.
+	* Fixed bug involving transcript naming.
+	* Fixed bug involving directories with special characters.
+	* Removed "name" mode directory comparison (there's no good reason to use
+	  it).
+	* Disallowed executing viewglob from a viewglob-controlled shell.
+	* Fixed several build issues.
+	* Other small bugs fixed.
+	* Large code reorganization.
+
 New in 0.8.4, released 2004-08-31:
 	* Fixed a big bug where the file boxes in the display would misbehave in
 	  many themes.

@@ -1,8 +1,8 @@
 dnl Process this file with autoconf to produce a configure script.
-AC_INIT([viewglob], [0.8.4])
+AC_INIT([viewglob], [0.9])
 AM_INIT_AUTOMAKE
 AM_CONFIG_HEADER([config.h])
-RELEASE_DATE="September 2, 2004"
+RELEASE_DATE="September 9, 2004"
 
 AC_DEFINE_UNQUOTED([VG_RELEASE_DATE], ["$RELEASE_DATE"] , [Date of release])
 
@@ -42,6 +42,12 @@ if test "x$BASH_FULL_PATH" = xnope; then
 	AC_MSG_ERROR([viewglob requires bash])
 fi
 AC_SUBST(BASH_FULL_PATH)
+
+dnl Test for sed.
+AC_PATH_PROG(SED_FULL_PATH, sed, nope)
+if test "x$SED_FULL_PATH" = xnope; then
+	AC_MSG_ERROR([viewglob requires sed])
+fi
 
 dnl So the shell scripts can get 'em.
 AC_SUBST(PACKAGE_NAME)

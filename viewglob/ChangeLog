@@ -1,3 +1,12 @@
+2004-09-09 13:03  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* configure.ac:
+	  - Adding check for sed (used in init-viewglob.zshrc).
+	  - Updating versions.
+	* viewglob.1: how to put in a real Ctrl-G
+	* sequences.c: fixing something that I "fixed" before
+	* NEWS: updating for 0.9.
+
 2004-09-09 02:15  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* README, README.ms, HACKING, TODO, viewglob.1: updating documentation
