@@ -183,36 +183,36 @@ static void compile_data(int argc, char** argv) {
 		                         /* new_dir_name, however, is used.  It is freed elsewhere if not. */
 		XFREE(normal_path);      /* normal_path is never saved. */
 	}
-
-	return;
 }
 
 
 static void report(void) {
 	Directory* dir_iter;
 	File* file_iter;
+	char types[8];
+	char selections[3];
+
+	types[FT_REGULAR] = 'r';
+	types[FT_EXECUTABLE] = 'e';
+	types[FT_DIRECTORY] = 'd';
+	types[FT_BLOCKDEV] = 'b';
+	types[FT_CHARDEV] = 'c';
+	types[FT_FIFO] = 'f';
+	types[FT_SOCKET] = 's';
+	types[FT_SYMLINK] = 'y';
+
+	selections[S_YES] = '*';
+	selections[S_MAYBE] = '~';
+	selections[S_NO] = '-';
 
 	for (dir_iter = dirs; dir_iter; dir_iter = dir_iter->next_dir) {
 		printf("%d %d %d %s\n", dir_iter->selected_count, dir_iter->file_count, dir_iter->hidden_count, dir_iter->name);
 		
-		for (file_iter = dir_iter->file_list; file_iter; file_iter = file_iter->next_file) {
-			printf("\t");
-			if (file_iter->selected == S_YES)
-				printf("*");
-			else if (file_iter->selected == S_MAYBE)
-				printf("~");
-			else
-				printf("-");
-
-			(file_iter->type == FT_DIR) ? printf(" d") : printf(" f");
-
-			printf(" %s\n", file_iter->name);
-		}
+		for (file_iter = dir_iter->file_list; file_iter; file_iter = file_iter->next_file)
+			printf("\t%c %c %s\n", selections[file_iter->selected], types[file_iter->type], file_iter->name);
 	}
 
-	printf("\n");       /* Always end output with a double \n. */
-
-	return;
+	printf("\n");   /* Always end output with a double \n. */
 }
 
 
@@ -237,8 +237,6 @@ static void correlate(char* dir_name, char* file_name, dev_t dev_id, ino_t dir_i
 		search_dir->next_dir = make_new_dir(dir_name, dev_id, dir_inode);
 		mark_files(search_dir->next_dir, file_name);
 	}
-
-	return;
 }
 
 
@@ -308,13 +306,13 @@ static bool mark_files(Directory* dir, char* file_name) {
 }
 
 
-static File* make_new_file(char* name, bool is_dir) {
+static File* make_new_file(char* name, enum file_type type) {
 	File* new_file;
 
 	new_file = XMALLOC(File, 1);
 	new_file->name = name;
 	new_file->selected = S_NO;
-	is_dir ? (new_file->type = FT_DIR) : (new_file->type = FT_FILE) ;
+	new_file->type = type;
 	new_file->next_file = NULL;
 	return new_file;
 }
@@ -331,7 +329,7 @@ static Directory* make_new_dir(char* dir_name, dev_t dev_id, ino_t inode) {
 	char* full_path;
 	File* file_iter = NULL;
 	struct stat file_stat;
-	bool is_dir;
+	enum file_type type;
 
 	new_dir = XMALLOC(Directory, 1);
 	new_dir->name = dir_name;
@@ -362,20 +360,22 @@ static Directory* make_new_dir(char* dir_name, dev_t dev_id, ino_t inode) {
 		(void)strcat(full_path, "/");
 		(void)strcat(full_path, entry->d_name);
 
-		/* Stat to determine if the file is a directory or a file (err...) */
-		if ( stat(full_path, &file_stat) == -1 ) {
+		/* Stat to determine the file type.
+		   Using lstat so that symbolic links are detected instead of followed.  May wish
+		   to switch at some point. */
+		if ( lstat(full_path, &file_stat) == -1 ) {
 			viewglob_error("Could not stat file");
-			is_dir = false;    /* We don't want to just skip this; assume it's regular. */
+			type = FT_REGULAR;   /* We don't want to just skip this; assume it's regular. */
 		}
 		else
-			is_dir = S_ISDIR(file_stat.st_mode);
+			type = determine_type(&file_stat);
 
 		if (file_iter) {
-			file_iter->next_file = make_new_file(file_name, is_dir);
+			file_iter->next_file = make_new_file(file_name, type);
 			file_iter = file_iter->next_file;
 		}
 		else {     /* It's the first file. */
-			new_dir->file_list = make_new_file(file_name, is_dir);
+			new_dir->file_list = make_new_file(file_name, type);
 			file_iter = new_dir->file_list;
 		}
 
@@ -394,6 +394,32 @@ static Directory* make_new_dir(char* dir_name, dev_t dev_id, ino_t inode) {
 
 	return new_dir;
 
+}
+
+
+enum file_type determine_type(const struct stat* file_stat) {
+	if (S_ISREG(file_stat->st_mode)) {
+		if ( (file_stat->st_mode & S_IXUSR) == S_IXUSR ||
+		     (file_stat->st_mode & S_IXGRP) == S_IXGRP ||
+			 (file_stat->st_mode & S_IXOTH) == S_IXOTH    )
+			return FT_EXECUTABLE;
+		else
+			return FT_REGULAR;
+	}
+	else if (S_ISDIR(file_stat->st_mode))
+		return FT_DIRECTORY;
+	else if (S_ISLNK(file_stat->st_mode))
+		return FT_SYMLINK;
+	else if (S_ISBLK(file_stat->st_mode))
+		return FT_BLOCKDEV;
+	else if (S_ISCHR(file_stat->st_mode))
+		return FT_CHARDEV;
+	else if (S_ISFIFO(file_stat->st_mode))
+		return FT_FIFO;
+	else if (S_ISSOCK(file_stat->st_mode))
+		return FT_SOCKET;
+	else
+		return FT_REGULAR;
 }
 
 

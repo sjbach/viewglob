@@ -49,8 +49,14 @@ enum _FileBoxOrdering {
 };
 
 enum _FileType {
-	FT_FILE,
-	FT_DIR,
+	FT_REGULAR,
+	FT_EXECUTABLE,
+	FT_DIRECTORY,
+	FT_BLOCKDEV,
+	FT_CHARDEV,
+	FT_FIFO,
+	FT_SOCKET,
+	FT_SYMLINK,
 };
 
 enum _FileSelection {

@@ -62,7 +62,7 @@ static gint cmp_ordering_win(gconstpointer a, gconstpointer b);
 
 /* --- variables --- */
 static gpointer parent_class = NULL;
-static GdkPixbuf* file_type_icons[2] = { NULL, NULL };
+static GdkPixbuf* file_type_icons[8] = { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
 static GCompareFunc ordering_func = cmp_ordering_ls;
 
 
@@ -421,6 +421,8 @@ void file_box_cull(FileBox* fbox) {
 			fitem_free(fi, TRUE);
 			continue;
 		}
+		//else if (fi->widget)
+		//	gtk_widget_show(fi->widget);
 		fi_iter = g_slist_next(fi_iter);
 	}
 }
@@ -570,14 +572,14 @@ static gint cmp_ordering_win(gconstpointer a, gconstpointer b) {
 	const FItem* aa = a;
 	const FItem* bb = b;
 
-	if (aa->type == FT_DIR) {
-		if (bb->type == FT_DIR)
+	if (aa->type == FT_DIRECTORY) {
+		if (bb->type == FT_DIRECTORY)
 			return strcmp( aa->name->str, bb->name->str );
 		else
 			return -1;
 	}
 	else {
-		if (bb->type == FT_DIR)
+		if (bb->type == FT_DIRECTORY)
 			return 1;
 		else
 			return strcmp( aa->name->str, bb->name->str );

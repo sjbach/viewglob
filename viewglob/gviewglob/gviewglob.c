@@ -39,7 +39,6 @@ FILE* df;
 
 /* Chooses a selection state based on the string's first char. */
 static FileSelection map_selection_state(const GString* string) {
-
 	switch ( *(string->str) ) {
 		case '-':
 			return FS_NO;
@@ -47,18 +46,34 @@ static FileSelection map_selection_state(const GString* string) {
 			return FS_MAYBE;
 		case '*':
 			return FS_YES;
+		default:
+			return FS_NO;
 	}
 }
 
 
 /* Chooses a file type based on the string's first char. */
 static FileType map_file_type(const GString* string) {
-
 	switch ( *(string->str) ) {
-		case 'f':
-			return FT_FILE;
+		case 'r':
+			return FT_REGULAR;
+		case 'e':
+			return FT_EXECUTABLE;
 		case 'd':
-			return FT_DIR;
+			return FT_DIRECTORY;
+		case 'y':
+			return FT_SYMLINK;
+		case 'b':
+			return FT_BLOCKDEV;
+		case 'c':
+			return FT_CHARDEV;
+		case 'f':
+			return FT_FIFO;
+		case 's':
+			return FT_SOCKET;
+		default:
+			//g_printerr("Unexpected file type\n");  /* FIXME */
+			return FT_REGULAR;
 	}
 }
 
@@ -514,35 +529,114 @@ static void set_icons(Exhibit* e) {
 	/* Try to get icons from the current theme. */
 	current_theme = gtk_icon_theme_get_default();
 
-	/* Directory icon */
-	icon_info = gtk_icon_theme_lookup_icon(current_theme, "gnome-fs-directory", ICON_SIZE, GTK_ICON_LOOKUP_USE_BUILTIN);
-	if (icon_info) {
-		/* Use whatever the user has. */
-		/* (I should be checking for an error here FIXME) */
-		file_box_set_icon(FT_DIR, gtk_icon_info_load_icon(icon_info, NULL));
-		gtk_icon_info_free(icon_info);
-	}
-	else {
-		/* Use this icon from old Gnome. */
-		file_box_set_icon(FT_DIR, make_pixbuf_scaled(directory_inline));
-	}
-
 	/* Regular file icon */
 	icon_info = gtk_icon_theme_lookup_icon(current_theme, "gnome-fs-regular", ICON_SIZE, GTK_ICON_LOOKUP_USE_BUILTIN);
 	if (icon_info) {
 		/* Use whatever the user has. */
 		/* (I should be checking for an error here FIXME) */
-		file_box_set_icon(FT_FILE, gtk_icon_info_load_icon(icon_info, NULL));
+		file_box_set_icon(FT_REGULAR, gtk_icon_info_load_icon(icon_info, NULL));
 		gtk_icon_info_free(icon_info);
 	}
 	else {
 		/* Use this icon from old Gnome. */
-		file_box_set_icon(FT_FILE, make_pixbuf_scaled(regular_inline));
+		file_box_set_icon(FT_REGULAR, make_pixbuf_scaled(regular_inline));
 	}
 
+	/* Executable icon */
+	icon_info = gtk_icon_theme_lookup_icon(current_theme, "gnome-fs-executable", ICON_SIZE, GTK_ICON_LOOKUP_USE_BUILTIN);
+	if (icon_info) {
+		/* Use whatever the user has. */
+		/* (I should be checking for an error here FIXME) */
+		file_box_set_icon(FT_EXECUTABLE, gtk_icon_info_load_icon(icon_info, NULL));
+		gtk_icon_info_free(icon_info);
+	}
+	else {
+		/* Use this icon from old Gnome. */
+		file_box_set_icon(FT_EXECUTABLE, make_pixbuf_scaled(executable_inline));
+	}
+
+	/* Directory icon */
+	icon_info = gtk_icon_theme_lookup_icon(current_theme, "gnome-fs-directory", ICON_SIZE, GTK_ICON_LOOKUP_USE_BUILTIN);
+	if (icon_info) {
+		/* Use whatever the user has. */
+		/* (I should be checking for an error here FIXME) */
+		file_box_set_icon(FT_DIRECTORY, gtk_icon_info_load_icon(icon_info, NULL));
+		gtk_icon_info_free(icon_info);
+	}
+	else {
+		/* Use this icon from old Gnome. */
+		file_box_set_icon(FT_DIRECTORY, make_pixbuf_scaled(directory_inline));
+	}
+
+	/* Block device icon */
+	icon_info = gtk_icon_theme_lookup_icon(current_theme, "gnome-fs-blockdev", ICON_SIZE, GTK_ICON_LOOKUP_USE_BUILTIN);
+	if (icon_info) {
+		/* Use whatever the user has. */
+		/* (I should be checking for an error here FIXME) */
+		file_box_set_icon(FT_BLOCKDEV, gtk_icon_info_load_icon(icon_info, NULL));
+		gtk_icon_info_free(icon_info);
+	}
+	else {
+		/* Use this icon from old Gnome. */
+		file_box_set_icon(FT_BLOCKDEV, make_pixbuf_scaled(blockdev_inline));
+	}
+
+	/* Character device icon */
+	icon_info = gtk_icon_theme_lookup_icon(current_theme, "gnome-fs-chardev", ICON_SIZE, GTK_ICON_LOOKUP_USE_BUILTIN);
+	if (icon_info) {
+		/* Use whatever the user has. */
+		/* (I should be checking for an error here FIXME) */
+		file_box_set_icon(FT_CHARDEV, gtk_icon_info_load_icon(icon_info, NULL));
+		gtk_icon_info_free(icon_info);
+	}
+	else {
+		/* Use this icon from old Gnome. */
+		file_box_set_icon(FT_CHARDEV, make_pixbuf_scaled(chardev_inline));
+	}
+
+	/* Fifo icon */
+	icon_info = gtk_icon_theme_lookup_icon(current_theme, "gnome-fs-fifo", ICON_SIZE, GTK_ICON_LOOKUP_USE_BUILTIN);
+	if (icon_info) {
+		/* Use whatever the user has. */
+		/* (I should be checking for an error here FIXME) */
+		file_box_set_icon(FT_FIFO, gtk_icon_info_load_icon(icon_info, NULL));
+		gtk_icon_info_free(icon_info);
+	}
+	else {
+		/* Use this icon from old Gnome. */
+		file_box_set_icon(FT_FIFO, make_pixbuf_scaled(fifo_inline));
+	}
+
+	/* Symlink icon */
+	icon_info = gtk_icon_theme_lookup_icon(current_theme, "gnome-dev-symlink", ICON_SIZE, GTK_ICON_LOOKUP_USE_BUILTIN);
+	if (icon_info) {
+		/* Use whatever the user has. */
+		/* (I should be checking for an error here FIXME) */
+		file_box_set_icon(FT_SYMLINK, gtk_icon_info_load_icon(icon_info, NULL));
+		gtk_icon_info_free(icon_info);
+	}
+	else {
+		/* Use this icon from old Gnome. */
+		file_box_set_icon(FT_SYMLINK, make_pixbuf_scaled(symlink_inline));
+	}
+
+	/* Socket icon */
+	icon_info = gtk_icon_theme_lookup_icon(current_theme, "gnome-fs-socket", ICON_SIZE, GTK_ICON_LOOKUP_USE_BUILTIN);
+	if (icon_info) {
+		/* Use whatever the user has. */
+		/* (I should be checking for an error here FIXME) */
+		file_box_set_icon(FT_SOCKET, gtk_icon_info_load_icon(icon_info, NULL));
+		gtk_icon_info_free(icon_info);
+	}
+	else {
+		/* Use this icon from old Gnome. */
+		file_box_set_icon(FT_SOCKET, make_pixbuf_scaled(socket_inline));
+	}
+
+
 	/* Context menu icons. */
-	v.show_hidden_pixbuf = gdk_pixbuf_new_from_inline(-1, hidden_inline, FALSE, NULL);
-	v.show_all_pixbuf = gdk_pixbuf_new_from_inline(-1, all_inline, FALSE, NULL);
+	v.show_hidden_pixbuf = gdk_pixbuf_new_from_inline(-1, context_hidden_inline, FALSE, NULL);
+	v.show_all_pixbuf = gdk_pixbuf_new_from_inline(-1, context_all_inline, FALSE, NULL);
 }
 
 

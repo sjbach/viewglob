@@ -1,3 +1,14 @@
+2004-08-20 18:28  Stephen Bach <sjbach@users.sourceforge.net>
+	* gnome-dev-symlink.png, gnome-fs-blockdev.png, gnome-fs-chardev.png,
+	  gnome-fs-executable.png gnome-fs-fifo.png, gnome-fs-socket.png:
+	  Added.
+	* gnome-fs-directory.png, gnome-fs-regular.png: changed default icons.
+	* Makefile.am, file_box.c, file_box.h, gviewglob.c, glob-expand.c,
+	  glob-expand.h:
+	  Added detection capability and icons for the rest of the basic Unix file
+	  types: block file, character file, fifo, symlink, and socket.  Also
+	  executable regular files.
+
 2004-08-20 01:12  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* wrap_box.c, wrap_box.h, file_box.c:
@@ -5,7 +16,8 @@
 
 2004-08-19 22:28  Stephen Bach <sjbach@users.sourceforge.net>
 
-	* glob-expand.c: fixed bug where directories at root had double leading slashes.
+	* glob-expand.c:
+	  Fixed bug where directories at root had double leading slashes.
 	* file_box.c: removed unnecessary text conversion.
 
 2004-08-19 22:06  Stephen Bach <sjbach@users.sourceforge.net>
@@ -18,7 +30,8 @@
 	  
 2004-08-19 01:55  Stephen Bach <sjbach@users.sourceforge.net>
 
-	* viewglob.in: ignore comments and newlines in config file, and report bad options.
+	* viewglob.in:
+	  Ignore comments and newlines in config file, and report bad options.
 	* file_box.c, file_box.h: added.
 	* dlisting.c, dlisting.h, gviewglob.c, gviewglob.h, wrapbox.c, wrapbox.h:
 	  Beginning large code reorganization.
@@ -31,7 +44,8 @@
 2004-08-11 14:21  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* viewglob.1: added info about the context menu.
-	* README.ms, README: removed the safety warning, as I'm now comfortable there's no danger.
+	* README.ms, README:
+	  Removed the safety warning, as I'm now comfortable there's no danger.
 	* viewglob.in: updated version.
 	* NEWS: updated for next release.
 
@@ -45,13 +59,16 @@
 	* dlisting.c: more hspacing between FItems in WrapBoxes.
 	* gviewglob.c: more vspacing between DListings.
 	* seer.c, seer.h, children.c, children.h, gviewglob.c, gviewglob.h:
-	  Using separate fifos for glob and cmd data so that they don't bleed into each other.
+	  Using separate fifos for glob and cmd data so that they don't bleed into
+	  each other.
 
 2004-08-10 18:10  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* seer.c, seer.h, misc.c: graceful exit on SIGTERM.
 	* sanitize.c: fixed processing error with \ and ' '.
-	* gviewglob.c: use GtkEntry instead of GtkTextView for cmdline widget to prevent forced window resizing.
+	* gviewglob.c:
+	  Use GtkEntry instead of GtkTextView for cmdline widget to prevent forced
+	  window resizing.
 
 2004-08-08 13:56  Stephen Bach <sjbach@users.sourceforge.net>
 
