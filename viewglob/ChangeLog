@@ -1,3 +1,11 @@
+2004-08-25 19:25  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* glob-expand.c:
+	  If a file argument has a trailing '/', it is also treated as a directory,
+	  i.e. it will show a listing for that directory if valid.  This way you
+	  can see the contents of a directory in gviewglob without referencing
+	  a file in that directory first.  Idea submitted by Pavel Tavoda.
+
 2004-08-25 17:30  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* init-viewglob.sh: removed

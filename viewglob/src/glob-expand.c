@@ -53,7 +53,8 @@ static void  correlate(char*, char*, dev_t, ino_t);
 
 static long   get_max_path(const char*);
 static char*  vg_dirname(const char*);
-static char*  normalize_path(const char*);
+static char*  normalize_path(const char* path, bool remove_trailing);
+static bool   has_trailing_slash(const char* path);
 
 static enum file_type  determine_type(const struct stat* file_stat);
 static File*           make_new_file(char* name, enum file_type type);
@@ -180,7 +181,7 @@ static void compile_data(int argc, char** argv) {
 	   rather than "{abc,def}". */
 	for (i = 1; i < argc && argv[i] != NULL; i++) {
 
-		normal_path = normalize_path(argv[i]);
+		normal_path = normalize_path(argv[i], true);
 		new_dir_name = vg_dirname(normal_path);
 		new_file_name = basename(normal_path);
 		DEBUG((df,"normal_path: %s\n", normal_path));
@@ -193,7 +194,37 @@ static void compile_data(int argc, char** argv) {
 		XFREE(new_file_name);    /* When the filename is used, a copy is made from the dirent entry. */
 		                         /* new_dir_name, however, is used.  It is freed elsewhere if not. */
 		XFREE(normal_path);      /* normal_path is never saved. */
+
+		if (has_trailing_slash(argv[i])) {
+			/* The file argument is being referenced as a directory.  We've already dealt with it as
+			   a file, so now lets also see if it's a directory, and if so we'll print its contents
+			   too. */
+			normal_path = normalize_path(argv[i], false);
+			new_dir_name = vg_dirname(normal_path);
+			DEBUG((df,"\tnormal_path: %s\n", normal_path));
+			DEBUG((df,"\tnew_dir_name: %s\n", new_dir_name));
+
+			if ( stat(new_dir_name, &dir_stat) == 0 )
+				correlate(new_dir_name, NULL, dir_stat.st_dev, dir_stat.st_ino);
+
+			XFREE(normal_path);
+		}
 	}
+}
+
+
+static bool has_trailing_slash(const char* path) {
+	int i;
+
+	for (i = 0; *(path + i) != '\0'; i++)
+		;
+
+	if (i) {
+		i--;
+		return *(path + i) == '/';
+	}
+	else
+		return false;
 }
 
 
@@ -240,13 +271,15 @@ static void correlate(char* dir_name, char* file_name, dev_t dev_id, ino_t dir_i
 	if (have_dir(dir_name, dev_id, dir_inode, &search_dir)) {
 		/* In this case search_dir is the located directory. */
 		XFREE(dir_name);         /* Since the dir is already known, we don't need this. */
-		mark_files(search_dir, file_name);
+		if (file_name)
+			mark_files(search_dir, file_name);
 	}
 	else {
 		/* In this case search_dir is the last directory struct in the list, so add this
 		   new dir to the end. */
 		search_dir->next_dir = make_new_dir(dir_name, dev_id, dir_inode);
-		mark_files(search_dir->next_dir, file_name);
+		if (file_name)
+			mark_files(search_dir->next_dir, file_name);
 	}
 }
 
@@ -504,7 +537,7 @@ static char* vg_dirname(const char* path) {
 
 
 /* Removes repeated /'s and takes out the ending /, if present. */
-static char* normalize_path(const char* path) {
+static char* normalize_path(const char* path, bool remove_trailing) {
 	char* norm;
 	int i, norm_pos;
 	bool slash_seen;
@@ -535,10 +568,9 @@ static char* normalize_path(const char* path) {
 
 	*(norm + norm_pos) = '\0';
 
-	/* Strip off a trailing /, if any. */
-	if (norm_pos > 1 && *(norm + norm_pos - 1) == '/') {
+	/* If remove_trailing == true, strip off a trailing / (if any). */
+	if (remove_trailing && norm_pos > 1 && *(norm + norm_pos - 1) == '/')
 		*(norm + norm_pos - 1) = '\0';
-	}
 
 	return norm;
 }
