@@ -21,18 +21,25 @@
 
 #include "common.h"
 
+#include "vgseer.h"
 #include "tc_setraw.h"
-#include "hardened-io.h"
 #include "actions.h"
 #include "connection.h"
 #include "sequences.h"
 #include "shell.h"
+#include "hardened-io.h"
+#include "param-io.h"
 
 #include <stdio.h>
 #include <signal.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <string.h>
+
+/* Sockets */
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 #if HAVE_SYS_WAIT_H
 #  include <sys/wait.h>
@@ -56,7 +63,7 @@
 FILE* df;
 #endif
 
-// FIXME also add viewglob_enabled here?
+// FIXME also add vgseer_enabled here?
 struct user_state_info {
 	gchar* cli;
 	gchar* pwd;
@@ -68,6 +75,7 @@ struct options {
 	enum shell_type shell;
 	gchar* executable;
 	gchar* init_loc;
+	gchar* expand_params;
 };
 
 /* --- Prototypes --- */
@@ -81,12 +89,13 @@ static void     unexpected_termination_handler(struct pty_child* shell_to_kill);
 static size_t   strlen_safe(const gchar* string);
 
 /* Program flow. */
-static gboolean main_loop(struct user_shell* u);
+static gboolean main_loop(struct user_shell* u, int vgd_fd);
 static gboolean io_activity(Connection** bufs, struct user_shell* u);
 static gboolean scan_for_newline(const Connection* b);
 static gboolean process_input(Connection* b, struct user_shell* u);
 
 /* Communication with vgd. */
+static int connect_to_vgd(gchar* server, gint port, struct user_shell* u, gchar* expand_opts);
 static gboolean is_key(Connection* b);
 static gboolean is_filename(Connection* b);
 static gboolean is_xid(Connection* b);
@@ -106,10 +115,8 @@ static gboolean set_term_title(gint fd, gchar* title);
 static void disable_viewglob(void);
 
 
-/* This controls whether or not viewglob should actively do stuff.
-   If the display is closed, viewglob will disable itself and try
-   to just be a regular shell. */
-gboolean viewglob_enabled = TRUE;
+/* This controls whether or not vgseer should actively do stuff. */
+gboolean vgseer_enabled = TRUE;
 
 /* Controls whether there are any situations where the filenames
    received from the daemon should not be escaped. */
@@ -121,12 +128,14 @@ gboolean term_size_changed = FALSE;
 int main(int argc, char** argv) {
 
 	/* Program options. */
-	struct options opts = { ST_BASH, NULL, NULL };
+	struct options opts = { ST_BASH, NULL, NULL, NULL };
 
 	/* Almost everything revolves around this. */
 	struct user_shell u;
+	gint   vgd_fd;
 
 	gboolean ok = TRUE;
+	
 
 	/* Set the program name. */
 	gchar* basename = g_path_get_basename(argv[0]);
@@ -207,6 +216,13 @@ int main(int argc, char** argv) {
 	/* If we terminate unexpectedly, we must kill this child shell too. */
 	unexpected_termination_handler(&u.proc);
 
+	/* Server connect here */
+	vgd_fd = connect_to_vgd("127.0.0.1", 16108, &u, opts.expand_params);
+	if (vgd_fd == -1) {
+		ok = FALSE;
+		goto done;
+	}
+
 	/* Setup signal handlers. */
 	if ( !handle_signals() ) {
 		g_critical("Could not set up signal handlers");
@@ -228,7 +244,7 @@ int main(int argc, char** argv) {
 	}
 
 	/* Enter main_loop. */
-	if ( !main_loop(&u) ) {
+	if ( !main_loop(&u, vgd_fd) ) {
 		g_critical("Problem during processing");
 		ok = FALSE;
 	}
@@ -246,6 +262,87 @@ done:
 	ok &= pty_child_terminate(&u.proc);
 	g_print("[Exiting viewglob]\n");
 	return (ok ? EXIT_SUCCESS : EXIT_FAILURE);
+}
+
+
+static int connect_to_vgd(gchar* server, gint port, struct user_shell* u, gchar* expand_opts) {
+	struct sockaddr_in sa;
+	int fd;
+	gchar string[100];
+
+	/* Convert the pid into a string. */
+	if (snprintf(string, sizeof(string), "%ld", (long) getpid()) <= 0) {
+		g_critical("Couldn't convert the pid to a string");
+		return -1;
+	}
+
+	/* Setup the socket. */
+	(void) memset(&sa, 0, sizeof(sa));
+	sa.sin_family = AF_INET;
+	sa.sin_port = htons(port);
+	if (inet_aton(server, &sa.sin_addr) == 0) {
+		g_critical("\"%s\" is an invalid address", server);
+		return -1;
+	}
+	if ( (fd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
+		g_critical("Could not create socket: %s", g_strerror(errno));
+		return -1;
+	}
+
+	/* Attempt to connect to vgd. */
+	while (connect(fd, (struct sockaddr*)&sa, sizeof(sa)) == -1) {
+		if (errno == EINTR)
+			continue;
+		else {
+			g_critical("Could not connect to vgd: %s", g_strerror(errno));
+			return -1;
+		}
+	}
+
+	/* Send over information. */
+	enum parameter param;
+	gchar* value = NULL;
+	if (!put_param(fd, P_PURPOSE, "vgseer"))
+		goto fail;
+	if (!put_param(fd, P_LOCALITY, "local"))
+		goto fail;
+	if (!put_param(fd, P_SHELL, shell_type_to_string(u->type)))
+		goto fail;
+	if (!put_param(fd, P_PROC_ID, string))
+		goto fail;
+	if (!put_param(fd, P_VGEXPAND_OPTS, expand_opts))
+		goto fail;
+
+	/* Wait for acknowledgement. */
+	if (!get_param(fd, &param, &value) || param != P_ORDER ||
+			!STREQ(value, "set-title"))
+		goto fail;
+
+	/* Set the terminal title. */
+	if (snprintf(string, sizeof(string), "vgseer%ld", (long) getpid()) <= 0) {
+		g_critical("Couldn't convert the pid to a string");
+		goto fail;
+	}
+	if (!set_term_title(STDOUT_FILENO, string)) {
+		g_critical("Couldn't set the term title");
+		goto fail;
+	}
+
+	/* Alert vgd, get acknowledgement, set title as something better. */
+	if (!put_param(fd, P_STATUS, "title-set"))
+		goto fail;
+	if (!get_param(fd, &param, &value) || param != P_ORDER ||
+			!STREQ(value, "continue"))
+		goto fail;
+	if (!set_term_title(STDOUT_FILENO, "viewglob"))
+		g_warning("Couldn't set the term title");
+
+	return fd;
+
+fail:
+	g_critical("Could not complete negotiation with vgd");
+	(void) close(fd);
+	return -1;
 }
 
 
@@ -293,10 +390,9 @@ static gboolean parse_args(gint argc, gchar** argv, struct options* opts) {
 				exit(EXIT_SUCCESS);
 				break;
 			case 'x':
-				/* Expand command (glob-expand) */
-				//g_free(opts->expand_command);
-				//opts->expand_command = g_strdup(optarg);
-				//FIXME
+				/* Vgexpand parameters */
+				g_free(opts->expand_params);
+				opts->expand_params = g_strdup(optarg);
 				break;
 		}
 	}
@@ -309,9 +405,10 @@ static gboolean parse_args(gint argc, gchar** argv, struct options* opts) {
 		g_critical("No shell initialization command specified");
 		return FALSE;
 	}
-	//else if (!opts->expand_command) {
-	//	g_critical("No shell expansion command specified");
-	//	return FALSE;
+	else if (!opts->expand_params) {
+		g_critical("No shell expansion parameters specified");
+		return FALSE;
+	}
 
 	return TRUE;
 }
@@ -324,7 +421,7 @@ static void report_version(void) {
 
 
 /* Main program loop. */
-static gboolean main_loop(struct user_shell* u) {
+static gboolean main_loop(struct user_shell* u, int vgd_fd) {
 
 	Action a = A_NOP;
 	gboolean ok = TRUE;
@@ -365,9 +462,6 @@ static gboolean main_loop(struct user_shell* u) {
 
 		DEBUG2((df, "cmd: %s\t\t(%s)\n", u->cmd.data->str, u->pwd));
 
-
-		/* FIXME
-		   - A_SEND_PWD has no use. */
 		for (a = action_queue(A_DEQUEUE); in_loop && (a != A_DONE); a = action_queue(A_DEQUEUE)) {
 			switch (a) {
 				case A_EXIT:
@@ -378,38 +472,46 @@ static gboolean main_loop(struct user_shell* u) {
 				case A_DISABLE:
 					DEBUG((df, "::disable::\n"));
 					disable_viewglob();
-					//if (display_running(disp))
-					//	display_terminate(disp);
 					break;
 
 				case A_SEND_CMD:
 					DEBUG((df, "::send cmd::\n"));
-					//if (viewglob_enabled && display_running(disp))
-					//	send_command(disp);
+					if (vgseer_enabled) {
+						if (!put_param(vgd_fd, P_CMD, u->cmd.data->str)) {
+							g_critical("Couldn't send command line to vgd");
+							in_loop = ok = FALSE;
+						}
+					}
 					break;
 
 				case A_SEND_PWD:
-					/* Do nothing. */
 					DEBUG((df, "::send pwd::\n"));
+					if (vgseer_enabled) {
+						if (!put_param(vgd_fd, P_PWD, u->pwd)) {
+							g_critical("Couldn't send PWD to vgd");
+							in_loop = ok = FALSE;
+						}
+					}
 					break;
 
 				case A_TOGGLE:
-					/* Fork or terminate the display. */
 					DEBUG((df, "::toggle::\n"));
-					//if (viewglob_enabled) {
-					//	if (display_running(disp))
-					//		display_terminate(disp);
-					//	else {
-					//		display_fork(disp);
-					//		action_queue(A_SEND_CMD);
-					//	}
-					//}
+					if (vgseer_enabled) {
+						if (!put_param(vgd_fd, P_ORDER, "toggle")) {
+							g_critical("Couldn't send toggle to vgd");
+							in_loop = ok = FALSE;
+						}
+					}
 					break;
 
 				case A_REFOCUS:
 					DEBUG((df, "A_REFOCUS"));
-					//if (viewglob_enabled && display_running(disp) && xDisp)
-					//	refocus(xDisp, disp->xid, term_xid);
+					if (vgseer_enabled) {
+						if (!put_param(vgd_fd, P_ORDER, "refocus")) {
+							g_critical("Couldn't send refocus to vgd");
+							in_loop = ok = FALSE;
+						}
+					}
 					break;
 
 				case A_SEND_LOST:
@@ -418,7 +520,7 @@ static gboolean main_loop(struct user_shell* u) {
 				case A_SEND_PGUP:
 				case A_SEND_PGDOWN:
 					DEBUG((df, "::send order::\n"));
-					//if (viewglob_enabled && display_running(disp))
+					//if (vgseer_enabled && display_running(disp))
 					//	send_order(disp, a);
 					//break;
 
@@ -529,7 +631,7 @@ static gboolean io_activity(Connection** connections, struct user_shell* u) {
 			#endif
 
 			/* Process the buffer. */
-			if (viewglob_enabled) {
+			if (vgseer_enabled) {
 				ok = process_input(cnt, u);
 				if (!ok)
 					break;
@@ -544,7 +646,7 @@ static gboolean io_activity(Connection** connections, struct user_shell* u) {
 			   very well for a person typing at a shell (i.e. 1 char length
 			   buffers), but less well when text is pasted in (i.e. multichar
 			   length buffers).  Ideas for improvement are welcome. */
-			if (viewglob_enabled && cnt->pl == PL_TERMINAL)
+			if (vgseer_enabled && cnt->pl == PL_TERMINAL)
 				u->expect_newline = scan_for_newline(cnt);
 
 
@@ -818,7 +920,7 @@ static void send_order(struct display* d, Action a) {
 
 static void disable_viewglob(void) {
 	g_printerr("(viewglob disabled)");
-	viewglob_enabled = FALSE;
+	vgseer_enabled = FALSE;
 }
 
 

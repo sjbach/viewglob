@@ -1,3 +1,14 @@
+2005-03-23 20:21  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* shell.h: moved to common
+	* shell.c, vgseer.h: added
+	* Makefile.am: debug compile flag added
+	* common/Makefile.am, param-io.c, param-io.h, vgd/Makefile.am,
+	  vgd.c, vgseer/Makefile.am, cmdline.c, sequences.c, sequences.h,
+	  vgseer.c:
+	  Connecting vgd to vgseer.
+
+
 2005-03-23 14:30  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* hardened_io.c, hardened_io.h, io-all.c, io-all.h: removed

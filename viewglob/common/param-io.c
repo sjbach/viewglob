@@ -23,7 +23,7 @@
 
 #include "common.h"
 #include "param-io.h"
-#include "hardened_io.h"
+#include "hardened-io.h"
 
 #include <netinet/in.h>
 #include <string.h>
@@ -39,6 +39,7 @@ static gchar* params[P_COUNT] = {
 	"status",
 	"pwd",
 	"cmd",
+	"vgexpand-data",
 	"order",
 	"key",
 	"file",

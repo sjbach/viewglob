@@ -25,26 +25,33 @@
 #endif
 
 #include "common.h"
-#include "cmdline.h"
-#include "children.h"
 
 G_BEGIN_DECLS
 
-/* Supported shell types. */
+/* Supported shell types.
+   Maintain order. */
 enum shell_type {
 	ST_BASH,
 	ST_ZSH,
+	ST_ERROR,
+	ST_COUNT,
 };
 
-/* Data structure for the user's shell. */
-struct user_shell {
-	gchar* pwd;
-	struct cmdline cmd;
-	struct pty_child proc;
-	enum shell_type type;
-
-	gboolean expect_newline;
+/* Maintain order. */
+enum shell_status {
+	SS_EXECUTING,
+	SS_PROMPT,
+	SS_LOST,
+	SS_TITLE_SET,
+	SS_ERROR,
+	SS_COUNT,
 };
+
+
+gchar*            shell_type_to_string(enum shell_type shell);
+enum shell_type   string_to_shell_type(gchar* string);
+gchar*            shell_status_to_string(enum shell_status status);
+enum shell_status string_to_shell_status(gchar* string);
 
 
 G_END_DECLS

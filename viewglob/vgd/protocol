@@ -3,11 +3,12 @@ For ping...
 	Receive:
 		purpose:ping
 	Send:
-		yo
+		status:yo
 
 For new connection...
 	Receive:
 		purpose:vgseer
+		locality:<local|remote>
 		shell:<bash|zsh>
 		pid:<pid>
 		vgexpand-opts:<string>

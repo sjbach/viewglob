@@ -17,8 +17,8 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#ifndef PARAM_IO_H
-#define PARAM_IO_H
+#ifndef DISPLAY_H
+#define DISPLAY_H
 
 #if HAVE_CONFIG_H
 #  include "config.h"
@@ -26,51 +26,19 @@
 
 #include "common.h"
 
-#include <glib.h>
-
 G_BEGIN_DECLS
 
-/* Order must be maintained. */
-enum parameter {
-	P_NONE,
 
-	/* The purpose of the connection. */
-	P_PURPOSE,
-
-	/* Used in vgseer initialization. */
-	P_LOCALITY,           /* Local or remote */
-	P_SHELL,
-	P_PROC_ID,            /* P_PID conflicts with wait.h. */
-	P_VGEXPAND_OPTS,
-
-	/* Volatile vgseer properties. */
-	P_STATUS,
-	P_PWD,
-	P_CMD,
-
-	/* For remote vgseers. */
-	P_VGEXPAND_DATA,
-
-	/* Directives to vgseer shells or the display. */
-	P_ORDER,
-
-	/* From the display. */
-	P_KEY,
-	P_FILE,
-
-	/* Explanation for a previous parameter. */
-	P_REASON,
-
-	/* For when the connection gets closed (read = 0) */
-	P_EOF,
-
-	/* The number of parameter types. */
-	P_COUNT,
+struct display {
+	pid_t pid;
+	int   fd;
 };
 
-gboolean get_param(int fd, enum parameter* param, gchar** value);
-gboolean put_param(int fd, enum parameter param, gchar* value);
+
+gboolean display_running(struct display* d);
+
 
 G_END_DECLS
 
 #endif
+

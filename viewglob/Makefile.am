@@ -1,4 +1,5 @@
 AUTOMAKE_OPTIONS = gnu
+AM_CFLAGS = -Wall -g
 
 #SUBDIRS = shell vgd vgdisplay vgping vgseer vgexpand
 SUBDIRS = vgseer vgdisplay vgexpand shell 

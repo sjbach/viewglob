@@ -20,10 +20,10 @@
 #include "config.h"
 
 #include "common.h"
-#include "shell.h"
 #include "actions.h"
 #include "connection.h"
 #include "sequences.h"
+#include "vgseer.h"
 
 #include <string.h>
 #include <ctype.h>
