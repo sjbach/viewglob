@@ -1,5 +1,5 @@
 dnl Process this file with autoconf to produce a configure script.
-AC_INIT([viewglob], [0.8.1])
+AC_INIT([viewglob], [0.8.2])
 AM_CONFIG_HEADER([config.h])
 AM_INIT_AUTOMAKE
 

@@ -56,8 +56,8 @@ vg_error() {
 
 vg_version() {
 cat << EOF
-viewglob 0.8.1
-Released August 11, 2004
+viewglob 0.8.2
+Released August 23, 2004
 EOF
 	exit 0
 }

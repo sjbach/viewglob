@@ -24,8 +24,8 @@
 #  include "config.h"
 #endif
 
-#define GLOB_EXPAND_VERSION "0.8.1"
-#define GLOB_EXPAND_RELEASE_DATE "August 11, 2004"
+#define GLOB_EXPAND_VERSION "0.8.2"
+#define GLOB_EXPAND_RELEASE_DATE "August 23, 2004"
 
 BEGIN_C_DECLS
 

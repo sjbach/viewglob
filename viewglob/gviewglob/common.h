@@ -26,7 +26,7 @@
 
 #define DEFAULT_FILE_DISPLAY_LIMIT 500
 
-#define DEBUG_ON 1
+#define DEBUG_ON 0
 
 #if DEBUG_ON
 #  include <stdio.h>

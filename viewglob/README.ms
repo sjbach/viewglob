@@ -4,7 +4,7 @@
 .so giftcurs.tmac
 .
 .TL
-viewglob 0.8.1 README
+viewglob 0.8.2 README
 .AU
 Stephen Bach <sjbach@users.sourceforge.net>
 .
@@ -20,7 +20,7 @@ A graphical display which shows the layouts of directories referenced on the com
 .LP
 The display also shows the results of file globs and expansions as they are typed (hence the name), highlighting selected files and potential name completions.
 .LP
-This is the second release.  See NEWS and ChangeLog for more information.  See the manpage (man viewglob) for notes and usage information.
+This is the third release.  See NEWS and ChangeLog for more information.  See the manpage (man viewglob) for notes and usage information.
 .LP
 The website is here:
 .IP
@@ -38,9 +38,9 @@ See the file \fBINSTALL\fP for generic instructions.  This program follows the .
 .
 .Sh PORTABILITY
 .LP
-It runs for sure on FreeBSD 4.10 and GNU/Linux 2.6. I don't have access to OS X or Solaris, so I can only hope for the best -- it would be awesome if someone could try it for me.
+Tested on FreeBSD 4.10 and various GNU/Linux distributions.  I don't have access to OS X or Solaris, so I can only hope for the best -- it would be awesome if someone could try it for me.
 .
 .Sh REQUIREMENTS
 .LP
-viewglob requires a version of bash, and at least GTK+ 2.4 (I'll see if I can relax that requirement in the next release).
+viewglob requires a version of bash (any, as far as I know) and GTK+ 2.4.
 

@@ -25,8 +25,8 @@
 #include "file_box.h"
 #include "dlisting.h"
 
-#define GVIEWGLOB_VERSION "0.8.1"
-#define GVIEWGLOB_RELEASE_DATE "August 11, 2004"
+#define GVIEWGLOB_VERSION "0.8.2"
+#define GVIEWGLOB_RELEASE_DATE "August 23, 2004"
 
 G_BEGIN_DECLS
 

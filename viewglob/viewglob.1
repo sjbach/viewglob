@@ -1,4 +1,4 @@
-.TH VIEWGLOB 1 "8 August 2004"
+.TH VIEWGLOB 1 "23 August 2004"
 .SH NAME
 viewglob, gviewglob \- display shell expansion and globbing dynamically
 .SH SYNOPSIS
@@ -40,7 +40,7 @@ Sort files with dirs first (Windows) or purely by name (ls).  ls mode is the def
 Maximum number of files to show in the display for each directory.  A [Results Truncated] indicator will show if the max has been reached.  Note that you can always force show all files with the context menu.  If --show-max is passed 0, there is no limit.
 .TP
 .B \-b, \-\-disable\-icons
-Don't show file/directory icons in the display.
+Don't show file type icons in the display.
 .TP
 .B \-t, \-\-disable\-star
 Disable the asterisk icon at the beginning of your shell prompt when in a viewglob\-supervised shell.
@@ -64,13 +64,13 @@ A trick I use to quickly find out what's located in a given directory without ru
 .PP
 The display will always show at least the layout of your current directory.
 .PP
-If the number of files in a displayed directory is above the given max, viewglob will truncate the results (with an indicator).  You can force viewglob to display the whole directory by right-clicking anywhere on the listing for that directory and choosing "Show all files".  By default hidden files are not shown, but you can view them by the same mechanism.
+If the number of files in a displayed directory is above the given max, viewglob will truncate the results (with an indicator).  You can force viewglob to display the whole directory by right-clicking anywhere on the listing for that directory and choosing "Show all files".  By default hidden files are not shown, but you can view them using the same mechanism.
 .PP
 At the bottom of the display window is a textbox with your command\-line.  This is the command\-line that viewglob is actually globbing on; if you find the display is not showing what you expected, check to make sure the display's command\-line is the same as the one in the shell, as they can be different (see \fBNOTES\fP below).
 .PP
 If you close the display without exiting the viewglob-supervised shell, you'll get a single error mesage while viewglob figures out what's going on.  It will then mostly disable itself and you'll have a regular shell.
 .PP
-If name is passed to the \fB\-\-compare\-mode\fP option, viewglob will treat the same directory referenced in different ways as different directories.  For example, with this option set, the following are all different:
+If "name" is passed to the \fB\-\-compare\-mode\fP option, viewglob will treat the same directory referenced in different ways as different directories.  For example, with this option set, the following are all different:
 .IP
 /usr/local/lib/
 .br
@@ -78,7 +78,7 @@ If name is passed to the \fB\-\-compare\-mode\fP option, viewglob will treat the
 .br
 /usr/local/lib/../lib/
 .PP
-(But a leading slash does not differentiate a directory from one without a leading slash.)
+(But a trailing slash does not differentiate a directory from one without a trailing slash.)
 .PP
 If inode mode is set (the default), directories referenced in several different ways will always be interpreted as the same directory if they're on the same device and have the same inode (i.e. they're the same).  So in the previous example, all three references to /usr/local/lib are equivalent.  However, the name of the first reference will be the name that appears in the viewglob display.  So if you refer to files in /usr/local/../local/lib and then /usr/local/lib on the same command\-line, viewglob understands they are the same directory, but will use the less practical name /usr/local/../local/lib, since it appears first (and is just as valid as /usr/local/lib)
 .PP
@@ -89,17 +89,17 @@ Since people generally don't type such things as /usr/local/../local/lib, this s
 .IP
 If present, this file specifies a default configuration for viewglob.  The file syntax is:
 .IP
-\fI<long option name>\fP \fI[ <whitespace>\fP \fI<value> ]\fP
+<\fIlong_option_name\fP> [ <\fIwhitespace\fP> <\fIvalue\fP> ]
 .IP
-So, to permanently disable the asterisk at the prompt, use a display limit of 500, show hidden files, and use windows-style sorting, the file should contain:
+So, to permanently disable the asterisk at the prompt, use a display limit of 700, show hidden files, and use windows-style sorting, the file should contain:
 .IP
 disable\-star
 .br
-show-max 500
+show-max      700
 .br
 show-hidden
 .br
-sort-style windows
+sort-style    windows
 .IP
 The configuration file has a lower priority than options specified on the command\-line, and can be disregarded completely with \-f.
 
@@ -124,7 +124,7 @@ Only the first command in a compound command will be interpreted by viewglob.  F
 .IP
 $ mv *.jp{e,}g ~/photos/ && rm *
 .PP
-viewglob will stop listening when it sees "&&", and the display will only register *.jp{e,}g.  This is not an implementation problem \- showing globbing for the subsequence commands could be deceptive, as the filesystem could be changed by executing the first command (as it is in this case).
+viewglob will stop listening when it sees "&&", and the display will only register *.jp{e,}g.  This isn't an implementation problem \- it's just that showing globbing for the subsequence commands could be deceptive, as the filesystem could be changed by executing the first command (as it is in this case).
 .PP
 Command substitution (stuff with backticks (`) or $(command)) is ignored by viewglob for the reason given above.  Works fine in your shell though.
 .PP
@@ -137,11 +137,13 @@ For more information, please visit:
 .SM HOME
 The location of the default configuration file.
 .SH BUGS
-Sometimes the heading labels in the display disallow shrinking past a certain point, sometimes they don't.  I haven't figured out why.
+Sometimes the heading labels in the display enforce a minimum width (which I find annoying), sometimes they don't.  I haven't figured out why.
 .PP
-Window resizing can be very slow in directories with many files (give /usr/bin or /usr/local/bin a shot to see what I mean).  This is something that can be improved.
+Window resizing can be very slow in directories with many files (give /usr/bin or /usr/local/bin a shot to see what I mean).
 .PP
-Resizing the terminal window will often cause viewglob's command\-line to become out of sync with the true command\-line, though it tries really hard to keep up.
+Adding to the above, writing "blah *" in a directory with a huge number of files which have been truncated (over the limit) is punishing to viewglob as it struggles to display them all.  This is most definitely a fixable bug and priority #1.
+.PP
+Resizing the terminal window after you've typed a multi-line command will often cause viewglob's command\-line to become out of sync with the true command\-line, though it tries really hard to keep up.
 .PP
 Ctrl-C may not work in terminals with FreeBSD.
 .PP

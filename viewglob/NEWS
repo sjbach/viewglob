@@ -1,3 +1,17 @@
+New in 0.8.2, released 2004-08-23:
+	* Added recognition functionality for all basic Unix file types (and
+	  executable regular files).
+	* File icons will now scale to the font size.
+	* Selected files are always shown, even if the display limit is exceeded
+	  or if they are hidden files.
+	* Errors in config file parsing will be reported.
+	* Made slight changes to the display layout.
+	* Fixed double-slash bug when directories at / referenced.
+	* Increased the default file display limit to 500.
+	* Fixed many build warnings.
+	* Many small bugs fixed.
+	* Code reorganization.
+
 New in 0.8.1, released 2004-08-11:
 	* The display will no longer confuse command-line data with glob data if
 	  you type really fast.
