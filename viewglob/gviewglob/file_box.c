@@ -229,8 +229,6 @@ void file_box_set_show_hidden_files(FileBox* fbox, gboolean show) {
 	if (fbox->show_hidden_files == show)
 		return;
 
-	DEBUG((df, "<new show_hidden_files>\n"));
-
 	GSList* fi_iter;
 	FItem* fi;
 	FileDisplayCategory fdc;
@@ -255,7 +253,6 @@ void file_box_set_show_hidden_files(FileBox* fbox, gboolean show) {
 
 void file_box_set_file_display_limit(FileBox* fbox, guint limit) {
 	g_return_if_fail(IS_FILE_BOX(fbox));
-	/* TODO: truncate results if limit is less than n_displayed_files.*/
 
 	if (fbox->file_display_limit == limit)
 		return;
@@ -462,9 +459,7 @@ static void fitem_build_widgets(FItem* fi) {
 	GtkWidget* hbox;
 	GtkWidget* eventbox;
 
-	gchar* temp1;
-	gchar* temp2;
-	gsize  length;
+	gchar* temp;
 
 	/* Event Box (to show selection) */
 	eventbox = gtk_event_box_new();
@@ -484,13 +479,11 @@ static void fitem_build_widgets(FItem* fi) {
 		gtk_box_pack_start(GTK_BOX(hbox), icon_image, FALSE, FALSE, 0);
 	}
 
-	/* Label -- must convert the text to utf8, and then escape it. */
+	/* Label -- must convert the text to utf8. */
 	label = gtk_label_new(NULL);
-	temp1 = g_filename_to_utf8(fi->name->str, fi->name->len, NULL, &length, NULL);
-	temp2 = g_markup_escape_text(temp1, length);
-	gtk_label_set_markup(GTK_LABEL(label), temp2);
-	g_free(temp1);
-	g_free(temp2);
+	temp = g_filename_to_utf8(fi->name->str, fi->name->len, NULL, NULL, NULL);
+	gtk_label_set_text(GTK_LABEL(label), temp);
+	g_free(temp);
 	gtk_widget_show(label);
 	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
 
