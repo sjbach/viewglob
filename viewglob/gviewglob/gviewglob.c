@@ -393,6 +393,13 @@ static void process_glob_data(const gchar* buff, gsize bytes, Exhibit* e) {
 
 					dl = exhibit_add(e, string, dir_rank, selected_count, total_count, hidden_count);
 
+					if (dir_rank == 1) {
+						/* Put pwd into the window title. */
+						char* title = g_strconcat("gviewglob - ", string->str, NULL);
+						gtk_window_set_title(GTK_WINDOW(e->window), title);
+						g_free(title);
+					}
+
 					g_string_free(selected_count, TRUE);
 					g_string_free(total_count, TRUE);
 					g_string_free(hidden_count, TRUE);
@@ -643,7 +650,6 @@ static gboolean window_configure_event(GtkWidget* window, GdkEventConfigure* eve
 	if (event->width != window->allocation.width) {
 		for (dl_iter = e->dl_slist; dl_iter; dl_iter = g_slist_next(dl_iter)) {
 			dl = dl_iter->data;
-			//g_printerr("?");
 			dlisting_set_optimal_width(dl, ((gint)dl->optimal_width) + event->width - window->allocation.width);
 		}
 	}
@@ -652,9 +658,11 @@ static gboolean window_configure_event(GtkWidget* window, GdkEventConfigure* eve
 }
 
 
-/* Set the layout to the size of the listings so that the scrollbars work. */
+/* Set the layout to the size of the listings so that the scrollbars work.
+   Set step_increment of the vadjustment, since it's not handled by the layout (?). */
 static void listings_allocate_event(GtkWidget* widget, GtkAllocation* allocation, GtkWidget* layout) {
 	gtk_layout_set_size(GTK_LAYOUT(layout), allocation->width, allocation->height);
+	gtk_layout_get_vadjustment(GTK_LAYOUT(layout))->step_increment = 0.1 * layout->allocation.height;
 }
 
 

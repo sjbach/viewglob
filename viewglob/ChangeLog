@@ -1,3 +1,9 @@
+2004-09-25 11:57  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* exhibit.c, gviewglob.c:
+	- Put PWD into the title of the display.
+	- Set step_increment of the scrollbar manually.
+
 2004-09-25 10:52  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* dlisting.c, exhibit.c, gviewglob.c:

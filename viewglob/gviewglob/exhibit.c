@@ -168,8 +168,6 @@ void exhibit_do_order(Exhibit* e, GString* order) {
 	page_increment = e->vadjustment->page_increment;
 	lower = e->vadjustment->lower;
 
-	g_print("(step increment: %f)", step_increment);
-
 	/* Otherwise we scroll down into a page of black. */
 	upper = e->vadjustment->upper - page_increment - step_increment;
 
@@ -200,7 +198,6 @@ void exhibit_do_order(Exhibit* e, GString* order) {
 		return;
 	}
 
-		g_print("(change: %f --> %f)", current, current + change);
 	if (change) {
 		gtk_adjustment_set_value(e->vadjustment, CLAMP(current + change, lower, upper));
 		gtk_adjustment_value_changed(e->vadjustment);
