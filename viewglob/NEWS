@@ -1,3 +1,8 @@
+New in 0.8.4, released 2004-08-31:
+	* Fixed a big bug where the file boxes in the display would misbehave in
+	  many themes.
+	* Slight improvement to memory usage.
+
 New in 0.8.3, released 2004-08-26:
 	* The contents of a directory are listed upon typing/tab-completing its
 	  trailing slash, rather than just upon referencing a file in the directory.

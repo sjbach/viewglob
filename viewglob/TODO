@@ -12,7 +12,6 @@ seer:
 
 gviewglob:
 	- DIR_COLORS
-	- fix scrollbar width assumption
 	- slight highlighting difference between files named explicitly and files expanded from a glob?
 	- don't focus on gtk window when opened (is this viable?)
 	- wait indicator?
@@ -21,4 +20,4 @@ gviewglob:
 		- like this: "/path/to/dir/blah/" --> "/path/to/d..."
 	- convert "2 selected, 10 total (4 hidden)" to "2, 10 (4)" if window size is too small
 		- then use "2, 10..." if it's really really small?
-	- Wrapbox resizing works, but is very slow.
+	- Wrapbox resizing works, but is slow.

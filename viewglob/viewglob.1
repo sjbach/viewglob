@@ -1,4 +1,4 @@
-.TH VIEWGLOB 1 "26 August 2004"
+.TH VIEWGLOB 1 "31 August 2004"
 .SH NAME
 viewglob, gviewglob \- display shell expansion and globbing dynamically
 .SH SYNOPSIS
@@ -24,10 +24,10 @@ Use an alternate display program.
 .B \-f, \-\-config\-file=path
 Use an alternate config file (\fI~/.viewglobrc\fP is the default).
 .TP
-.B \-p, \-\-shell\-output=filename
+.B \-o, \-\-shell\-output=filename
 Copy a transcript of the shell's output to the given file.  Note that this keeps the terminal sequences intact, so a cat of the file will be a perfect repeat of the session.  Be careful, the file will grow quickly!
 .TP
-.B \-p, \-\-term\-output=filename
+.B \-O, \-\-term\-output=filename
 Output a transcript of the terminal's input to the given file.  This is the stuff that you've typed, without any of the shell interpretation.
 .TP
 .B \-n, \-\-compare\-mode=<name|inode>

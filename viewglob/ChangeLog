@@ -1,3 +1,9 @@
+2004-08-31 11:15  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* NEWS, README, README.ms, TODO, configure.ac, viewglob.1, gviewglob.h,
+	  glob-expand.h, seer.h, viewglob.in:
+	  Updates for release 0.8.4.
+
 2004-08-30 21:34  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* file_box.c, file_box.h: use gchars instead of GStrings.

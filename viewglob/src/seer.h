@@ -29,8 +29,8 @@
 #include "cmdline.h"
 #include "children.h"
 
-#define SEER_VERSION "0.8.3"
-#define SEER_RELEASE_DATE "August 26, 2004"
+#define SEER_VERSION "0.8.4"
+#define SEER_RELEASE_DATE "August 31, 2004"
 
 BEGIN_C_DECLS
 
