@@ -5,6 +5,7 @@ pkglib_PROGRAMS = gviewglob
 gviewglob_SOURCES = gviewglob.c exhibit.c dlisting.c wrap_box.c file_box.c \
                     feedback.c
 
+# These are mostly standard Gnome icons.
 BUILT_SOURCES = icons.h
 icons.h: Makefile
 	rm -f icons.tmp icons.h
