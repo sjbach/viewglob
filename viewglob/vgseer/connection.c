@@ -170,8 +170,9 @@ gboolean connection_read(Connection* cnct) {
 
 		case IOR_ERROR:
 			if (errno == EIO) {
-				g_return_val_if_reached(FALSE);
-				/* Assume EIO is a gentle error. */
+				/* We often get an EIO here when the user shell exits.  For
+				   now we pretend it's a gentle error.  FIXME, though, as
+				   there's gotta be a side effect. */
 				action_queue(A_EXIT);
 			}
 			else {

@@ -386,7 +386,10 @@ static gboolean window_key_press_event(GtkWidget* window, GdkEventKey* event,
 						*temp2 -= 96;
 					else if (event->keyval >= '[' && event->keyval <= '_')
 						*temp2 -= 64;
-					else if (event->keyval == '@')
+					else if (event->keyval == '@' || event->keyval == ' ')
+						/* This will go out empty, but vgseer is smart enough
+						   to interpret a value length of 0 as a NUL
+						   character. */
 						*temp2 = '\0';
 				}
 

@@ -196,7 +196,8 @@ static void check_active_window(struct state* s) {
 			v = iter->data;
 			if (new_active_win == v->win) {
 				s->active = v;
-				context_switch(s, v);
+				if (child_running(&s->display))
+					context_switch(s, v);
 				break;
 			}
 		}
@@ -256,17 +257,35 @@ static void process_display(struct state* s) {
 
 		case P_WIN_ID:
 			g_message("(disp) P_WIN_ID: %s", value);
+			if ((s->display_win = strtoul(value, NULL, 10)) == ULONG_MAX) {
+				g_warning("(disp) window ID is out of bounds: %s", value);
+				s->display_win = 0;
+			}
+			else {
+				g_message("(disp) Display has window id %lu", s->display_win);
+			}
+			param = P_NONE;
 			break;
 
 		case P_EOF:
 			g_message("(disp) EOF from display");
 			(void) child_terminate(&s->display);
+			param = P_NONE;
 			break;
 
 		default:
 			g_warning("(disp) Unexpected parameter: %d = %s", param, value);
 			// TODO: restart display (wrap into function)
+			param = P_NONE;
 			break;
+	}
+
+	if (param != P_NONE) {
+		/* Pass the message right along. */
+		if (!put_param(s->active->fd, param, value)) {
+			g_warning("Couldn't pass message to active client");
+			drop_client(s, s->active);
+		}
 	}
 }
 
@@ -339,7 +358,23 @@ static void process_client(struct state* s, struct vgseer_client* v) {
 
 		case P_ORDER:
 			g_message("(%d) Received P_ORDER: %s", v->fd, value);
-			update_display(s, v, param, value);
+			if (STREQ(value, "refocus"))
+				refocus(s->Xdisplay, v->win, s->display_win);
+			else if (STREQ(value, "toggle")) {
+				if (child_running(&s->display))
+					child_terminate(&s->display);
+				else {
+					if (!child_fork(&s->display)) {
+						g_critical("Couldn't fork the display");
+						die(s, EXIT_FAILURE);
+					}
+					context_switch(s, s->active);
+				}
+			}
+			else {
+				/* The rest of the orders go to the display. */
+				update_display(s, v, param, value);
+			}
 			break;
 
 		case P_VGEXPAND_DATA:

@@ -676,6 +676,7 @@ static void process_vgd(struct user_state* u, struct vgd_stuff* vgd) {
 
 	enum parameter param;
 	gchar* value;
+	gsize len;
 
 	if (!get_param(vgd->fd, &param, &value)) {
 		g_critical("Out of sync with vgd");
@@ -688,11 +689,16 @@ static void process_vgd(struct user_state* u, struct vgd_stuff* vgd) {
 		case P_FILE:
 			value = escape_filename(value, u, vgd->shell_conn->pl,
 					vgd->term_conn->holdover);
+			len = strlen(value);
 			break;
 
 		case P_KEY:
-			g_return_if_fail(strlen(value) == 1);
 			value = g_strdup(value);
+			if ( (len = strlen(value)) == 0) {
+				/* Force a length of one for the case when a NUL character is
+				   sent (Ctrl-<SPACE>). */
+				len = 1;
+			}
 			break;
 
 		case P_EOF:
@@ -709,11 +715,12 @@ static void process_vgd(struct user_state* u, struct vgd_stuff* vgd) {
 			g_return_if_reached();
 	}
 
-	/* Now pretend this vgd data came from the terminal. */
+	/* Now pretend this vgd data came from the terminal.  It's pretty safe to
+	   assume the string will fit in the buffer, regardless of the size of
+	   the holdover. */
 	prepend_holdover(vgd->term_conn);
-	strncpy(vgd->term_conn->buf + vgd->term_conn->filled, value,
-			vgd->term_conn->size - vgd->term_conn->filled);
-	vgd->term_conn->filled += strlen(value);
+	memcpy(vgd->term_conn->buf + vgd->term_conn->filled, value, len);
+	vgd->term_conn->filled += len;
 
 	if (vgseer_enabled) {
 		scan_sequences(vgd->term_conn, u);

@@ -1,3 +1,10 @@
+2005-03-30 02:10  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* children.c, children.h:
+	  - setsid() for pty_child_fork().
+	  - Removed display stuff.
+	* vgd.c, vgseer.c, vgclassic.c: further integration
+
 2005-03-29 18:44  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* vgd.c, exhibit.c, dlisting.c, exhibit.h, file_box.c, file_box.h,
