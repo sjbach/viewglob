@@ -1,3 +1,7 @@
+2005-03-05 00:48  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* glob-expand.c: /home/blah --> ~
+
 2005-03-04 22:40  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* x11-stuff.c, x11-stuff.h: added

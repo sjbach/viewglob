@@ -24,6 +24,7 @@
 #include "glob-expand.h"
 #include <sys/stat.h>
 #include <string.h>
+#include <stdlib.h>
 
 #if HAVE_DIRENT_H
 #  include <dirent.h>
@@ -45,6 +46,7 @@
 static int   parse_args(int argc, char** argv);
 static void  report_version(void);
 static void  compile_data(int, char**);
+static void  home_to_tilde(void);
 static void  report(void);
 static void  print_dir(Directory* dir);
 static void  initiate(dev_t pwd_dev_id, ino_t pwd_inode);
@@ -104,6 +106,7 @@ int main(int argc, char* argv[]) {
 	pwd_length = strlen(pwd);
 
 	compile_data(argc - offset, argv + offset);
+	home_to_tilde();
 	report();
 
 #if DEBUG_ON
@@ -205,6 +208,39 @@ static void compile_data(int argc, char** argv) {
 			XFREE(normal_path);
 		}
 	}
+}
+
+
+/* Convert the "/home/blah" prefix to "~". */
+static void home_to_tilde(void) {
+
+	Directory* dir_iter;
+	char* home;
+	size_t home_len;
+	size_t dir_len;
+	
+	if ( !(home = normalize_path(getenv("HOME"), true)) )
+		return;
+
+	/* May as well only do this once. */
+	home_len = strlen(home);
+
+	for (dir_iter = dirs; dir_iter; dir_iter = dir_iter->next_dir) {
+		dir_len = strlen(dir_iter->name);
+		if (home_len == dir_len) {
+			if (strcmp(home, dir_iter->name) == 0)
+				strcpy(dir_iter->name, "~");
+		}
+		else if (home_len < dir_len) {
+
+			/* Need to be careful here because /home/blahblah/ shouldn't become ~blah/ */
+			if (strncmp(home, dir_iter->name, home_len) == 0 && *(dir_iter->name + home_len) == '/') {
+				*(dir_iter->name + home_len - 1) = '~';
+				dir_iter->name += home_len - 1;
+			}
+		}
+	}
+
 }
 
 
@@ -343,7 +379,7 @@ static bool have_dir(char* name, dev_t dev_id, ino_t inode, Directory** return_d
 			return true;
 		}
 	} while ( (dir_iter->next_dir != NULL) && (dir_iter = dir_iter->next_dir) );
-	/* ^^ Don't want to interate to NULL, thus the weird invariant. */
+	/* ^^ Don't want to iterate to NULL, thus the weird invariant. */
 
 	*return_dir = dir_iter;  /* This is the last directory struct in the list. */
 	return false;
@@ -581,6 +617,9 @@ static char* normalize_path(const char* path, bool remove_trailing) {
 	int i, norm_pos;
 	bool slash_seen;
 	size_t length;
+
+	if (!path)
+		return NULL;
 
 	length = strlen(path);
 	norm = XMALLOC(char, length + 1);	/* We'll need at most this much memory. */
