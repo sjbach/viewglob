@@ -72,7 +72,7 @@ GtkWidget*  file_box_new(void);
 void        file_box_destroy(FileBox* fbox);
 void        file_box_set_optimal_width(FileBox* fbox, guint optimal_width);
 guint       file_box_get_optimal_width(FileBox* fbox);
-void        file_box_add(FileBox* fbox, gchar* name, FileType type,
+int         file_box_add(FileBox* fbox, gchar* name, FileType type,
 		FileSelection selection, gint rank);
 void        file_box_begin_read(FileBox* fbox);
 void        file_box_flush(FileBox* fbox);

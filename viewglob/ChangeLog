@@ -1,3 +1,16 @@
+2005-04-04 15:12  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* param-io.c:
+	  Changed the end-of-data semaphore to "\027\027" instead of "\n\n".
+	* dircont.c, dircont.h, file_box.c, file_box.h, vgmini.c:
+	  - Established "scoring system" to determine which DirCont should
+	    become active when new glob data arrives.
+	  - Added navigation functionality.
+	  - Added keystroke passing functionality.
+	  - Paint the mask on the active DirCont (big or small).
+	* vgclassic.c, display-common.c, display-common.h:
+	  Moved over more common code.
+
 2005-04-03 21:18  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* all.png, hidden.png, vgclassic.h: removed

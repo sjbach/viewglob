@@ -49,6 +49,8 @@ void write_xwindow_id(GtkWidget* gtk_window);
 gchar* up_to_delimiter(gchar** ptr, char c);
 FileSelection map_selection_state(gchar c);
 FileType map_file_type(gchar c);
+gboolean window_key_press_event(GtkWidget* window, GdkEventKey* event,
+		gpointer data);
 
 
 G_END_DECLS

@@ -38,6 +38,14 @@ G_BEGIN_DECLS
 #define DIRCONT_GET_CLASS(obj) \
 	(G_TYPE_INSTANCE_GET_CLASS ((obj), DIRCONT_TYPE, DirContClass))
 
+/* -- enums -- */
+typedef enum _DirContNav DirContNav;
+
+enum _DirContNav {
+	DCN_PGUP,
+	DCN_PGDOWN,
+};
+
 /* --- typedefs --- */
 typedef struct _DirCont DirCont;
 typedef struct _DirContClass DirContClass;
@@ -63,6 +71,7 @@ struct _DirCont {
 	gboolean is_pwd;
 	gboolean is_restricted;
 	gboolean is_active;
+	gint score;
 
 	PangoLayout* name_layout;
 	PangoLayout* counts_layout;
@@ -77,17 +86,18 @@ GType dircont_get_type(void) G_GNUC_CONST;
 GtkWidget* dircont_new(void);
 void dircont_destroy(DirCont* dc);
 void dircont_set_optimal_width(DirCont* dc, gint width);
-void dircont_set_mask_string(DirCont* dc, gchar* mask_str);
+void dircont_set_mask_string(DirCont* dc, const gchar* mask_str);
 void dircont_set_name(DirCont* dc, const gchar* name);
-void dircont_set_selected(DirCont* dc, const gchar* selected);
-void dircont_set_total(DirCont* dc, const gchar* total);
-void dircont_set_hidden(DirCont* dc, const gchar* hidden);
+void dircont_set_counts(DirCont* dc,
+		const gchar* selected, const gchar* total, const gchar* hidden);
+void dircont_repaint_header(DirCont* dc);
 void dircont_mark(DirCont* d, gint rank);
 void dircont_set_active(DirCont* dc, gboolean setting);
 void dircont_set_pwd(DirCont* dc, gboolean setting);
 gboolean dircont_is_new(const DirCont* dc);
 void dircont_free(DirCont* dc);
 void dircont_set_sizing(gint modifier);
+void dircont_nav(DirCont* dc, DirContNav nav);
 
 G_END_DECLS
 

@@ -24,7 +24,12 @@
 #include <gtk/gtk.h>
 #include <string.h>   /* For strcmp */
 
+#include <gdk-pixbuf/gdk-pixbuf.h>
+#include <gdk-pixbuf/gdk-pixdata.h>
+
 #define WIDTH_BUFFER 0
+#define DIR_NAME_SPACER 3
+#define COUNT_SPACER 20
 #define BASE_DIR_FONT_SIZE    +2
 #define BASE_COUNT_FONT_SIZE  -1
 
@@ -32,21 +37,22 @@
 static void dircont_class_init(DirContClass* klass);
 static void dircont_init(DirCont* dc);
 
-static void update_layout(DirCont* dc);
-
 static gboolean button_press_event(GtkWidget *widget,
 		GdkEventButton *event, DirCont* dc);
 static gboolean header_expose_event(GtkWidget *area, GdkEventExpose *event,
 		DirCont* dc);
+static void reset_count_layout(DirCont* dc); 
+static GdkPixbuf *
+create_gradient(GdkColor *color1, GdkColor *color2, gint width, gint height, gboolean horz);
+
 
 
 /* --- variables --- */
 static gpointer parent_class = NULL;
-static GdkColor header_color;
-static GdkColor separator_color;
 static gint header_height = 0;
 
-static GString* mask = NULL;
+static PangoLayout* big_mask_layout = NULL;
+static PangoLayout* small_mask_layout = NULL;
 static GString* dir_tag_open = NULL;
 static GString* dir_tag_close = NULL;
 static GString* count_tag_open = NULL;
@@ -108,10 +114,6 @@ static void dircont_class_init(DirContClass* class) {
 	gtk_widget_destroy(area);
 //	header_height += 3; /* For spacing */
 
-	//FIXME
-	// Get separator and header colours
-	if (!mask)
-		mask = g_string_new(NULL);
 	if (!dir_tag_open)
 		dir_tag_open = g_string_new(NULL);
 	if (!dir_tag_close)
@@ -139,13 +141,13 @@ static void dircont_init(DirCont* dc) {
 	dc->selected = g_string_new(NULL);
 	dc->total = g_string_new(NULL);
 	dc->hidden = g_string_new(NULL);
+	dc->score = 0;
 	dc->is_pwd = FALSE;
 	dc->is_active = FALSE;
 
 	/* The header is a drawing area. */
 	dc->header = gtk_drawing_area_new();
-	gtk_widget_set_size_request(dc->header, -1, header_height); //FIXME
-	g_printerr("(%d)\n", header_height);
+	gtk_widget_set_size_request(dc->header, -1, header_height);
 	gtk_widget_show(dc->header);
 	g_signal_connect(G_OBJECT(dc->header), "expose-event",
 			G_CALLBACK(header_expose_event), dc);
@@ -160,7 +162,6 @@ static void dircont_init(DirCont* dc) {
 	dc->scrolled_window = gtk_scrolled_window_new(NULL, NULL);
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(dc->scrolled_window),
 			GTK_POLICY_NEVER, GTK_POLICY_ALWAYS);
-//	gtk_widget_show(dc->scrolled_window);
 
 	/* Create the file box. */
 	dc->file_box = file_box_new();
@@ -171,9 +172,7 @@ static void dircont_init(DirCont* dc) {
 
 	/* Initialize the layout. */
 	dircont_set_name(dc, "<unset>");
-	dircont_set_selected(dc, "0");
-	dircont_set_total(dc, "0");
-	dircont_set_hidden(dc, "0");
+	dircont_set_counts(dc, "0", "0", "0");
 
 	/* Pack 'em in. */
 	gtk_scrolled_window_add_with_viewport(
@@ -250,44 +249,86 @@ void dircont_set_name(DirCont* dc, const gchar* name) {
 	g_return_if_fail(IS_DIRCONT(dc));
 	g_return_if_fail(name != NULL);
 
-	dc->name = g_string_assign(dc->name, name);
-	update_layout(dc);
+	if (!STREQ(name, dc->name->str)) {
+
+		dc->name = g_string_assign(dc->name, name);
+
+		gchar* escaped;
+		gchar* utf8;
+		gchar* markup;
+		gsize len;
+
+		utf8 = g_filename_to_utf8(
+				dc->name->str, dc->name->len, NULL, &len, NULL);
+		escaped = g_markup_escape_text(utf8, len);
+		markup = g_strconcat(
+				dir_tag_open->str, "<b>",
+				escaped,
+				"</b>", dir_tag_close->str, NULL);
+
+		pango_layout_set_markup(dc->name_layout, markup, -1);
+
+		g_free(markup);
+		g_free(escaped);
+		g_free(utf8);
+	}
 }
 
 
-void dircont_set_selected(DirCont* dc, const gchar* selected) {
+void dircont_set_counts(DirCont* dc,
+		const gchar* selected, const gchar* total, const gchar* hidden) {
 	g_return_if_fail(dc != NULL);
 	g_return_if_fail(IS_DIRCONT(dc));
 	g_return_if_fail(selected != NULL);
-
-	if (!STREQ(selected, dc->selected->str)) {
-		dc->selected = g_string_assign(dc->selected, selected);
-		update_layout(dc);
-	}
-}
-
-
-void dircont_set_total(DirCont* dc, const gchar* total) {
-	g_return_if_fail(dc != NULL);
-	g_return_if_fail(IS_DIRCONT(dc));
 	g_return_if_fail(total != NULL);
-
-	if (!STREQ(total, dc->total->str)) {
-		dc->is_restricted = STREQ(total, "0");
-		dc->total = g_string_assign(dc->total, total);
-		update_layout(dc);
-	}
-}
-
-
-void dircont_set_hidden(DirCont* dc, const gchar* hidden) {
-	g_return_if_fail(dc != NULL);
-	g_return_if_fail(IS_DIRCONT(dc));
 	g_return_if_fail(hidden != NULL);
 
-	if (!STREQ(hidden, dc->hidden->str)) {
+	gboolean changed = FALSE;
+
+	/* Figure out if anything needs to be changed. */
+	if ( (changed |= !STREQ(selected, dc->selected->str)) )
+		dc->selected = g_string_assign(dc->selected, selected);
+	if ( (changed |= !STREQ(total, dc->total->str)) ) {
+		dc->is_restricted = STREQ(total, "0");
+		dc->total = g_string_assign(dc->total, total);
+	}
+	if ( (changed |= !STREQ(hidden, dc->hidden->str)) )
 		dc->hidden = g_string_assign(dc->hidden, hidden);
-		update_layout(dc);
+
+	if (changed)
+		reset_count_layout(dc);
+}
+
+
+static void reset_count_layout(DirCont* dc) {
+	g_return_if_fail(dc != NULL);
+
+	gchar* markup;
+
+	if (dc->is_restricted) {
+		markup = g_strconcat(count_tag_open->str,
+				"(Restricted)",
+				count_tag_close->str, NULL);
+	}
+	else {
+		markup = g_strconcat(count_tag_open->str,
+				dc->selected->str, " selected, ",
+				dc->total->str, " total (",
+				dc->hidden->str, " hidden)",
+				count_tag_close->str, NULL);
+	}
+	pango_layout_set_markup(dc->counts_layout, markup, -1);
+	g_free(markup);
+}
+
+
+void dircont_repaint_header(DirCont* dc) {
+	/* Make sure the header gets redrawn. */
+	if (dc->header->window) {
+		GdkRectangle rect = { 0, 0, 0, 0, };
+		rect.width = dc->header->allocation.width;
+		rect.height = dc->header->allocation.height;
+		gdk_window_invalidate_rect(dc->header->window, &rect, FALSE);
 	}
 }
 
@@ -319,7 +360,7 @@ void dircont_set_active(DirCont* dc, gboolean setting) {
 
 	if (setting != dc->is_active) {
 		dc->is_active = setting;
-		update_layout(dc);
+		reset_count_layout(dc);
 		if (dc->is_active)
 			gtk_widget_show(dc->scrolled_window);
 		else
@@ -334,10 +375,8 @@ void dircont_set_pwd(DirCont* dc, gboolean setting) {
 	g_return_if_fail(dc != NULL);
 	g_return_if_fail(IS_DIRCONT(dc));
 
-	if (setting != dc->is_pwd) {
+	if (setting != dc->is_pwd)
 		dc->is_pwd = setting;
-		update_layout(dc);
-	}
 }
 
 
@@ -365,55 +404,6 @@ void dircont_free(DirCont* dc) {
 }
 
 
-static void update_layout(DirCont* dc) {
-
-	gchar* escaped;
-	gchar* utf8;
-	gchar* markup;
-	gsize len;
-
-	utf8 = g_filename_to_utf8(dc->name->str, dc->name->len, NULL, &len, NULL);
-	escaped = g_markup_escape_text(utf8, len);
-	markup = g_strconcat(
-			dir_tag_open->str, "<b>",
-			escaped,
-			"</b>", dir_tag_close->str, NULL);
-
-	pango_layout_set_markup(dc->name_layout, markup, -1);
-	g_free(markup);
-	g_free(escaped);
-	g_free(utf8);
-
-	if (dc->is_active) {
-		markup = g_strconcat(count_tag_open->str,
-				dc->selected->str, " selected, ",
-				dc->total->str, " total (",
-				dc->hidden->str, " hidden)          Mask: ", mask->str,
-				count_tag_close->str, NULL);
-	}
-	else {
-		markup = g_strconcat(count_tag_open->str,
-				dc->selected->str, " selected, ",
-				dc->total->str, " total (",
-				dc->hidden->str, " hidden)",
-				count_tag_close->str, NULL);
-	}
-	pango_layout_set_markup(dc->counts_layout, markup, -1);
-	g_free(markup);
-
-	/* Now make sure the header gets redrawn. */
-	GdkRectangle rect = { 0, 0, 0, 0, };
-	rect.width = dc->header->allocation.width;
-	rect.height = dc->header->allocation.height;
-	gdk_window_invalidate_rect(dc->header->window, &rect, FALSE);
-
-
-//	if (dc->is_pwd)
-//	if (dc->is_active)
-
-}
-
-
 static gboolean header_expose_event(GtkWidget *header, GdkEventExpose *event,
 		DirCont* dc) {
 
@@ -421,10 +411,26 @@ static gboolean header_expose_event(GtkWidget *header, GdkEventExpose *event,
 //	GdkGC* bg_gc = header->style->bg_gc[GTK_WIDGET_STATE(header)];
 	GdkGC* bg_gc = header->style->bg_gc[GTK_STATE_ACTIVE];
 
-	gint name_height;
-	pango_layout_get_pixel_size(dc->name_layout, NULL, &name_height);
+	gint name_width, name_height;
+	pango_layout_get_pixel_size(dc->name_layout, &name_width, &name_height);
+
+	GdkGCValues fgv, bgv;
+	gdk_gc_get_values(fg_gc, &fgv);
+	gdk_gc_get_values(bg_gc, &bgv);
+
+#if 0
+	GdkPixbuf* gradient = create_gradient(&bgv.background, &fgv.background, header->allocation.width, name_height, TRUE);
+
 
 	/* Draw background of name */
+	gdk_draw_pixbuf(
+			header->window,
+			bg_gc,
+			gradient,
+			0, 0, 0, 0,
+			header->allocation.width, name_height,
+			GDK_RGB_DITHER_NONE, 0, 0);
+#endif
 	gdk_draw_rectangle(
 			header->window,
 			bg_gc,
@@ -432,19 +438,58 @@ static gboolean header_expose_event(GtkWidget *header, GdkEventExpose *event,
 			0, 0,
 			header->allocation.width, name_height);
 
+	/* Draw separator. */
+	if (dc->rank != 0) {
+		// TODO -- if the dc goes from rank 0 to a different rank (or vice versa), its separator area needs to be redrawn
+		gdk_draw_rectangle(
+				header->window,
+				fg_gc,
+				TRUE,
+				0, 0,
+				header->allocation.width, 1);
+	}
+
 	/* Draw name */
 	gdk_draw_layout(
 			header->window,
 			fg_gc,
-			3, 0,
+			DIR_NAME_SPACER, 0,
 			dc->name_layout);
 
-	/* Draw file counts (and maybe mask text) */
+	/* Draw file counts */
 	gdk_draw_layout(
 			header->window,
 			fg_gc,
-			20, name_height,
+			COUNT_SPACER, name_height,
 			dc->counts_layout);
+
+	/* If this is the active dc, show the mask as well. */
+	if (dc->is_active) {
+		gint mask_width;
+		pango_layout_get_pixel_size(big_mask_layout, &mask_width, NULL);
+
+		if (3*DIR_NAME_SPACER + name_width + mask_width <
+				header->allocation.width && big_mask_layout) {
+			/* Use the big mask layout. */
+			gdk_draw_layout(
+					header->window,
+					fg_gc,
+					header->allocation.width - mask_width - DIR_NAME_SPACER,
+					2,
+					big_mask_layout);
+		}
+		else if (small_mask_layout) {
+			/* Use the small mask layout. */
+
+			pango_layout_get_pixel_size(small_mask_layout, &mask_width, NULL);
+			gdk_draw_layout(
+					header->window,
+					fg_gc,
+					header->allocation.width - mask_width - COUNT_SPACER,
+					name_height,
+					small_mask_layout);
+		}
+	}
 
 	return TRUE;
 }
@@ -493,12 +538,125 @@ void dircont_set_optimal_width(DirCont* dc, gint width) {
 
 /* Set the new mask text and update the given DirCont (which is probably the
    active DirCont). */
-void dircont_set_mask_string(DirCont* dc, gchar* mask_str) {
+void dircont_set_mask_string(DirCont* dc, const gchar* mask_str) {
 
-	mask = g_string_assign(mask, mask_str);
+	/* Initialize the layouts if necessary. */
+	if (!big_mask_layout || !small_mask_layout) {
+		GtkWidget* area = gtk_drawing_area_new();
+		big_mask_layout = gtk_widget_create_pango_layout(area, NULL);
+		small_mask_layout = gtk_widget_create_pango_layout(area, NULL);
+		gtk_widget_destroy(area);
+	}
 
-	update_layout(dc);
+	/* Big mask layout (when directory name is short) */
+	gchar* markup = g_strconcat(
+			dir_tag_open->str, "<small><b>",
+			mask_str,
+			"</b></small>", dir_tag_close->str, NULL);
+	pango_layout_set_markup(big_mask_layout, markup, -1);
+	g_free(markup);
+
+
+	/* Small mask layout (when directory name is long) */
+	markup = g_strconcat(
+			count_tag_open->str, "<b>",
+			"Mask: ", mask_str,
+			"</b>", count_tag_close->str, NULL);
+	pango_layout_set_markup(small_mask_layout, markup, -1);
+	g_free(markup);
 }
 
 
+/* Navigate the scrolled window for the given dc. */
+void dircont_nav(DirCont* dc, DirContNav nav) {
+	g_return_if_fail(dc != NULL);
+	g_return_if_fail(IS_DIRCONT(dc));
+
+	gdouble upper, lower, current, step_inc, page_inc, change;
+
+	GtkAdjustment* vadj= gtk_scrolled_window_get_vadjustment(
+			GTK_SCROLLED_WINDOW(dc->scrolled_window));
+
+	current = gtk_adjustment_get_value(vadj);
+	page_inc = vadj->page_increment;
+	step_inc = vadj->step_increment;
+	lower = vadj->lower;
+	change = 0;
+
+	/* Otherwise we scroll down into a page of black. */
+	upper = vadj->upper - page_inc - step_inc;
+
+	switch (nav) {
+		case DCN_PGUP:
+			change = -page_inc;
+			break;
+		case DCN_PGDOWN:
+			change = +page_inc;
+			break;
+		default:
+			g_return_if_reached();
+	}
+
+	/* Set the value. */
+	if (change)
+		gtk_adjustment_set_value(vadj, CLAMP(current + change, lower, upper));
+}
+
+
+static GdkPixbuf *
+create_gradient(GdkColor *color1, GdkColor *color2, gint width, gint height,
+		gboolean horz) {
+
+	g_return_val_if_fail(color1 != NULL && color2 != NULL, NULL);
+	g_return_val_if_fail(width > 0 && height > 0, NULL);
+
+	GdkPixbuf *pix;
+	gint i, j;
+	GdkPixdata pixdata;
+	guint8 rgb[3];
+
+	pixdata.magic = GDK_PIXBUF_MAGIC_NUMBER;
+	pixdata.length = GDK_PIXDATA_HEADER_LENGTH + (width * height * 3);
+	pixdata.pixdata_type = GDK_PIXDATA_COLOR_TYPE_RGB |
+		GDK_PIXDATA_SAMPLE_WIDTH_8 | GDK_PIXDATA_ENCODING_RAW;
+	pixdata.rowstride = width * 3;
+	pixdata.width = width;
+	pixdata.height = height;
+	pixdata.pixel_data = g_malloc(width * height * 3);
+
+	if(horz) {
+		for(i = 0; i < width; i++) {
+			rgb[0] = (color1->red +
+					(i * (color2->red - color1->red) / width)) >> 8;
+			rgb[1] = (color1->green +
+					(i * (color2->green - color1->green) / width)) >> 8;
+			rgb[2] = (color1->blue +
+					(i * (color2->blue - color1->blue) / width)) >> 8;
+			memcpy(pixdata.pixel_data + (i * 3), rgb, 3);
+		}
+		
+		for(i = 1; i < height; i++) {
+			memcpy(pixdata.pixel_data + (i * pixdata.rowstride),
+					pixdata.pixel_data, pixdata.rowstride);
+		}
+	}
+	else {
+		for(i = 0; i < height; i++) {
+			rgb[0] = (color1->red +
+					(i * (color2->red - color1->red) / height)) >> 8;
+			rgb[1] = (color1->green
+					+ (i * (color2->green - color1->green) / height)) >> 8;
+			rgb[2] = (color1->blue
+					+ (i * (color2->blue - color1->blue) / height)) >> 8;
+			for(j = 0; j < width; j++) {
+				memcpy(pixdata.pixel_data + (i * pixdata.rowstride) + (j * 3),
+						rgb, 3);
+			}
+		}
+	}
+	
+	pix = gdk_pixbuf_from_pixdata(&pixdata, TRUE, NULL);
+
+	return pix;
+}
 

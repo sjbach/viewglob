@@ -53,7 +53,7 @@ static FItem*    fitem_new(const gchar* name, FileType type,
 		FileSelection selection);
 static void      fitem_build_widgets(FItem* fi);
 static void      fitem_free(FItem* fi, gboolean destroy_widgets);
-static void      fitem_update_type_selection_and_order(FItem* fi, FileType t,
+static int       fitem_update_type_selection_and_order(FItem* fi, FileType t,
 		FileSelection s, FileBox* fbox, gint rank);
 static void      fitem_display(FItem* fi, FileBox* fbox);
 
@@ -436,26 +436,30 @@ static GdkPixbuf* make_pixbuf_scaled(const guint8 icon_inline[],
 }
 
 
-void file_box_add(FileBox* fbox, gchar* name, FileType type,
+int file_box_add(FileBox* fbox, gchar* name, FileType type,
 		FileSelection selection, gint rank) {
-	g_return_if_fail(IS_FILE_BOX(fbox));
+	g_return_val_if_fail(IS_FILE_BOX(fbox), 0);
 
 	GSList* search_result;
 	FItem* fi;
+	gint points;
 
 	/* Check if we've already got this FItem. */
 	search_result = g_slist_find_custom(fbox->fis, name, cmp_same_name);
 	if (search_result) {
 		fi = search_result->data;
-		fitem_update_type_selection_and_order(fi, type, selection, fbox, rank);
+		points = fitem_update_type_selection_and_order(
+				fi, type, selection, fbox, rank);
 	}
 	else {
 		fi = fitem_new(name, type, selection);
 		fbox->fis = g_slist_insert(fbox->fis, fi, rank);
+		points = 2;
 	}
 
 	fi->marked = TRUE;
 	fitem_display(fi, fbox);
+	return points;
 }
 
 
@@ -671,8 +675,10 @@ static void fitem_free(FItem* fi, gboolean destroy_widgets) {
 }
 
 
-static void fitem_update_type_selection_and_order(FItem* fi, FileType t,
+static int fitem_update_type_selection_and_order(FItem* fi, FileType t,
 		FileSelection s, FileBox* fbox, gint rank) {
+
+	gint points = 0;
 
 	/* File type. */
 	if (fi->type != t) {
@@ -688,6 +694,8 @@ static void fitem_update_type_selection_and_order(FItem* fi, FileType t,
 		/* Reposition this FItem. */
 		fbox->fis = g_slist_remove(fbox->fis, fi);
 		fbox->fis = g_slist_insert(fbox->fis, fi, rank);
+
+		points = 2;
 	}
 
 	/* File selection state. */
@@ -697,7 +705,11 @@ static void fitem_update_type_selection_and_order(FItem* fi, FileType t,
 			gtk_widget_set_state(fi->widget,
 					selection_to_state(fi->selection));
 		}
+
+		points++;
 	}
+
+	return points;
 }
 
 

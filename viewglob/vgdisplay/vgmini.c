@@ -50,16 +50,17 @@ static void process_glob_data(gchar* buf, gsize bytes, struct vgmini* vg);
 static DirCont* add_dircont(struct vgmini* vg, gchar* name, gint rank,
 		gchar* selected, gchar* total, gchar* hidden);
 static void unmark_all_dirconts(struct vgmini* vg);
-static void cull_dirconts(struct vgmini* vg);
+static void cull_dcs(struct vgmini* vg);
 static void rearrange_and_show(struct vgmini* vg);
+static void do_order(struct vgmini* vg, const gchar* order);
+static void update_dc(struct vgmini* vg, DirCont* dc, gboolean setting);
+static void activate_dc(struct vgmini* vg, gboolean next);
 //static gboolean window_delete_event(GtkWidget* widget, GdkEvent* event,
 //		gpointer data);
 //static gboolean window_configure_event(GtkWidget* window,
 //		GdkEventConfigure* event, struct vgmini* vg);
 //static void window_allocate_event(GtkWidget* window,
 //		GtkAllocation* allocation, struct vgmini* vg);
-//static gboolean window_key_press_event(GtkWidget* window,
-//		GdkEventKey* event, gpointer data);
 gint default_width(struct vgmini* vg);
 
 
@@ -87,6 +88,7 @@ gint main(gint argc, char** argv) {
 	struct vgmini vg;
 	vg.cmdline = gtk_drawing_area_new();
 	vg.dcs = NULL;
+	vg.active = NULL;
 
 	/* Toplevel window. */
 	vg.window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
@@ -103,56 +105,6 @@ gint main(gint argc, char** argv) {
 	file_box_set_sizing(-1);
 	dircont_set_sizing(-1);
 
-	/*
-	GtkWidget* wdc = dircont_new();
-	DirCont* dc = DIRCONT(wdc);
-	dircont_set_name(dc, "Name3");
-	gtk_widget_show(wdc);
-	gtk_widget_hide(DIRCONT(wdc)->file_box->parent->parent);
-	gtk_box_pack_start(GTK_BOX(vg.vbox), wdc, FALSE, FALSE, 0);
-	wdc = dircont_new();
-	dircont_set_name(dc, "Name");
-	dircont_set_selected(dc, "selected");
-	dircont_set_total(dc, "total");
-	dircont_set_hidden(dc, "hidden");
-	file_box_begin_read(FILE_BOX(dc->file_box));
-	file_box_add(FILE_BOX(dc->file_box), "name", FT_REGULAR, FS_NO, 0);
-	file_box_add(FILE_BOX(dc->file_box), "name1", FT_REGULAR, FS_NO, 0);
-	file_box_add(FILE_BOX(dc->file_box), "name2", FT_REGULAR, FS_NO, 0);
-	file_box_add(FILE_BOX(dc->file_box), "name3", FT_REGULAR, FS_NO, 0);
-	file_box_add(FILE_BOX(dc->file_box), "name4", FT_REGULAR, FS_NO, 0);
-	file_box_add(FILE_BOX(dc->file_box), "name5", FT_REGULAR, FS_NO, 0);
-	file_box_add(FILE_BOX(dc->file_box), "name6", FT_REGULAR, FS_NO, 0);
-	file_box_add(FILE_BOX(dc->file_box), "name7", FT_REGULAR, FS_NO, 0);
-	file_box_add(FILE_BOX(dc->file_box), "name8", FT_REGULAR, FS_NO, 0);
-	file_box_add(FILE_BOX(dc->file_box), "name9", FT_REGULAR, FS_NO, 0);
-	file_box_add(FILE_BOX(dc->file_box), "name10", FT_REGULAR, FS_NO, 0);
-	file_box_add(FILE_BOX(dc->file_box), "name11", FT_REGULAR, FS_NO, 0);
-	file_box_add(FILE_BOX(dc->file_box), "name12", FT_REGULAR, FS_NO, 0);
-	file_box_add(FILE_BOX(dc->file_box), "name13", FT_REGULAR, FS_NO, 0);
-	file_box_add(FILE_BOX(dc->file_box), "name14", FT_REGULAR, FS_NO, 0);
-	file_box_add(FILE_BOX(dc->file_box), "name15", FT_REGULAR, FS_NO, 0);
-	file_box_add(FILE_BOX(dc->file_box), "name16", FT_REGULAR, FS_NO, 0);
-	file_box_add(FILE_BOX(dc->file_box), "name17", FT_REGULAR, FS_NO, 0);
-	file_box_add(FILE_BOX(dc->file_box), "name18", FT_REGULAR, FS_NO, 0);
-	file_box_add(FILE_BOX(dc->file_box), "blahblahblah", FT_REGULAR, FS_NO, 0);
-	file_box_add(FILE_BOX(dc->file_box), "afileisme", FT_REGULAR, FS_NO, 0);
-	file_box_add(FILE_BOX(dc->file_box), "alhkdjk12", FT_REGULAR, FS_NO, 0);
-	file_box_add(FILE_BOX(dc->file_box), "121120ksa", FT_REGULAR, FS_NO, 0);
-	file_box_flush(FILE_BOX(dc->file_box));
-	dircont_set_optimal_width(dc, 240);
-	gtk_widget_show(wdc);
-	gtk_box_pack_start(GTK_BOX(vg.vbox), wdc, TRUE, TRUE, 0);
-	wdc = dircont_new();
-	dircont_set_name(dc, "Name2");
-	gtk_widget_show(wdc);
-	gtk_widget_hide(DIRCONT(wdc)->file_box->parent->parent);
-	gtk_box_pack_start(GTK_BOX(vg.vbox), wdc, FALSE, FALSE, 0);
-	*/
-
-
-
-
 	gtk_container_add(GTK_CONTAINER(vg.window), vg.vbox);
 
 	/*
@@ -167,9 +119,8 @@ gint main(gint argc, char** argv) {
 //			G_CALLBACK(window_key_press_event), NULL);
 //	g_signal_connect(G_OBJECT(area), "expose-event",
 //			G_CALLBACK(area_expose_event), NULL);
-
-
-//	vg.dcs = g_slist_prepend(vg.dcs, dc);
+	g_signal_connect(G_OBJECT(vg.window), "key-press-event",
+			G_CALLBACK(window_key_press_event), NULL);
 
 	GIOChannel* stdin_ioc;
 	if ( (stdin_ioc = g_io_channel_unix_new(STDIN_FILENO)) == NULL) {
@@ -205,7 +156,7 @@ static gboolean receive_data(GIOChannel* source, GIOCondition condition,
 		switch (param) {
 
 			case P_ORDER:
-//				exhibit_do_order(vg, value);
+				do_order(vg, value);
 				break;
 
 			case P_CMD:
@@ -217,6 +168,7 @@ static gboolean receive_data(GIOChannel* source, GIOCondition condition,
 				break;
 
 			case P_MASK:
+				dircont_set_mask_string(vg->active, value);
 				//FIXME
 				break;
 
@@ -342,8 +294,8 @@ static void process_glob_data(gchar* buf, gsize bytes, struct vgmini* vg) {
 
 			case GRS_FILE_NAME:
 				string = up_to_delimiter(&p, '\n');
-				file_box_add(FILE_BOX(dc->file_box), string, type, selection,
-						file_rank);
+				dc->score += file_box_add(FILE_BOX(dc->file_box),
+						string, type, selection, file_rank);
 				rs = GRS_IN_LIMBO;
 				break;
 
@@ -353,7 +305,7 @@ static void process_glob_data(gchar* buf, gsize bytes, struct vgmini* vg) {
 		}
 	}
 
-	cull_dirconts(vg);
+	cull_dcs(vg);
 	rearrange_and_show(vg);
 }
 
@@ -379,9 +331,7 @@ static DirCont* add_dircont(struct vgmini* vg, gchar* name, gint rank,
 
 		/* It's a known DirCont. */
 		dc = search_result->data;
-		dircont_set_selected(dc, selected);
-		dircont_set_total(dc, total);
-		dircont_set_hidden(dc, hidden);
+		dircont_set_counts(dc, selected, total, hidden);
 		dircont_mark(dc, rank);
 
 		/* We'll be reading these next, at which point they'll be remarked. */
@@ -392,13 +342,12 @@ static DirCont* add_dircont(struct vgmini* vg, gchar* name, gint rank,
 		/* It's a new DirCont. */
 		dc = DIRCONT(dircont_new());
 		dircont_set_name(dc, name);
-		dircont_set_selected(dc, selected);
-		dircont_set_total(dc, total);
-		dircont_set_hidden(dc, hidden);
+		dircont_set_counts(dc, selected, total, hidden);
 		/* Set optimal width as the width of the listings vbox. */
 //		dircont_set_optimal_width(dc, vg->listings_box->allocation.width);
 		dircont_set_optimal_width(dc, 240); //FIXME
 		dircont_mark(dc, rank);
+		dc->score += 100;
 		vg->dcs = g_slist_append(vg->dcs, dc);
 	}
 
@@ -408,7 +357,7 @@ static DirCont* add_dircont(struct vgmini* vg, gchar* name, gint rank,
 
 /* Remove DirConts and their widgets if they're no longer marked for
    showing. */
-static void cull_dirconts(struct vgmini* vg) {
+static void cull_dcs(struct vgmini* vg) {
 	GSList* iter;
 	DirCont* dc;
 
@@ -439,6 +388,7 @@ static void unmark_all_dirconts(struct vgmini* vg) {
 	for (iter = vg->dcs; iter; iter = g_slist_next(iter)) {
 		dc = iter->data;
 		dc->marked = FALSE;
+		dc->score = 0;
 	}
 }
 
@@ -448,8 +398,8 @@ static void rearrange_and_show(struct vgmini* vg) {
 	DirCont* dc;
 	GSList* iter;
 
-	DirCont* prev_active = vg->active;
-	while ( (iter = g_slist_find_custom(vg->dcs, &next_rank,
+	DirCont* highest = vg->dcs->data;
+	while ( (iter = g_slist_find_custom(vg->dcs, GINT_TO_POINTER(next_rank),
 					cmp_dircont_same_rank)) ) {
 		dc = iter->data;
 
@@ -463,39 +413,102 @@ static void rearrange_and_show(struct vgmini* vg) {
 			gtk_box_reorder_child(GTK_BOX(vg->vbox), GTK_WIDGET(dc),
 					next_rank);
 			gtk_widget_show(GTK_WIDGET(dc));
-			vg->active = dc;
 		}
 		else {
 			if (dc->rank != dc->old_rank) {
 				gtk_box_reorder_child(GTK_BOX(vg->vbox), GTK_WIDGET(dc),
 						next_rank);
 			}
-			if (prev_active == NULL)
-				prev_active = dc;
 		}
+
+		/* Restricted directories can't be active. */
+		if (dc->is_restricted)
+			dc->score = -1;
+
+		if (dc->score >= highest->score)
+			highest = dc;
 
 		next_rank++;
 	}
 
-	if (!vg->active)
-		vg->active = prev_active;
+	/* Always use the previous active dc if there's a tie. */
+	if (!vg->active || highest->score > vg->active->score)
+		vg->active = highest;
 
-	for (iter = vg->dcs; iter; iter = g_slist_next(iter)) {
-		dc = iter->data;
-		gboolean setting = (dc == vg->active);
-		dircont_set_active(dc, setting);
-		gtk_box_set_child_packing(
-				GTK_BOX(vg->vbox),
-				GTK_WIDGET(dc),
-				setting, setting, 0, GTK_PACK_START);
+	if (vg->dcs) {
+		for (iter = vg->dcs; iter; iter = g_slist_next(iter)) {
+			dc = iter->data;
+			update_dc(vg, dc, dc == vg->active);
+		}
 	}
-
-	/* To make the scrollbars rescale. */
-//	gtk_widget_queue_resize(vg->vbox);
 }
 
 
+static void update_dc(struct vgmini* vg, DirCont* dc, gboolean setting) {
+	dircont_set_active(dc, setting);
+	gtk_box_set_child_packing(
+			GTK_BOX(vg->vbox),
+			GTK_WIDGET(dc),
+			setting, setting, 0, GTK_PACK_START);
+	dircont_repaint_header(dc);
+}
 
+
+static void do_order(struct vgmini* vg, const gchar* order) {
+	if (STREQ(order, "pgup"))
+		dircont_nav(vg->active, DCN_PGUP);
+	else if (STREQ(order, "pgdown"))
+		dircont_nav(vg->active, DCN_PGDOWN);
+	else if (STREQ(order, "up"))
+		activate_dc(vg, FALSE);
+	else if (STREQ(order, "down"))
+		activate_dc(vg, TRUE);
+	else {
+		g_warning("Unexpected order: \"%s\"", order);
+		return;
+	}
+}
+
+
+/* Activate the next or previous DirCont (and deactivate the current one). */
+static void activate_dc(struct vgmini* vg, gboolean next) {
+
+	if (!vg->active)
+		return;
+
+	DirCont* new_active;
+	GSList* search;
+
+	gint rank = vg->active->rank;
+	gboolean found = FALSE;
+
+	while ( (rank = (next ? rank + 1 : rank - 1)) >= 0) {
+
+		search = g_slist_find_custom(vg->dcs, GINT_TO_POINTER(rank),
+				cmp_dircont_same_rank);
+
+		if (search) {
+			new_active = search->data;
+			if (new_active->is_restricted)
+				continue;
+			else {
+				found = TRUE;
+				break;
+			}
+		}
+		else {
+			/* There're no more to look at. */
+			return;
+		}
+	}
+
+	/* Activate the found dc. */
+	if (found) {
+		update_dc(vg, new_active, TRUE);
+		update_dc(vg, vg->active, FALSE);
+		vg->active = new_active;
+	}
+}
 
 
 static gint cmp_dircont_same_name(gconstpointer a, gconstpointer b) {
@@ -507,11 +520,11 @@ static gint cmp_dircont_same_name(gconstpointer a, gconstpointer b) {
 
 static gint cmp_dircont_same_rank(gconstpointer a, gconstpointer b) {
 	const DirCont* aa = a;
-	const gint* bb = b;
+	const gint bb = GPOINTER_TO_INT(b);
 
-	if ( aa->rank == *bb )
+	if (aa->rank == bb)
 		return 0;
-	else if ( aa->rank > *bb )
+	else if (aa->rank > bb)
 		return 1;
 	else
 		return -1;

@@ -28,7 +28,6 @@
 #include "file-types.h"
 
 #include <gtk/gtk.h>
-#include <gdk/gdkkeysyms.h>
 #include <gdk/gdkx.h>
 #include <string.h>       /* For strcmp. */
 #include <unistd.h>       /* For getopt. */
@@ -55,9 +54,6 @@ static gboolean window_configure_event(GtkWidget* window,
 		GdkEventConfigure* event, Exhibit* e);
 static void window_allocate_event(GtkWidget* window,
 		GtkAllocation* allocation, Exhibit* e);
-static gboolean window_key_press_event(GtkWidget* window,
-		GdkEventKey* event, gpointer data);
-
 
 static gboolean window_delete_event(GtkWidget* widget, GdkEvent* event,
 		gpointer data) {
@@ -257,71 +253,6 @@ static gboolean window_configure_event(GtkWidget* window,
 		GdkEventConfigure* event, Exhibit* e) {
 	e->width_change += event->width - window->allocation.width;
 	return FALSE;
-}
-
-
-/* A key has been pressed -- write it to the terminal. */
-static gboolean window_key_press_event(GtkWidget* window, GdkEventKey* event,
-		gpointer data) {
-
-	gsize  bytes_written;
-	gchar* temp1;
-	gchar* temp2;
-
-	gboolean result = TRUE;
-
-	switch (event->keyval) {
-		case GDK_Home:
-		case GDK_Left:
-		case GDK_Up:
-		case GDK_Right:
-		case GDK_Down:
-		case GDK_Page_Up:
-		case GDK_Page_Down:
-		case GDK_End:
-			/* These keys we let the display interpret. */
-			result = FALSE;
-			break;
-
-		default:
-			/* The rest are passed to the terminal. */
-			temp1 = g_malloc(2);
-			*temp1 = event->keyval;
-			*(temp1 + 1) = '\0';
-
-			/* Convert out of utf8. */
-			temp2 = g_locale_from_utf8(temp1, -1, NULL, &bytes_written, NULL);
-
-			if (temp2) {
-				if (event->state & GDK_CONTROL_MASK) {
-					/* Control is being held.  Determine if it's a control
-					   key and convert. */
-					if (event->keyval >= 'a' && event->keyval <= 'z')
-						*temp2 -= 96;
-					else if (event->keyval >= '[' && event->keyval <= '_')
-						*temp2 -= 64;
-					else if (event->keyval == '@' || event->keyval == ' ')
-						/* This will go out empty, but vgseer is smart enough
-						   to interpret a value length of 0 as a NUL
-						   character. */
-						*temp2 = '\0';
-				}
-
-				if (!put_param(STDOUT_FILENO, P_KEY, temp2)) {
-					g_critical("Couldn't write key to stdout");
-					exit(EXIT_FAILURE);
-				}
-
-				g_free(temp2);
-			}
-			else
-				result = FALSE;
-
-			g_free(temp1);
-			break;
-	}
-
-	return result;
 }
 
 

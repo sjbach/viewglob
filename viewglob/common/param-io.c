@@ -118,7 +118,7 @@ gboolean get_param(int fd, enum parameter* param, gchar** value) {
 
 	/* Now the value. */
 	start = end + 1;
-	end = g_strstr_len(start, bytes, "\n\n");
+	end = g_strstr_len(start, bytes, "\027\027");
 	if (!end)
 		goto fail;
 	*end = '\0';
@@ -151,7 +151,7 @@ gboolean put_param(int fd, enum parameter param, gchar* value) {
 	gsize len;
 
 	/* Make the string. */
-	string = g_strconcat(param_to_string(param), ":", value, "\n\n", NULL);
+	string = g_strconcat(param_to_string(param), ":", value, "\027\027", NULL);
 	len = strlen(string);
 
 	/* Make sure the length is okay, and convert to network format. */
