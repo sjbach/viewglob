@@ -53,6 +53,7 @@ static FileType       map_file_type(const GString* string);
 static gboolean  window_delete_event(GtkWidget* widget, GdkEvent* event, gpointer data);
 static gboolean  window_configure_event(GtkWidget* window, GdkEventConfigure* event, Exhibit* e);
 static gboolean  window_state_event(GtkWidget *window, GdkEvent *event, Exhibit* e);
+static gboolean  window_key_press_event(GtkWidget* window, GdkEventKey* event, gpointer data);
 static void      listings_allocate_event(GtkWidget* widget, GtkAllocation* allocation, GtkWidget* layout);
 
 /* Globals. */
@@ -680,6 +681,48 @@ static gboolean window_state_event(GtkWidget *window, GdkEvent *event, Exhibit* 
 }
 
 
+/* A key has been pressed -- write it to the terminal. */
+static gboolean window_key_press_event(GtkWidget* window, GdkEventKey* event, gpointer data) {
+
+	gsize bytes_written;
+	gchar* temp1;
+	gchar* temp2;
+	gchar* temp3;
+	gboolean result = FALSE;
+
+	temp1 = g_malloc(2);
+	*temp1 = event->keyval;
+	*(temp1 + 1) = '\0';
+
+	/* Convert out of utf8. */
+	temp2 = g_locale_from_utf8(temp1, -1, NULL, &bytes_written, NULL);
+
+	if (temp2) {
+		if (event->state & GDK_CONTROL_MASK) {
+			/* Control is being held.  Determine if it's a control key and
+			   convert. */
+			if (event->keyval >= 'a' && event->keyval <= 'z')
+				*temp2 -= 96;
+			else if (event->keyval >= '[' && event->keyval <= '_')
+				*temp2 -= 64;
+			else if (event->keyval == '@')
+				*temp2 = '\0';
+		}
+
+		temp3 = g_strconcat("key:", temp2, NULL);
+
+		result = feedback_write_string(temp3, strlen("key:."));
+
+		g_free(temp3);
+		g_free(temp2);
+	}
+
+	g_free(temp1);
+
+	return result;
+}
+
+
 static gboolean parse_args(int argc, char** argv) {
 	gboolean in_loop = TRUE;
 	gint max;
@@ -828,6 +871,7 @@ int main(int argc, char *argv[]) {
 	g_signal_connect(G_OBJECT(e.window), "configure-event", G_CALLBACK(window_configure_event), &e);
 	g_signal_connect(G_OBJECT(e.window), "window-state-event", G_CALLBACK(window_state_event), &e);
 	g_signal_connect(G_OBJECT(e.window), "delete_event", G_CALLBACK(window_delete_event), NULL);
+	g_signal_connect(G_OBJECT(e.window), "key-press-event", G_CALLBACK(window_key_press_event), NULL);
 	g_signal_connect(G_OBJECT(e.listings_box), "size-allocate", G_CALLBACK(listings_allocate_event), layout);
 
 	set_icons(&e);

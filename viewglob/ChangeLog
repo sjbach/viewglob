@@ -1,3 +1,8 @@
+2004-09-26 10:58  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* gviewglob.c, seer.c:
+	  Typing in the display now goes to the terminal.
+
 2004-09-25 19:41  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* feedback.c, feedback.h: added

@@ -52,10 +52,14 @@ FILE* df;
 /* Prototypes */
 static bool main_loop(struct display* d);
 static bool user_activity(void);
+static bool write_to_shell(Buffer* b);
 static bool scan_for_newline(const Buffer* b);
 static bool process_input(Buffer* b);
 
-static char* convert_file_name(enum process_level pl, char* holdover, Buffer* b);
+static bool  is_key(Buffer* b);
+static bool  is_filename(Buffer* b);
+static bool  convert_to_filename(enum process_level pl, char* holdover, Buffer* src_b, Buffer* dest_b);
+static bool  convert_to_key(Buffer* src_b, Buffer* dest_b);
 
 static void send_sane_cmd(struct display* d);
 static void send_order(struct display* d, Action a);
@@ -440,10 +444,10 @@ static bool user_activity(void) {
 	static Buffer sandbox_b = { NULL, BUFSIZ, 0, 0, 0, PL_EXECUTING, MS_NO_MATCH, NULL };
 	static Buffer display_b = { NULL, BUFSIZ, 0, 0, 0, PL_TERMINAL, MS_NO_MATCH, NULL };
 
-	char* filename;
 	fd_set fdset_read;
-	bool ok = true;
 	int max_fd;
+	bool data_converted;
+	bool ok = true;
 
 	/* This only happens once. */
 	if (!term_b.buf && !shell_b.buf) {
@@ -517,16 +521,20 @@ static bool user_activity(void) {
 					DEBUG((df, "\n===============\n"));
 				#endif
 
-				/* Create and write the filename. */
-				filename = convert_file_name(shell_b.pl, shell_b.holdover, &display_b);
-				if (filename) {
-					if (!hardened_write(u.s.fd, filename, strlen(filename))) {
-						viewglob_error("Problem writing to shell");
-						ok = false;
+				/* Transform the display's output to something the shell can use. */
+				if (is_filename(&display_b))
+					data_converted = convert_to_filename(shell_b.pl, shell_b.holdover, &display_b, &term_b);
+				else if (is_key(&display_b))
+					data_converted = convert_to_key(&display_b, &term_b);
+				else
+					data_converted = false;
+
+				if (data_converted) {
+					/* Pretend this data came from the terminal. */
+					ok = write_to_shell(&term_b);
+					if (!ok)
 						goto done;
-					}
 				}
-				XFREE(filename);
 			}
 		}
 	}
@@ -550,40 +558,9 @@ static bool user_activity(void) {
 			goto done;
 		}
 
-		#if DEBUG_ON
-			size_t x;
-			DEBUG((df, "read %d bytes from the terminal:\n===============\n", term_b.filled));
-			for (x = 0; x < term_b.filled; x++)
-				DEBUG((df, "%c", term_b.buf[x]));
-			DEBUG((df, "\n===============\n"));
-		#endif
-
-		/* Process the buffer. */
-		if (viewglob_enabled) {
-			ok = process_input(&term_b);
-			if (!ok) goto done;
-		}
-
-		/* Look for a newline.  If one is found, then a match of a newline/carriage
-		   return in the shell's output (which extends past the end of the command-
-		   line) will be interpreted as command execution.  Otherwise, they'll be
-		   interpreted as a command wrap.  This is a heuristic (I can't see a
-		   guaranteed way to relate shell input to output); in my testing, it works
-		   very well for a person typing at a shell (i.e. 1 char length buffers),
-		   but less well when text is pasted in (i.e. multichar length buffers).
-		   Ideas for improvement are welcome. */
-		if (viewglob_enabled)
-			u.expect_newline = scan_for_newline(&term_b);
-
-		/* Write it out. */
-		if (!hardened_write(u.s.fd, term_b.buf + term_b.skip, term_b.filled - term_b.skip)) {
-			viewglob_error("Problem writing to shell");
-			ok = false;
+		ok = write_to_shell(&term_b);
+		if (!ok)
 			goto done;
-		}
-		if (u.term_transcript_fd != -1 && !hardened_write(u.term_transcript_fd, term_b.buf + term_b.skip, term_b.filled - term_b.skip))
-			viewglob_warning("Could not write term transcript");
-
 	}
 
 	/* If data has been written by the user's shell... */
@@ -671,20 +648,22 @@ static bool scan_for_newline(const Buffer* b) {
 }
 
 
-/* Create a formatted (or not) filename from the buffer. */
-static char* convert_file_name(enum process_level pl, char* holdover, Buffer* b) {
-	char* filename;
-	size_t i, j, size = 0;
+/* Convert the data in src_b into an escaped filename (maybe) and copy it into dest_b. */
+static bool convert_to_filename(enum process_level pl, char* holdover, Buffer* src_b, Buffer* dest_b) {
+	size_t i, j;
 	char c;
 
-	/* Locate the ':' delimiter. */
-	while ( *(b->buf + i) != ':' )
-		i++;
-	i++;
+	i = strlen("file:");  /* Point to the first character after the ':'. */
+	j = 0;
 
-	/* Get size of the filename. */
-	for (j = i; j < b->filled && (c = *(b->buf + j)) != '\0'; j++) {
+	if (pl == PL_AT_PROMPT && opts.smart_insert) {
+		/* If there's no whitespace to the left, add a space at the beginning. */
+		if (!cmd_whitespace_to_left(holdover))
+			*(dest_b->buf + j++) = ' ';
+	}
 
+	/* Fill in the filename. */
+	for (; i < src_b->filled && (c = *(src_b->buf + i)) != '\0'; i++) {
 		switch(c) {
 			/* Shell special characters. */
 			case '*':
@@ -714,78 +693,73 @@ static char* convert_file_name(enum process_level pl, char* holdover, Buffer* b)
 			case '\\':
 			case '!':
 				if (pl == PL_AT_PROMPT || !opts.smart_insert)
-					size++;   /* One for the backslash. */
+					*(dest_b->buf + j++) = '\\';
 			default:
-				size++;       /* One for the character. */
+				*(dest_b->buf + j++) = c;
 				break;
 		}
 	}
 
 	if (pl == PL_AT_PROMPT && opts.smart_insert) {
-		/* Need whitespace to separate the filename from other arguments. */
-		if (!cmd_whitespace_to_left(holdover))
-			size++;
+		/* If there's no whitespace to the right, add a space at the end. */
 		if (!cmd_whitespace_to_right())
-			size++;
+			*(dest_b->buf + j++) = ' ';
 	}
 
-	filename = XMALLOC(char, size + 1);
-	*(filename + size) = '\0';
-	j = 0;
+	dest_b->filled = j;
+	return true;
+}
 
-	if (pl == PL_AT_PROMPT && opts.smart_insert) {
-		/* Add whitespace to separate the filename from other arguments. */
-		if (!cmd_whitespace_to_left(holdover)) {
-			*(filename) = ' ';
-			j++;
-		}
-		if (!cmd_whitespace_to_right())
-			*(filename + size - 1) = ' ';
+
+/* Convert the data in src_b into a key and copy it into dest_b. */
+static bool convert_to_key(Buffer* src_b, Buffer* dest_b) {
+	*(dest_b->buf) = *(src_b->buf + strlen("key:"));
+	dest_b->filled = 1;
+
+	DEBUG((df, "(the key is: %c)\n", *(dest_b->buf)));
+	return true;
+}
+
+
+static bool write_to_shell(Buffer* b) {
+	bool ok = true;
+
+	#if DEBUG_ON
+		size_t x;
+		DEBUG((df, "read %d bytes from the terminal:\n===============\n", b->filled));
+		for (x = 0; x < b->filled; x++)
+			DEBUG((df, "%c", b->buf[x]));
+		DEBUG((df, "\n===============\n"));
+	#endif
+
+	/* Process the buffer. */
+	if (viewglob_enabled) {
+		ok = process_input(b);
+		if (!ok) goto done;
 	}
 
+	/* Look for a newline.  If one is found, then a match of a newline/carriage
+	   return in the shell's output (which extends past the end of the command-
+	   line) will be interpreted as command execution.  Otherwise, they'll be
+	   interpreted as a command wrap.  This is a heuristic (I can't see a
+	   guaranteed way to relate shell input to output); in my testing, it works
+	   very well for a person typing at a shell (i.e. 1 char length buffers),
+	   but less well when text is pasted in (i.e. multichar length buffers).
+	   Ideas for improvement are welcome. */
+	if (viewglob_enabled)
+		u.expect_newline = scan_for_newline(b);
 
-	/* Fill in the filename. */
-	for (; i < b->filled && (c = *(b->buf + i)) != '\0'; i++) {
-		switch(c) {
-			/* Shell special characters. */
-			case '*':
-			case '?':
-			case '$':
-			case '|':
-			case '&':
-			case ';':
-			case '(':
-			case ')':
-			case '<':
-			case '>':
-			case ' ':
-			case '\t':
-			case '\n':
-			case '[':
-			case ']':
-			case '#':
-			case '\'':
-			case '\"':
-			case '`':
-			case ',':
-			case ':':
-			case '{':
-			case '}':
-			case '~':
-			case '\\':
-			case '!':
-				if (pl == PL_AT_PROMPT || !opts.smart_insert) {
-					*(filename + j) = '\\';
-					j++;
-				}
-			default:
-				*(filename + j) = c;
-				j++;
-				break;
-		}
+	/* Write it out. */
+	if (!hardened_write(u.s.fd, b->buf + b->skip, b->filled - b->skip)) {
+		viewglob_error("Problem writing to shell");
+		ok = false;
+		goto done;
 	}
+	if (u.term_transcript_fd != -1 && !hardened_write(u.term_transcript_fd, b->buf + b->skip, b->filled - b->skip))
+		viewglob_warning("Could not write term transcript");
 
-	return filename;
+	done:
+	return ok;
 }
 
 
@@ -846,6 +820,30 @@ static bool process_input(Buffer* b) {
 	}
 
 	return true;
+}
+
+
+static bool is_filename(Buffer* b) {
+	bool result;
+
+	if ( *(b->buf) != 'f' || b->filled < 7 )
+		result = false;
+	else 
+		result = !strncmp("file:", b->buf, 5);
+
+	return result;
+}
+
+
+static bool is_key(Buffer* b) {
+	bool result;
+
+	if (*(b->buf) != 'k' || b->filled < 5)
+		result = false;
+	else
+		result = !strncmp("key:", b->buf, 4);
+
+	return result;
 }
 
 
