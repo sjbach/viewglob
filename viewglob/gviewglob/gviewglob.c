@@ -609,7 +609,7 @@ static gboolean window_key_press_event(GtkWidget* window, GdkEventKey* event, gp
 
 static gboolean parse_args(int argc, char** argv) {
 	gboolean in_loop = TRUE;
-	gint max, modifier;
+	gint max;
 
 	opterr = 0;
 	while (in_loop) {
