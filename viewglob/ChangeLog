@@ -1,5 +1,7 @@
 2005-03-01 15:35  Stephen Bach <sjbach@users.sourceforge.net>
+
 	* children.c: added comments, fixed a double allocation.
+	* hardened_io.c: added comments, fixed some types.
 
 2004-11-19 01:43  Stephen Bach <sjbach@users.sourceforge.net>
 

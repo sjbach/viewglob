@@ -22,7 +22,6 @@
 #endif
 
 #include "common.h"
-#include "viewglob-error.h"
 #include "seer.h"
 #include "viewglob-error.h"
 #include "hardened_io.h"
@@ -45,6 +44,8 @@ extern FILE* df;
 #endif
 
 
+/* Attempt to open the given file with the given flags and mode.
+   Emit warning if it doesn't work out. */
 int open_warning(char* file_name, int flags, mode_t mode) {
 	int fd = -1;
 	if (file_name) {
@@ -56,6 +57,7 @@ int open_warning(char* file_name, int flags, mode_t mode) {
 	return fd;
 }
 
+/* Attempt to close the given file.  Emit warning on failure. */
 void close_warning(int fd, char* file_name) {
 	if ( fd != -1 && close(fd) == -1) {
 		viewglob_warning("Could not close file");
@@ -64,7 +66,7 @@ void close_warning(int fd, char* file_name) {
 	}
 }
 
-/* If read is interrupted by a signal, try again. */
+/* If read is interrupted by a signal, try again.  Emit error on failure. */
 bool hardened_read(int fd, void* buf, size_t count, ssize_t* nread) {
 	bool ok = true;
 
@@ -98,9 +100,10 @@ bool hardened_read(int fd, void* buf, size_t count, ssize_t* nread) {
 
 
 /* Write all length bytes of buff to fd, even if it requires several tries.
-   Retry after signal interrupts. */
+   Retry after signal interrupts.  Emit error on failure. */
 bool hardened_write(int fd, char* buff, size_t length) {
-	int nwritten, offset = 0;
+	ssize_t nwritten
+	size_t offset = 0;
 
 	while (length > 0) {
 		while (true) {
