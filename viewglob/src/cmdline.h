@@ -50,6 +50,9 @@ bool  cmd_has_queue(void);
 bool  cmd_write_queue(void);
 void  cmd_clear_queue(void);
 
+bool  cmd_whitespace_to_left(char* holdover);
+bool  cmd_whitespace_to_right(void);
+
 bool  cmd_overwrite_char(char c, bool preserve_cret);
 bool  cmd_insert_chars(char c, int n);
 bool  cmd_del_chars(int n);

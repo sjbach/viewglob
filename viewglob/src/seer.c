@@ -55,7 +55,7 @@ static bool user_activity(void);
 static bool scan_for_newline(const Buffer* b);
 static bool process_input(Buffer* b);
 
-static char* convert_file_name(Buffer* b);
+static char* convert_file_name(enum process_level pl, char* holdover, Buffer* b);
 
 static void send_sane_cmd(struct display* d);
 static void send_order(struct display* d, Action a);
@@ -89,7 +89,7 @@ int main(int argc, char* argv[]) {
 	opts.executable = opts.display = NULL;
 	opts.config_file = opts.shell_out_file = opts.term_out_file = NULL;
 	opts.init_loc = opts.expand_command = NULL;
-	opts.navigation = true;
+	opts.smart_insert = true;
 
 	/* Initialize the shell and display structs. */
 	u.s.pid = x.s.pid = disp.pid = -1;
@@ -225,7 +225,7 @@ static void parse_args(int argc, char** argv) {
 
 	opterr = 0;
 	while (in_loop) {
-		switch (getopt(argc, argv, "bc:d:e:f:i:n:o:O:s:vVx:w")) {
+		switch (getopt(argc, argv, "bc:d:e:f:i:mn:o:O:s:vVx:w")) {
 			case -1:
 				in_loop = false;
 				break;
@@ -271,6 +271,9 @@ static void parse_args(int argc, char** argv) {
 				XFREE(opts.init_loc);
 				opts.init_loc = XMALLOC(char, strlen(optarg) + 1);
 				strcpy(opts.init_loc, optarg);
+				break;
+			case 'm':
+				opts.smart_insert = false;
 				break;
 			case 'n':
 				/* Maximum number of files to display per directory (unless forced). */
@@ -515,7 +518,7 @@ static bool user_activity(void) {
 				#endif
 
 				/* Create and write the filename. */
-				filename = convert_file_name(&display_b);
+				filename = convert_file_name(shell_b.pl, shell_b.holdover, &display_b);
 				if (filename) {
 					if (!hardened_write(u.s.fd, filename, strlen(filename))) {
 						viewglob_error("Problem writing to shell");
@@ -523,6 +526,7 @@ static bool user_activity(void) {
 						goto done;
 					}
 				}
+				XFREE(filename);
 			}
 
 		}
@@ -669,18 +673,19 @@ static bool scan_for_newline(const Buffer* b) {
 
 
 /* Create a formatted (or not) filename from the buffer. */
-static char* convert_file_name(Buffer* b) {
+static char* convert_file_name(enum process_level pl, char* holdover, Buffer* b) {
 	char* filename;
 	size_t i, j, size = 0;
 	char c;
 
 	/* Locate the ':' delimiter. */
-	while ( *(b->buf + i) != ':')
+	while ( *(b->buf + i) != ':' )
 		i++;
 	i++;
 
-	/* Get size. */
+	/* Get size of the filename. */
 	for (j = i; j < b->filled && (c = *(b->buf + j)) != '\0'; j++) {
+
 		switch(c) {
 			/* Shell special characters. */
 			case '*':
@@ -710,18 +715,39 @@ static char* convert_file_name(Buffer* b) {
 			case '/':
 			case '\\':
 			case '!':
-				size++;   /* One for the backslash. */
+				if (pl == PL_AT_PROMPT || !opts.smart_insert)
+					size++;   /* One for the backslash. */
 			default:
-				size++;   /* One for the character. */
+				size++;       /* One for the character. */
 				break;
 		}
 	}
 
+	if (pl == PL_AT_PROMPT && opts.smart_insert) {
+		/* Need whitespace to separate the filename from other arguments. */
+		if (!cmd_whitespace_to_left(holdover))
+			size++;
+		if (!cmd_whitespace_to_right())
+			size++;
+	}
+
 	filename = XMALLOC(char, size + 1);
 	*(filename + size) = '\0';
+	j = 0;
+
+	if (pl == PL_AT_PROMPT && opts.smart_insert) {
+		/* Add whitespace to separate the filename from other arguments. */
+		if (!cmd_whitespace_to_left(holdover)) {
+			*(filename) = ' ';
+			j++;
+		}
+		if (!cmd_whitespace_to_right())
+			*(filename + size - 1) = ' ';
+	}
+
 
 	/* Fill in the filename. */
-	for (j = 0; i < b->filled && (c = *(b->buf + i)) != '\0'; i++) {
+	for (; i < b->filled && (c = *(b->buf + i)) != '\0'; i++) {
 		switch(c) {
 			/* Shell special characters. */
 			case '*':
@@ -751,8 +777,10 @@ static char* convert_file_name(Buffer* b) {
 			case '/':
 			case '\\':
 			case '!':
-				*(filename + j) = '\\';
-				j++;
+				if (pl == PL_AT_PROMPT || !opts.smart_insert) {
+					*(filename + j) = '\\';
+					j++;
+				}
 			default:
 				*(filename + j) = c;
 				j++;

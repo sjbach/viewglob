@@ -40,7 +40,7 @@ struct options {
 	char* term_out_file;
 	char* init_loc;
 	char* expand_command;
-	bool navigation;
+	bool  smart_insert;
 };
 
 

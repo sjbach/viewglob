@@ -26,23 +26,27 @@ vg_usage() {
 usage: $SCRIPT_NAME [-d <display program>] [-f <config file>]
                    [-o <shell output file>] [-O <terminal output file]
                    [-p <name|inode>] [-s <ls|windows>] [-n <##>]
-                   [-b] [-t] [-w] [ -e <executable>]
--c, --shell-mode    Shell to use (bash or zsh).
--d, --display       Path to a display program to use instead of the default.
--f, --config-file   Alternate config file.
--o, --shell-output  Output a transcript of the shell's output to the given file.
--O, --term-output   Output a transcript of the terminal's input to given file.
-                    (i.e. the stuff you type into the shell)
--s, --sort-style    File sorting style.
--n, --show-max      Maximum number of files to show per directory
-                    (you can still force show if max is reached).
--b, --disable-icons Don't show file/directory icons in display.
--t, --disable-star  Don't show the viewglob asterisk indicator in the shell.
--w, --show-hidden   Display hidden files by default.
--e, --executable    Alternate shell executable to run
-                    (you probably don't need to use this).
--h, --help          This usage.
--V, --version       Print the version.
+                   [-b] [-t] [-m] [-w] [ -e <executable>]
+-c, --shell-mode            Shell to use (bash or zsh).
+-d, --display               Path to a display program to use instead of the
+                            default.
+-f, --config-file           Alternate config file.
+-o, --shell-output          Output a transcript of the shell's output to the
+                            given file.
+-O, --term-output           Output a transcript of the terminal's input to given
+                            file (i.e. the stuff you type into the shell).
+-s, --sort-style            File sorting style.
+-n, --show-max              Maximum number of files to show per directory
+                            (you can still force show if max is reached).
+-b, --disable-icons         Don't show file/directory icons in display.
+-t, --disable-star          Don't show the viewglob asterisk indicator in the
+                            shell.
+-m, --disable-smart-insert  Always insert escaped filenames.
+-w, --show-hidden           Display hidden files by default.
+-e, --executable            Alternate shell executable to run
+                            (you probably don't need to use this).
+-h, --help                  This usage.
+-V, --version               Print the version.
 EOF
 
 	exit 0
@@ -128,7 +132,7 @@ export VG_ASTERISK=yep
 . $VG_DIR/getopt.sh
 
 # Parse the options.
-while getoptex "b; c: e: d: f: n: o: O: s: t; w; h; v; V; shell-mode: executable: display: config-file: shell-output: show-hidden; show-max: sort-style: term-output: disable-star; disable-icons; help; version;" "$@"
+while getoptex "b; c: e: d: f: m; n: o: O: s: t; w; h; v; V; shell-mode: executable: display: config-file: shell-output: show-hidden; show-max: sort-style: term-output: disable-star; disable-icons; disable-smart-insert; help; version;" "$@"
 	do case "$OPTOPT" in
 
 		b|disable-icons)
@@ -153,6 +157,10 @@ while getoptex "b; c: e: d: f: n: o: O: s: t; w; h; v; V; shell-mode: executable
 		f|config-file)
 			vg_test_config_file "$OPTARG"
 			VG_CONFIG_FILE="$OPTARG"
+			;;
+
+		m|disable-smart-insert)
+			VG_DISPLAY_OPTS="${VG_DISPLAY_OPTS} -m"
 			;;
 
 		o|shell-output)
@@ -219,6 +227,9 @@ if [ -r "$VG_CONFIG_FILE" ]; then
 				;;
 			disable-star)
 				VG_ASTERISK=nope
+				;;
+			disable-smart-insert)
+				VG_DISPLAY_OPTS="${VG_DISPLAY_OPTS} -m"
 				;;
 			compare-mode)
 				# Do nothing -- this is for compatibility with old config files.

@@ -129,6 +129,53 @@ void cmd_clear_queue(void) {
 	}
 }
 
+/* Determine whether there is whitespace to the left of the cursor. */
+bool cmd_whitespace_to_left(char* holdover) {
+	bool result;
+
+	if ( (u.cmd.pos == 0) ||
+	     /* Kludge: if the shell buffer has a holdover, which consists
+			only of a space, it's reasonable to assume it won't
+			complete a sequence and will end up being added to the
+			command line. */
+	     (holdover && strlen(holdover) == 1 && *(holdover) == ' ') )
+		result = true;
+	else {
+		switch ( *(u.cmd.command + u.cmd.pos - 1) ) {
+			case ' ':
+			case '\n':
+			case '\t':
+				result = true;
+				break;
+			default:
+				result = false;
+				break;
+		}
+	}
+
+	return result;
+}
+
+
+/* Determine whether there is whitespace to the right of the cursor
+   (i.e. underneath the cursor). */
+bool cmd_whitespace_to_right(void) {
+	bool result;
+
+	switch ( *(u.cmd.command + u.cmd.pos) ) {
+		case ' ':
+		case '\n':
+		case '\t':
+			result = true;
+			break;
+		default:
+			result = false;
+			break;
+	}
+
+	return result;
+}
+
 
 /* Overwrite the char in the working command line at pos in command;
    realloc if necessary. */
