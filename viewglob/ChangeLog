@@ -1,3 +1,10 @@
+2004-08-12 01:55  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* viewglob.in: ignore comments and newlines in config file, and report bad options.
+	* file_box.c, file_box.h: added.
+	* dlisting.c, dlisting.h, gviewglob.c, gviewglob.h, wrapbox.c, wrapbox.h:
+	  Beginning large code reorganization.
+
 2004-08-11 14:46  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* Makefile.am: adding gviewglob/common.h.
