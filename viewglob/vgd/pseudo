@@ -1,0 +1,114 @@
+
+
+struct state {
+	GList*         clients;
+	struct sandbox bash;
+	struct sandbox zsh;
+
+}
+
+struct sandbox {
+	enum shell_type   shell;
+	int               fd;
+
+struct vgseer_client {
+	/* Static properties (set once) */
+	gboolean          local;
+	pid_t             pid;
+	Window            win;
+	enum shell_type   shell;
+	gchar*            expand_opts;
+	int               fd;
+
+	/* Dynamic properties (change often) */
+	enum shell_status status;
+	gchar*            cli;
+	gchar*            pwd;
+}
+
+
+Main() {
+	Setup listening socket;
+	clients = NULL;
+
+	while (TRUE) {
+		fdset(server_fd);
+		for each client
+			fdset(client_fd)
+
+		select();  // for one second?
+		if any are set {
+
+			if set(server_fd)
+				accept_new_client();
+			else if set(display_fd)
+				process_display();
+			else for each client {
+				if set(client_fd) {
+					process_client(client);
+					break;
+				}
+			}
+		}
+
+		find out active window;
+		if new active window != old active window {
+			if new active window is one of our clients {
+				active window = new active window;
+				update_display();
+			}
+		}
+
+		if (!persistent && clients == NULL)
+			break;
+	}
+
+	cleanup();
+}
+
+
+switch_display_shell() {
+	// send new term's Window id
+	update_display(reglob);
+}
+
+
+accept_new_client(struct state* s) {
+	//straight forward
+}
+
+
+/* For now just request one parameter/value pair (except for vgexpand_data).
+   If this is a performance problem, make final non-blocking data request. */
+process_client(struct state* s, struct vgseer_client* c) {
+
+	if (get_pair() == error)
+		(void) put_pair(P_ORDER, "die!");
+
+	else switch param {
+
+		case P_STATUS:
+			set status;
+			update_display(no reglob);
+
+		case P_PWD:
+			set pwd
+			update_display(no reglob);
+
+		case P_CMD:
+			set cmd
+			if active client
+				update_display(reglob);
+
+		case P_ORDER:
+
+		case P_VGEXPAND_DATA:   // Remote shells only
+		
+		default:
+			g_warning("Unexpected parameter!");
+			(void) put_pair(P_ORDER, "die!");
+
+	}
+
+}
+

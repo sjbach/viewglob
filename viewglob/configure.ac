@@ -150,7 +150,6 @@ dnl End of pty stuff.
 dnl =====================================================================
 
 
-#AC_CONFIG_FILES([Makefile src/Makefile gviewglob/Makefile])
-AC_CONFIG_FILES([Makefile vgexpand/Makefile vgdisplay/Makefile shell/Makefile vgseer/Makefile common/Makefile])
+AC_CONFIG_FILES([Makefile vgd/Makefile vgexpand/Makefile vgdisplay/Makefile shell/Makefile vgseer/Makefile common/Makefile])
 AC_OUTPUT
 

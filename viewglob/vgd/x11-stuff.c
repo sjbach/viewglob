@@ -22,7 +22,7 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-/* Modified from main.c from the wmctrl package. */
+/* Modified from main.c in the wmctrl package. */
 
 
 #if HAVE_CONFIG_H
@@ -30,7 +30,6 @@
 #endif
 
 #include "common.h"
-#include "viewglob-error.h"
 #include "x11-stuff.h"
 #define MAX_PROPERTY_VALUE_LEN 4096
 
@@ -39,46 +38,47 @@
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
 
+#include <glib.h>
 
 #if DEBUG_ON
 extern FILE* df;
 #endif
 
-static void activate_window (Display* disp, Window win, bool switch_desktop);
-static Window *get_client_list (Display *disp, unsigned long *size);
-static char* get_property (Display* disp, Window win, Atom xa_prop_type, char* prop_name, unsigned long* size);
-static char* get_window_title (Display* disp, Window win);
-static bool client_msg(Display* disp, Window win, char* msg,
-		unsigned long data0, unsigned long data1, 
-		unsigned long data2, unsigned long data3,
-		unsigned long data4);
+static void activate_window (Display* disp, Window win, gboolean switch_desktop);
+static Window *get_client_list (Display *disp, gulong *size);
+static gchar* get_property (Display* disp, Window win, Atom xa_prop_type, gchar* prop_name, gulong* size);
+static gchar* get_window_title (Display* disp, Window win);
+static gboolean client_msg(Display* disp, Window win, gchar* msg,
+		gulong data0, gulong data1, 
+		gulong data2, gulong data3,
+		gulong data4);
 
 
 void refocus(Display* disp, Window w1, Window w2) {
 	Window active_window;
-	int revert_to_return;
+	gint revert_to_return;
 
 	XGetInputFocus(disp, &active_window, &revert_to_return);
 
 	/* Refocus the window which isn't focused.  Or, if neither
 	   are focused (?), focus both. */
 	if (active_window == w1 && w2 != 0)
-		activate_window(disp, w2, false);
+		activate_window(disp, w2, FALSE);
 	else if (active_window == w2 && w1 != 0)
-		activate_window(disp, w1, false);
+		activate_window(disp, w1, FALSE);
 	else if (w1 != 0 && w2 != 0) {
-		activate_window(disp, w2, false);
-		activate_window(disp, w1, false);
+		activate_window(disp, w2, FALSE);
+		activate_window(disp, w1, FALSE);
 	}
 }
 
 
-static void activate_window(Display* disp, Window win, bool switch_desktop) {
-	unsigned long* desktop;
+static void activate_window(Display* disp, Window win, gboolean switch_desktop) {
+	gulong* desktop;
 	/* desktop ID */
-	if ((desktop = (unsigned long*)get_property(disp, win,
+	if ((desktop = (gulong*)get_property(disp, win,
 			XA_CARDINAL, "_NET_WM_DESKTOP", NULL)) == NULL) {
-		if ((desktop = (unsigned long*)get_property(disp, win,
+		if ((desktop = (gulong*)get_property(disp, win,
 				XA_CARDINAL, "_WIN_WORKSPACE", NULL)) == NULL) {
 			DEBUG((df, "Cannot find desktop ID of the window.\n"));
 		}
@@ -90,7 +90,7 @@ static void activate_window(Display* disp, Window win, bool switch_desktop) {
 					*desktop, 0, 0, 0, 0) != EXIT_SUCCESS) {
 			DEBUG((df, "Cannot switch desktop.\n"));
 		}
-		XFREE(desktop);
+		g_free(desktop);
 	}
 
 	/*client_msg(disp, win, "_NET_ACTIVE_WINDOW", 0, 0, 0, 0, 0);*/
@@ -99,10 +99,10 @@ static void activate_window(Display* disp, Window win, bool switch_desktop) {
 }
 
 
-static bool client_msg(Display* disp, Window win, char* msg,
-		unsigned long data0, unsigned long data1, 
-		unsigned long data2, unsigned long data3,
-		unsigned long data4) {
+static gboolean client_msg(Display* disp, Window win, gchar* msg,
+		gulong data0, gulong data1, 
+		gulong data2, gulong data3,
+		gulong data4) {
 	XEvent event;
 	long mask = SubstructureRedirectMask | SubstructureNotifyMask;
 
@@ -119,25 +119,24 @@ static bool client_msg(Display* disp, Window win, char* msg,
 	event.xclient.data.l[4] = data4;
 	
 	if (XSendEvent(disp, DefaultRootWindow(disp), False, mask, &event))
-		return true;
+		return TRUE;
 	else {
-		viewglob_warning("Cannot send %s event");
-		viewglob_warning(msg);
-		return false;
+		g_warning("Cannot send %s event", msg);
+		return FALSE;
 	}
 }
 
 
-static char* get_property (Display* disp, Window win,
-		Atom xa_prop_type, char* prop_name, unsigned long* size) {
+static gchar* get_property (Display* disp, Window win,
+		Atom xa_prop_type, gchar* prop_name, gulong* size) {
 	Atom xa_prop_name;
 	Atom xa_ret_type;
-	int ret_format;
-	unsigned long ret_nitems;
-	unsigned long ret_bytes_after;
-	unsigned long tmp_size;
-	unsigned char* ret_prop;
-	char* ret;
+	gint ret_format;
+	gulong ret_nitems;
+	gulong ret_bytes_after;
+	gulong tmp_size;
+	guchar* ret_prop;
+	gchar* ret;
 	
 	xa_prop_name = XInternAtom(disp, prop_name, False);
 	
@@ -156,7 +155,7 @@ static char* get_property (Display* disp, Window win,
 
 	/* null terminate the result to make string handling easier */
 	tmp_size = (ret_format / 8) * ret_nitems;
-	ret = XMALLOC(char, tmp_size + 1);
+	ret = g_malloc(tmp_size + 1);
 	memcpy(ret, ret_prop, tmp_size);
 	ret[tmp_size] = '\0';
 
@@ -168,10 +167,10 @@ static char* get_property (Display* disp, Window win,
 }
 
 
-Window get_xid_from_title(Display* disp, char* title) {
+Window get_xid_from_title(Display* disp, gchar* title) {
 	Window* client_list;
-	unsigned long client_list_size;
-	int i, j;
+	gulong client_list_size;
+	gint i, j;
 
 	if (!disp || !title)
 		return 0;
@@ -183,7 +182,7 @@ Window get_xid_from_title(Display* disp, char* title) {
 			return 0;
 
 		for (j = 0; j < client_list_size / 4; j++) {
-			char* window_title = get_window_title(disp, client_list[j]);
+			gchar* window_title = get_window_title(disp, client_list[j]);
 			if (window_title && strcmp(title, window_title) == 0)
 				return client_list[j];
 		}
@@ -196,14 +195,14 @@ Window get_xid_from_title(Display* disp, char* title) {
 }
 
 
-static Window* get_client_list (Display* disp, unsigned long* size) {
+static Window* get_client_list (Display* disp, gulong* size) {
 	Window* client_list;
 
 	if ((client_list = (Window*)get_property(disp, DefaultRootWindow(disp), 
 					XA_WINDOW, "_NET_CLIENT_LIST", size)) == NULL) {
 		if ((client_list = (Window*)get_property(disp, DefaultRootWindow(disp), 
 						XA_CARDINAL, "_WIN_CLIENT_LIST", size)) == NULL) {
-			viewglob_warning("Cannot get client list properties. \n"
+			g_warning("Cannot get client list properties. \n"
 				  "(_NET_CLIENT_LIST or _WIN_CLIENT_LIST)"
 				  "\n");
 			return NULL;
@@ -214,10 +213,10 @@ static Window* get_client_list (Display* disp, unsigned long* size) {
 }
 
 
-static char* get_window_title (Display *disp, Window win) {
-	char* title_utf8;
-	char* wm_name;
-	char* net_wm_name;
+static gchar* get_window_title (Display *disp, Window win) {
+	gchar* title_utf8;
+	gchar* wm_name;
+	gchar* net_wm_name;
 
 	wm_name = get_property(disp, win, XA_STRING, "WM_NAME", NULL);
 	net_wm_name = get_property(disp, win, 
@@ -230,8 +229,8 @@ static char* get_window_title (Display *disp, Window win) {
 	else
 		title_utf8 = NULL;
 
-	XFREE(wm_name);
-	XFREE(net_wm_name);
+	g_free(wm_name);
+	g_free(net_wm_name);
 	
 	return title_utf8;
 }

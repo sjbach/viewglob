@@ -53,6 +53,8 @@ extern int errno;
 #  define EXIT_FAILURE  1
 #endif
 
+#define STREQ(a, b) (strcmp ((a), (b)) == 0)
+
 #define PERM_FILE	(S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)
 
 #if DEBUG_ON

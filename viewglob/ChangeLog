@@ -1,3 +1,9 @@
+2005-03-21 23:47  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* io-all.c, io-all.h, param-io.c, param-io.h, vgd.c: added
+	* configure.ac, common/Makefile.am, common.h, x11-stuff.c:
+	  Starting work on vgd.
+
 2005-03-15 15:48  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* Makefile.am, configure.ac: renamed glob-expand to vgexpand.
