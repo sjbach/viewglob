@@ -1,3 +1,8 @@
+New in 1.0.1, released 2004-10-12:
+	Features:
+	  * Added options to display directories in reverse order or
+	    reverse order with the current directory first.
+
 New in 1.0, released 2004-09-28:
 	Features:
 	  * Added functionality to insert file/directory name/path into
@@ -5,7 +10,7 @@ New in 1.0, released 2004-09-28:
 	  * Added "smart-insert" functionality and program flag.
 	  * Keystrokes typed into the display are written to the terminal.
 	  * Display titlebar shows the path of the current directory.
-	
+
 	Bug fixes:
 	  * Long-standing display resize issue fixed (window no longer
 	    sometimes enforces a ridiculous minimum width).
@@ -58,7 +63,7 @@ New in 0.8.3, released 2004-08-26:
 	* No more calls to init-viewglob.sh on startup, which would clutter up
 	  the user's .bash_history and sometimes cause a beep.
 	* Fixed an annoying bug where viewglob would confuse the output of a
-	  multi- hit tab-completion with the command line.
+	  multi-hit tab-completion with the command line.
 
 New in 0.8.2, released 2004-08-23:
 	* Added recognition functionality for all basic Unix file types (and
@@ -77,9 +82,9 @@ New in 0.8.2, released 2004-08-23:
 New in 0.8.1, released 2004-08-11:
 	* The display will no longer confuse command-line data with glob data
 	  if you type really fast.
-	* Command-line text box in the display will no longer grow the window.
+	* Command line text box in the display will no longer grow the window.
 	* File layout of directories in the display is now easier on the eyes.
-	* Fixed small command-line processing error.
+	* Fixed small command line processing error.
 	* Forced exit now a little more graceful.
 
 New in 0.8.0, released 2004-08-08:

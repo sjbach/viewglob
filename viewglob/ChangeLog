@@ -1,8 +1,13 @@
+2004-10-11 22:01  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* NEWS, README, README.ms, configure.ac, viewglob.1:
+	  Updates for release 1.0.1.
+
 2004-10-11 19:39  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* glob-expand.c, glob-expand.h, viewglob.in:
 	  Added --dir-ordering feature.
-	* viewglob.1, README.ms, AUTHORS,:
+	* viewglob.1, README.ms, AUTHORS:
 	  Updated documentation.
 
 2004-09-28 11:09  Stephen Bach <sjbach@users.sourceforge.net>

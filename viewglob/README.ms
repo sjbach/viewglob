@@ -4,9 +4,9 @@
 .so giftcurs.tmac
 .
 .TL
-viewglob 1.0 README
+viewglob 1.0.1 README
 .br
-September 28, 2004
+October 12, 2004
 .AU
 Stephen Bach <sjbach@users.sourceforge.net>
 .
@@ -69,7 +69,7 @@ I don't have access to Solaris, so I can only hope for the best -- it would be a
 .LP
 viewglob requires a version of bash (any, as far as I know) and GTK+ 2.4.  A version of zsh is also obviously required if you wish to use zsh under viewglob.
 .
-.Sh NEW IN 1.0
+.Sh NEW IN PREVIOUS RELEASE 1.0
 .LP
 The biggest change is the addition of file name insert functionality.  If you double click a file in the display (or the directory header), its name will be passed as text to the terminal.  Holding shift will send the full path to the file.
 .LP
@@ -79,7 +79,7 @@ This release also allows you to type into the display and have the keystrokes pa
 .LP
 Two large issues with FreeBSD (and assumedly the other BSDs as well) are also fixed.  I've been unable to track down the problem with Ctrl-C and SIGINT, though; if you are a terminal I/O savvy BSD user willing to help, please get in touch with me.
 .
-.Sh NEW IN 0.9.1
+.Sh NEW IN PREVIOUS RELEASE 0.9.1
 .LP
 First of all, if you've got a previous installation of viewglob that's not from a package manager (i.e. you just ran make && make install), you should remove it before installing this version.  I was incorrectly installing some binaries to .../share/viewglob instead of .../lib/viewglob, which goes against the Filesystem Hierarchy Standard.  If you've still got the sources to the old install, a make uninstall should do the job.  If not, the directory which you want to remove is, by default, /usr/local/share/viewglob.
 .LP
@@ -105,7 +105,7 @@ You just want a regular shell, but you want to keep the current environment.
 Maybe you're compiling in the background, and your viewglob shell has begun to stutter.
 .RE
 .
-.Sh NEW IN 0.9
+.Sh NEW IN PREVIOUS RELEASE 0.9
 .LP
 Preliminary support for zsh has been added.  From my testing viewglob works well with the advanced completion features of zsh, but there is a lot of ground to cover.  If you use zsh and find that viewglob isn't working well at all, please let me know - I'd be mostly interested in seeing your .zshrc file.
 .LP
