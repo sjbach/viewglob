@@ -78,44 +78,45 @@ seer:
 	sequences.c, sequences.h, circular.h
 	- Defines "sequence groups" for each "process level", which are defined
 	  only for viewglob's purposes.  The sequence group for PL_EXECUTING is
-	  checked against while viewglob has not located the command line (usually
-	  after a command has been run) and PL_AT_PROMPT while at the command
-	  line.  These are mostly differentiated for performance reasons (the
-	  PL_EXECUTING sequence group is much smaller than for PL_PROMPT) and to
-	  decrease the chance of hitting false positives.
-	  A sequence match in a sequence group can modify viewglob's command line,
-	  remove itself from the buffer (so the destination never knows it's
-	  there), and/or change the process level.
+	  checked against while viewglob has not located the command line
+	  (usually after a command has been run) and PL_AT_PROMPT while at the
+	  command line.  These are mostly differentiated for performance
+	  reasons (the PL_EXECUTING sequence group is much smaller than for
+	  PL_PROMPT) and to decrease the chance of hitting false positives.
+	  A sequence match in a sequence group can modify viewglob's command
+	  line, remove itself from the buffer (so the destination never knows
+	  it's there), and/or change the process level.
 	- Determining which sequences should be in each process level has been
-	  done completely based on what I see the shells spitting out.  That is, I
-	  don't check for any terminal sequences which I haven't seen the shells
-	  use.  This means if your shell usage is substantially different from
-	  mine, viewglob may be less accomodating to you.  Improvement here
-	  requires feedback.
-	- I don't use regular expressions for the sequence matching, but I wish I
-	  could.  The problem is that regexes either match or don't -- there's no
-	  "in progress", which is necessary for knowing how much of the buffer you
-	  need to keep track of at any given time.
-	- There's a big list of terminal sequences in the rxvt package located in
-	  docs/xterm.seq.  Very helpful in figuring out what the shell is doing.
+	  done completely based on what I see the shells spitting out.  That
+	  is, I don't check for any terminal sequences which I haven't seen
+	  the shells use.  This means if your shell usage is substantially
+	  different from mine, viewglob may be less accomodating to you.
+	  Improvement here requires feedback.
+	- I don't use regular expressions for the sequence matching, but I
+	  wish I could.  The problem is that regexes either match or don't --
+	  there's no "in progress", which is necessary for knowing how much of
+	  the buffer you need to keep track of at any given time.
+	- There's a big list of terminal sequences in the rxvt package located
+	  in docs/xterm.seq.  Very helpful in figuring out what the shell is
+	  doing.
 
 	buffer.c, buffer.h, circular.h
-	- There are buffers for output coming from the shell and for input coming
-	  from the terminal.  The terminal buffer only uses the PL_TERMINAL
-	  sequence group (which is the Ctrl-G stuff).  The rest are for the shell
-	  buffer.
+	- There are buffers for output coming from the shell and for input
+	  coming from the terminal.  The terminal buffer only uses the
+	  PL_TERMINAL sequence group (which is the Ctrl-G stuff).  The rest
+	  are for the shell buffer.
 
 	cmdline.c, cmdline.h
 	- viewglob's representation of the shell's command line.  This should be
 	  as close as possible to the true command line.  It's modified based on
 	  different sequence matches (or lack there of).  Ideally all calls to
-	  modify the internal command line should be isolated to sequences.c, but
-	  right now they're all over the place.  Kind-of messy.
+	  modify the internal command line should be isolated to sequences.c,
+	  but right now they're all over the place.  Kind-of messy.
 
 	sanitize.c, sanitize.h
-	- When prompted by seer.c, creates a "sanitized" command line based on the
-	  cmdline.c command line.  This removes dangerous constructs such as
-	  history expansions and compound commands.
+	- When prompted by seer.c, creates a "sanitized" command line based on
+	  the cmdline.c command line.  This removes dangerous constructs such
+	  as history expansions and compound commands.
 
 	children.c, children.h
 	- Concerned with the forking of the shells and the display.
