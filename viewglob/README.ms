@@ -6,7 +6,7 @@
 .TL
 Viewglob 1.0.3 README
 .br
-March 6, 2005
+March 5, 2005
 .AU
 Stephen Bach <sjbach@users.sourceforge.net>
 .
