@@ -662,6 +662,7 @@ static gboolean window_state_event(GtkWidget *window, GdkEvent *event, Exhibit* 
 }
 
 
+/*
 static gboolean configure_event2(GtkWidget* window, GdkEventConfigure* event, GtkWidget* label) {
 
 	if (event->width != window->allocation.width) {
@@ -670,6 +671,7 @@ static gboolean configure_event2(GtkWidget* window, GdkEventConfigure* event, Gt
 
 	return FALSE;
 }
+*/
 
 
 
@@ -742,6 +744,7 @@ static void report_version(void) {
 	return;
 }
 
+/*
 static void allocate_callback(GtkWidget *label, GtkAllocation *allocation, gpointer data) {
 	g_print("(allocate)");
 }
@@ -750,6 +753,7 @@ static void allocate_callback(GtkWidget *label, GtkAllocation *allocation, gpoin
 static void request_callback(GtkWidget *label, GtkRequisition *requisition, gpointer data) {
 	g_print("(request)");
 }
+*/
 
 
 
@@ -821,8 +825,8 @@ int main(int argc, char *argv[]) {
 	gtk_box_set_homogeneous(GTK_BOX(e.listings_box), FALSE);
 		//gtk_box_pack_start(GTK_BOX(vbox), e.listings_box, TRUE, TRUE, 0);
 	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scrolled_window), e.listings_box);
-	//gtk_container_set_resize_mode(GTK_CONTAINER(e.listings_box->parent), GTK_RESIZE_IMMEDIATE);
-	//gtk_container_set_resize_mode(GTK_CONTAINER(e.listings_box), GTK_RESIZE_IMMEDIATE);
+	/* Kludge for resizing. */
+	gtk_container_set_resize_mode(GTK_CONTAINER(e.listings_box), GTK_RESIZE_IMMEDIATE);
 	/* g_object_set(e.listings_box, "width-request", 150, NULL); */
 	gtk_widget_show(e.listings_box);
 

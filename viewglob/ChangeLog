@@ -2,6 +2,7 @@
 
 	* gviewglob.c, seer.c:
 	  If user closes the display, seer finds out and toggles it off.
+	* gviewglob.c, dlisting.c: fixing resizing is on hold for now
 
 2004-09-20 15:58  Stephen Bach <sjbach@users.sourceforge.net>
 

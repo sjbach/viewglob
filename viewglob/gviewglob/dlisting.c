@@ -32,8 +32,8 @@ extern FILE* df;
 /* --- prototypes --- */
 static void  dlisting_class_init(DListingClass* klass);
 static void  dlisting_init(DListing* dl);
-static void  dlisting_size_request(GtkWidget* widget, GtkRequisition* requisition);
-static void  dlisting_size_allocate(GtkWidget *widget, GtkAllocation *allocation);
+//static void  dlisting_size_request(GtkWidget* widget, GtkRequisition* requisition);
+//static void  dlisting_size_allocate(GtkWidget *widget, GtkAllocation *allocation);
 static void  dlisting_reset_file_count_label(DListing* dl);
 
 static gboolean is_zero(const gchar* string);
@@ -83,10 +83,19 @@ static void dlisting_class_init(DListingClass* class) {
 	widget_class = GTK_WIDGET_CLASS(class);
 
 	parent_class = g_type_class_peek_parent(class);
-	widget_class->size_request = dlisting_size_request;
-	widget_class->size_allocate = dlisting_size_allocate;
+	//widget_class->size_request = dlisting_size_request;
+	//widget_class->size_allocate = dlisting_size_allocate;
 }
 
+/*
+void test_allocate(GtkWidget *widget, GtkAllocation *allocation, gpointer user_data) {
+	g_print("(allocate)");
+}
+
+void test_request(GtkWidget *widget, GtkRequisition *requisition, gpointer user_data) {
+	g_print("(request)");
+}
+*/
 
 static void dlisting_init(DListing* dl) {
 	GTK_WIDGET_SET_FLAGS(dl, GTK_NO_WINDOW);
@@ -114,12 +123,19 @@ static void dlisting_init(DListing* dl) {
 
 	gtk_box_set_homogeneous(box, FALSE);
 
+	//GtkWidget* label;
+	//label = gtk_label_new("Testing!");
+	//gtk_widget_show(label);
+	//gtk_box_pack_start(box, label, FALSE, FALSE, 0);
 
 	/* Event box for the directory header (so it can be a different colour). */
 	dl->heading_event_box = gtk_event_box_new();
 	gtk_widget_set_state(dl->heading_event_box, GTK_STATE_ACTIVE);
 	gtk_box_pack_start(box, dl->heading_event_box, FALSE, FALSE, 0);
 	gtk_widget_show(dl->heading_event_box);
+
+	//g_signal_connect(dl->heading_event_box, "size-allocate", G_CALLBACK(test_allocate), NULL);
+	//g_signal_connect(dl->heading_event_box, "size-request", G_CALLBACK(test_request), NULL);
 
 	/* Directory header vbox. */
 	dir_heading_vbox = gtk_vbox_new(FALSE, 0);
@@ -208,6 +224,7 @@ static void dlisting_init(DListing* dl) {
 	dlisting_reset_file_count_label(dl);
 }
 
+/*
 static void dlisting_size_request(GtkWidget* widget, GtkRequisition* requisition) {
 	DListing* dl;
 	GtkRequisition heading_req = { 0, 0 }, file_box_req = { 0, 0 };
@@ -225,8 +242,10 @@ static void dlisting_size_request(GtkWidget* widget, GtkRequisition* requisition
 	requisition->width = MIN(requisition->width, dl->optimal_width - WIDTH_BUFFER);
 	//g_printerr("(%d %d)", requisition->width, requisition->height);
 }
+*/
 
 
+/*
 static void dlisting_size_allocate(GtkWidget* widget, GtkAllocation* allocation) {
 	DListing* dl;
 	GtkRequisition child_requisition;
@@ -244,12 +263,12 @@ static void dlisting_size_allocate(GtkWidget* widget, GtkAllocation* allocation)
 
 	gtk_widget_size_allocate (GTK_WIDGET(dl->heading_event_box), &child_allocation);
 
-	//child_allocation.width = MIN(child_allocation.width, dl->optimal_width - WIDTH_BUFFER);
 	child_allocation.y = child_allocation.y + child_allocation.height;
 	child_allocation.height = MAX(1, allocation->height - child_allocation.height);
 
 	gtk_widget_size_allocate (GTK_WIDGET(dl->file_box), &child_allocation);
 }
+*/
 
 
 GtkWidget* dlisting_new (void) {
@@ -390,7 +409,7 @@ void dlisting_set_optimal_width(DListing* dl, gint width) {
 	//g_printerr("!");
 
 	//gtk_widget_queue_resize(GTK_WIDGET(dl->file_box));
-	//gtk_widget_queue_resize(GTK_WIDGET(dl->heading_event_box));
+	gtk_widget_queue_resize(GTK_WIDGET(dl->heading_event_box));
 	//gtk_container_resize_children(GTK_CONTAINER(dl));
 	// FIXME
 }
@@ -428,7 +447,7 @@ void dlisting_free(DListing* dl) {
 	file_box_destroy(FILE_BOX(dl->file_box));   /* This also gets the FItems associated with the file box. */
 
 	//FIXME
-	//gtk_widget_destroy(dl->menu);    /* Delete the menu.  This should get the menu items too. */
+	gtk_widget_destroy(dl->menu);    /* Delete the menu.  This should get the menu items too. */
 
 	g_string_free(dl->name, TRUE);
 	g_string_free(dl->selected_count, TRUE);
