@@ -37,16 +37,7 @@
 BEGIN_C_DECLS
 
 
-int client_msg(Display *disp, Window win, char *msg,
-	unsigned long data0, unsigned long data1, 
-	unsigned long data2, unsigned long data3,
-	unsigned long data4);
-
 bool activate_window (Display* disp, Window win, bool switch_desktop);
-
-char* get_property (Display* disp, Window win,
-	Atom xa_prop_type, char* prop_name, unsigned long* size);
-
 Window get_xid_from_title(Display* disp, char* title);
 
 
