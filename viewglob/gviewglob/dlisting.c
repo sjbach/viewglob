@@ -34,9 +34,18 @@ static void  dlisting_reset_file_count_label(DListing* dl);
 
 static gboolean is_zero(const gchar* string);
 
+static gint show_context_menu(GtkWidget *widget, GdkEvent *event);
+static void show_hidden_files_activate_handler(GtkMenuItem* menu_item, DListing* dl);
+static void show_all_files_activate_handler(GtkMenuItem* menu_item, DListing* dl);
+
+
 /* --- variables --- */
 static gpointer parent_class = NULL;
 static GdkColor separator_color = { 0, 0, 0, 0 };
+static GdkPixbuf* show_hidden_pixbuf = NULL;
+static GdkPixbuf* show_all_pixbuf = NULL;
+static gboolean show_hidden_files;
+static gboolean show_all_files;
 
 /*--- functions --- */
 GType dlisting_get_type(void) {
@@ -78,46 +87,27 @@ static void dlisting_class_init(DListingClass* class) {
 static void dlisting_init(DListing* dl) {
 	GTK_WIDGET_SET_FLAGS(dl, GTK_NO_WINDOW);
 
-	//GtkWidget* vbox = GTK_VBOX(dl);
 	GtkBox* box = GTK_BOX(dl);
-	//GtkWidget* dir_heading_event_box;
 	GtkWidget* dir_heading_vbox;
 	GtkWidget* dir_heading_separator;
 	GtkWidget* left_spacer;
-	//GtkWidget* file_num_label;
 
-	// FIXME
-	//GtkWidget* menu;
-	//GtkWidget* menu_item_image;
-	//GtkWidget* image_menu_item;
+	GtkWidget* menu_item_image;
+	GtkWidget* image_menu_item;
 
 	dl->name = NULL;
 	dl->old_rank = -1;
 	dl->rank = -1;
 	dl->marked = FALSE;
 
-	dl->selected_count = NULL;
-	dl->total_count = NULL;
-	dl->hidden_count = NULL;
-
-	dl->name_label = NULL;
-	dl->count_label = NULL;
-	dl->menu = NULL;
-	dl->file_box = NULL;
-
-	//dl->widget = NULL;
-
-	//dl->name = g_string_new("<unset>");
 	dl->name = g_string_new("");
 	dl->rank = -1;
 	dl->old_rank = -1;
-	dl->marked = TRUE;
 
 	dl->selected_count = g_string_new("0");
 	dl->total_count = g_string_new("0");
 	dl->hidden_count = g_string_new("0");
 
-	//gtk_box_set_homogeneous(GTK_BOX(vbox), FALSE);
 	gtk_box_set_homogeneous(box, FALSE);
 
 	/* Event box for the directory header (so it can be a different colour). */
@@ -134,7 +124,6 @@ static void dlisting_init(DListing* dl) {
 
 	/* Create black-line separator. */
 	dir_heading_separator = gtk_hseparator_new();
-	//gtk_widget_modify_bg(dir_heading_separator, GTK_STATE_NORMAL, v.separator_color);
 	gtk_widget_modify_bg(dir_heading_separator, GTK_STATE_NORMAL, &separator_color);
 	gtk_box_pack_start(GTK_BOX(dir_heading_vbox), dir_heading_separator, FALSE, FALSE, 0);
 	gtk_widget_show(dir_heading_separator);
@@ -167,10 +156,47 @@ static void dlisting_init(DListing* dl) {
 	gtk_box_pack_start(box, dl->file_box, FALSE, FALSE, 0);
 	gtk_widget_show(dl->file_box);
 
+	/* Setup the context menu. */
+	dl->menu = gtk_menu_new();
+
+	/* Show Hidden. */
+	image_menu_item = gtk_image_menu_item_new_with_mnemonic("Show _hidden files");
+	if (show_hidden_pixbuf) {
+		menu_item_image = gtk_image_new_from_pixbuf(show_hidden_pixbuf);
+		gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(image_menu_item), menu_item_image);
+		gtk_widget_show(menu_item_image);
+	}
+	gtk_widget_show(image_menu_item);
+	if (show_hidden_files) {
+		/* Hidden files are always shown -- this item is redundant. */
+		gtk_widget_set_state(image_menu_item, GTK_STATE_INSENSITIVE);
+	}
+	else
+		g_signal_connect(image_menu_item, "activate", G_CALLBACK(show_hidden_files_activate_handler), dl);
+	gtk_menu_append(GTK_MENU_SHELL(dl->menu), image_menu_item);
+
+	/* Show All. */
+	image_menu_item = gtk_image_menu_item_new_with_mnemonic("Show _all files");
+	if (show_all_pixbuf) {
+		menu_item_image = gtk_image_new_from_pixbuf(show_all_pixbuf);
+		gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(image_menu_item), menu_item_image);
+		gtk_widget_show(menu_item_image);
+	}
+	gtk_widget_show(image_menu_item);
+	if (show_all_files) {
+		/* There's no file display limit -- this item is redundant. */
+		gtk_widget_set_state(image_menu_item, GTK_STATE_INSENSITIVE);
+	}
+	else
+		g_signal_connect(image_menu_item, "activate", G_CALLBACK(show_all_files_activate_handler), dl);
+	gtk_menu_append(GTK_MENU_SHELL(dl->menu), image_menu_item);
+
+	g_signal_connect_swapped(box, "button_press_event", G_CALLBACK(show_context_menu), dl->menu);
+	gtk_widget_show(dl->menu);
+
+	/* Initialize the labels. */
 	dlisting_set_name(dl, "<unset>");
 	dlisting_reset_file_count_label(dl);
-
-	/* TODO: context menu */
 }
 
 
@@ -184,6 +210,26 @@ void dlisting_set_separator_color(GdkColor color) {
 	separator_color.red = color.red;
 	separator_color.green = color.green;
 	separator_color.blue = color.blue;
+}
+
+
+void dlisting_set_show_hidden_pixbuf(GdkPixbuf* pixbuf) {
+	show_hidden_pixbuf = pixbuf;
+}
+
+
+void dlisting_set_show_all_pixbuf(GdkPixbuf* pixbuf) {
+	show_all_pixbuf = pixbuf;
+}
+
+
+void dlisting_set_show_hidden_files(gboolean show_hidden) {
+	show_hidden_files = show_hidden;
+}
+
+
+void dlisting_set_show_all_files(gboolean show_all) {
+	show_all_files = show_all;
 }
 
 
@@ -342,4 +388,63 @@ static gboolean is_zero(const gchar* string) {
 	else
 		return FALSE;
 }
+
+
+static gint show_context_menu(GtkWidget *widget, GdkEvent *event) {
+	GtkMenu* menu;
+	GdkEventButton* event_button;
+
+	g_return_val_if_fail (widget != NULL, FALSE);
+	g_return_val_if_fail (GTK_IS_MENU (widget), FALSE);
+	g_return_val_if_fail (event != NULL, FALSE);
+
+	menu = GTK_MENU(widget);
+
+	if (event->type == GDK_BUTTON_PRESS) {
+		event_button = (GdkEventButton*) event;
+		if (event_button->button == 3) {
+			gtk_menu_popup (menu, NULL, NULL, NULL, NULL, event_button->button, event_button->time);
+			return TRUE;
+		}
+	}
+
+	return FALSE;
+}
+
+
+static void show_hidden_files_activate_handler(GtkMenuItem* menu_item, DListing* dl) { 
+	GtkWidget* widget;
+
+	g_return_if_fail(GTK_IS_MENU_ITEM(menu_item));
+	g_return_if_fail(IS_DLISTING(dl));
+	widget = GTK_WIDGET(dl);
+
+	file_box_set_show_hidden_files(FILE_BOX(dl->file_box), TRUE);
+	dlisting_reset_file_count_label(dl);
+	gtk_widget_set_state(GTK_WIDGET(menu_item), GTK_STATE_INSENSITIVE);
+
+	if (widget->parent) {
+		/* Update scrollbar. */
+		gtk_widget_queue_resize(widget->parent);
+	}
+}
+
+
+static void show_all_files_activate_handler(GtkMenuItem* menu_item, DListing* dl) { 
+	GtkWidget* widget;
+
+	g_return_if_fail(GTK_IS_MENU_ITEM(menu_item));
+	g_return_if_fail(IS_DLISTING(dl));
+	widget = GTK_WIDGET(dl);
+
+	file_box_set_file_display_limit(FILE_BOX(dl->file_box), 0);
+	dlisting_reset_file_count_label(dl);
+	gtk_widget_set_state(GTK_WIDGET(menu_item), GTK_STATE_INSENSITIVE);
+
+	if (widget->parent) {
+		/* Update scrollbar. */
+		gtk_widget_queue_resize(widget->parent);
+	}
+}
+
 

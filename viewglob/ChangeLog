@@ -1,3 +1,10 @@
+2004-09-10 18:27  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* dlisting.c, dlisting.h, file_box.c, gviewglob.c, gviewglob.h:
+	  - Re-enabled the context menus
+	  - Fixed a bug with Show Hidden Files.
+	  - Fixed an ancient #define typo.
+
 2004-09-10 17:27  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* exhibit.c, exhibit.h: added

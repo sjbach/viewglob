@@ -610,8 +610,8 @@ static void set_icons(Exhibit* e) {
 
 
 	/* Context menu icons. */
-	v.show_hidden_pixbuf = gdk_pixbuf_new_from_inline(-1, context_hidden_inline, FALSE, NULL);
-	v.show_all_pixbuf = gdk_pixbuf_new_from_inline(-1, context_all_inline, FALSE, NULL);
+	dlisting_set_show_hidden_pixbuf(gdk_pixbuf_new_from_inline(-1, context_hidden_inline, FALSE, NULL));
+	dlisting_set_show_all_pixbuf(gdk_pixbuf_new_from_inline(-1, context_all_inline, FALSE, NULL));
 }
 
 
@@ -774,6 +774,10 @@ int main(int argc, char *argv[]) {
 	   This probably isn't the best way to do this. */
     style = gtk_widget_get_default_style();
 	dlisting_set_separator_color(style->fg[GTK_STATE_NORMAL]);
+
+	/* These modify the context menu items. */
+	dlisting_set_show_hidden_files(v.show_hidden_files);
+	dlisting_set_show_all_files(v.file_display_limit == 0);
 
 	/* Setup the listings display. */
 	e.listings_box = gtk_vbox_new(FALSE, 5);

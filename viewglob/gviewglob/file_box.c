@@ -275,7 +275,7 @@ void file_box_set_show_hidden_files(FileBox* fbox, gboolean show) {
 		}
 	}
 
-	file_box_allow_size_requests(fbox, TRUE);
+	file_box_flush(fbox);
 }
 
 
@@ -568,7 +568,7 @@ static void fitem_free(FItem* fi, gboolean destroy_widgets) {
 	if (!fi)
 		return;
 
-	DEBUG((df, "destroying: %s (%d)\n", fi->name, destroy_widgets));
+	/*DEBUG((df, "destroying: %s (%d)\n", fi->name, destroy_widgets));*/
 
 	g_free(fi->name);
 	if (destroy_widgets && fi->widget)

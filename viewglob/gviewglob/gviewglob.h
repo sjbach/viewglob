@@ -18,7 +18,7 @@
 */
 
 #ifndef GVIEWGLOB_H
-#define GVIEWGOB_H
+#define GVIEWGLOB_H
 
 #include <gtk/gtk.h>
 #include <gdk/gdk.h>
@@ -26,9 +26,6 @@
 G_BEGIN_DECLS
 
 struct viewable_preferences {
-	GdkPixbuf* show_hidden_pixbuf;
-	GdkPixbuf* show_all_pixbuf;
-
 	/* Options */
 	gboolean show_icons;
 	gboolean show_hidden_files;
