@@ -57,7 +57,7 @@ And for BSD users:
 export LS_COLORS='no=00:fi=00:di=01;34:*.tar=01;31:*.tgz=01;31' # etc.
 exec viewglob
 .Ve
-On a separate note, the algorithm for the refocus shortcut (Cg-<TAB> or Cg-<ENTER>) has been tweaked to be a little smarter.
+On a separate note, the algorithm for the refocus shortcut (C-g <TAB> or C-g <ENTER>) has been tweaked to be a little smarter.
 .
 .Sh INSTALLATION
 .LP
