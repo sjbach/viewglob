@@ -1,4 +1,12 @@
-2004-08-12 01:55  Stephen Bach <sjbach@users.sourceforge.net>
+2004-08-19 22:06  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* fitem.c, fitem.h: incorporated into file_box.{c,h} and removed.
+	* file_box.c, file_box.h, dlisting.c, dlisting.h, gviewglob.c, gviewglob.h:
+	  - Code reorganization mostly completed.
+	  - Files are always displayed if they're selected, even if they're over
+	    the limit or hidden.
+	  
+2004-08-19 01:55  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* viewglob.in: ignore comments and newlines in config file, and report bad options.
 	* file_box.c, file_box.h: added.
