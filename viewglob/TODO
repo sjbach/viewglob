@@ -8,7 +8,11 @@ seer:
 	Future:
 	- many terminals linking to the same display, with the display showing the info of the focused terminal only?
 
+glob-expand & seer:
+	- reverse order flag (also PWD-first option?)
+
 gviewglob:
+	- multiple column option (--columns=# ) ?
 	- if knowingly out of sync, send message to display to put up X icon and say "(viewglob will catch up on the next command)"
 	- DIR_COLORS
 	- slight highlighting difference between files named explicitly and files expanded from a glob?
