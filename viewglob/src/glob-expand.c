@@ -444,7 +444,10 @@ static char* vg_dirname(const char* path) {
 			/* Build an absolute path with pwd and the argument's path. */
 			dirname = XMALLOC(char, pwd_length + 1 + slash_pos + 1);
 			(void)strcpy(dirname, pwd);
-			(void)strcat(dirname, "/");
+			if (strcmp(dirname, "/") != 0) {
+				/* (Kludge for directories at root) */
+				(void)strcat(dirname, "/");
+			}
 			(void)strncat(dirname, path, slash_pos);
 			*(dirname + pwd_length + 1 + slash_pos) = '\0';	/* Just in case. */
 		}
