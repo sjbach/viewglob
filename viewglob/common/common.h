@@ -58,10 +58,11 @@ extern int errno;
 #if DEBUG_ON
 #include <stdio.h>
 extern FILE* df;
-#define DEBUG(blah)	do {					\
+#define DEBUG2(blah)	do {					\
 						fprintf blah;	\
 						fflush(df);			\
 					} while (0)
+#define DEBUG(blah)	do { } while(0)
 #else
 #define DEBUG(blah)	do { } while(0)
 #endif

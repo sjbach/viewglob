@@ -31,9 +31,10 @@ G_BEGIN_DECLS
 #define CMD_STEP_SIZE 512
 
 struct cmdline {
-	gchar* command;
+	GString* data;
+//	gchar* command;
 	gint pos;
-	gint length;
+//	gint length;
 	gboolean rebuilding;
 };
 
@@ -41,6 +42,7 @@ struct cmdline {
 enum direction { D_RIGHT = 0, D_LEFT = 1, D_ALL = 2 };
 
 gboolean cmd_init(struct cmdline* cmd);
+void cmd_free(struct cmdline* cmd);
 gboolean cmd_clear(struct cmdline* cmd);
 
 gboolean cmd_whitespace_to_left(struct cmdline* cmd, gchar* holdover);

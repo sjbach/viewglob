@@ -364,6 +364,8 @@ static gboolean main_loop(struct user_shell* u) {
 			break;
 		}
 
+		DEBUG2((df, "cmd: %s\n", u->cmd.data->str));
+
 
 		/* FIXME
 		   - A_SEND_PWD has no use.
@@ -434,7 +436,7 @@ static gboolean main_loop(struct user_shell* u) {
 		}
 	}
 
-	g_free(u->cmd.command);
+	cmd_free(&u->cmd);
 	return ok;
 }
 
@@ -596,8 +598,8 @@ static gboolean process_input(Connection* b, struct user_shell* u) {
 			b->n = 1;
 		}
 
-		DEBUG((df, "<<<%s>>> {%d = %c}\n", u->cmd.command, u->cmd.pos, *(u->cmd.command + u->cmd.pos)));
-		DEBUG((df, "length: %d\tpos: %d\tstrlen: %d\n\n", u->cmd.length, u->cmd.pos, strlen(u->cmd.command)));
+		DEBUG((df, "<<<%s>>> {%d = %c}\n", u->cmd.data->str, u->cmd.pos, *(u->cmd.data->str + u->cmd.pos)));
+		DEBUG((df, "length: %d\tpos: %d\tstrlen: %d\n\n", u->cmd.data->len, u->cmd.pos, strlen(u->cmd.data->str)));
 	}
 
 	if (IN_PROGRESS(b->status)) {
@@ -759,8 +761,7 @@ static gboolean is_xid(Connection* b) {
 static void send_command(struct display* d) {
 
 	//FIXME
-	//DEBUG((df, "writing %s", u.cmd.command));
-	DEBUG((df, "sending cmd"));
+	DEBUG((df, "writing %s", u.cmd.data->str));
 }
 
 

@@ -211,7 +211,6 @@ static gchar* parse_printables(const gchar* string, const gchar* sequence) {
 //FIXME remove find_prev_cret() and find_next_cret() and replace with g_strstrblah() etc.?
 
 gint find_prev_cret(gchar* string, gint pos) {
-//gint find_prev_cret(gint pos) {
 	gint i;
 	gboolean found = FALSE;
 
@@ -936,11 +935,11 @@ static MatchEffect seq_term_cursor_forward(Connection* b, struct user_shell* u) 
 		/* Default is 1. */
 		n = 1;
 	}
-	if (u->cmd.pos + n <= u->cmd.length)
+	if (u->cmd.pos + n <= u->cmd.data->len)
 		u->cmd.pos += n;
 	else {
 		if (shell == ST_ZSH) {
-			if (u->cmd.pos + n == u->cmd.length + 1) {
+			if (u->cmd.pos + n == u->cmd.data->len + 1) {
 				/* This is more likely to just be a space causing a deletion of the RPROMPT in zsh. */
 				cmd_overwrite_char(&u->cmd, ' ', FALSE);
 			}
@@ -1043,8 +1042,10 @@ static MatchEffect seq_term_bell(Connection* b, struct user_shell*  u) {
 static MatchEffect seq_term_cursor_up(Connection* b, struct user_shell*  u) {
 	MatchEffect effect = ME_NO_EFFECT;
 	gint i, n;
-	gint last_cret, next_cret, offset;
-	gint pos;
+	gint offset;
+	gchar* last_cr_p;
+	gchar* next_cr_p;
+	gchar* pos;
 
 	n = parse_digits(b->buf + b->pos, b->n);
 	if (n == 0) {
@@ -1052,23 +1053,24 @@ static MatchEffect seq_term_cursor_up(Connection* b, struct user_shell*  u) {
 		n = 1;
 	}
 
-	last_cret = find_prev_cret(u->cmd.command, u->cmd.pos);
-	next_cret = find_next_cret(u->cmd.command, u->cmd.length, u->cmd.pos);
-	if (last_cret == -1 && next_cret == -1) {
+	last_cr_p = g_strrstr_len(u->cmd.data->str, u->cmd.pos, "\015");
+	next_cr_p = g_strstr_len(u->cmd.data->str + u->cmd.pos, u->cmd.data->len - u->cmd.pos, "\015");
+	if (last_cr_p == NULL && next_cr_p == NULL)
 		goto out_of_prompt;
-	}
 
 	/* First try to find the ^M at the beginning of the wanted line. */
-	if (last_cret != -1) {
+	if (last_cr_p != NULL) {
 		DEBUG((df, "trying first\n"));
 
-		pos = u->cmd.pos;
-		for (i = 0; i < n + 1 && pos != -1; i++)
-			pos = find_prev_cret(u->cmd.command, pos);
+		pos = u->cmd.data->str + u->cmd.pos;
+		for (i = 0; i < n + 1 && pos != NULL; i++)
+			pos = g_strrstr_len(u->cmd.data->str, pos - u->cmd.data->str, "\015");
 
-		if (pos != -1) {
-			offset = u->cmd.pos - last_cret;    /* Cursor is offset chars from the beginning of the line. */
-			u->cmd.pos = pos + offset;          /* Position cursor on new line at same position. */
+		if (pos != NULL) {
+			/* Cursor is offset chars from the beginning of the line. */
+			offset = u->cmd.data->str + u->cmd.pos - last_cr_p;
+			/* Position cursor on new line at same position. */
+			u->cmd.pos = pos + offset - u->cmd.data->str;
 			if (u->cmd.pos >= 0) {
 				effect = ME_NO_EFFECT;
 				goto done;
@@ -1079,16 +1081,16 @@ static MatchEffect seq_term_cursor_up(Connection* b, struct user_shell*  u) {
 	}
 
 	/* That failed, so now try to find the ^M at the end of the wanted line. */
-	if (next_cret != -1) {
+	if (next_cr_p != NULL) {
 		DEBUG((df, "trying second\n"));
 
-		pos = u->cmd.pos;
-		for (i = 0; i < n && pos != -1; i++)
-			pos = find_prev_cret(u->cmd.command, pos);
+		pos = u->cmd.data->str + u->cmd.pos;
+		for (i = 0; i < n && pos != NULL; i++)
+			pos = g_strrstr_len(u->cmd.data->str, pos - u->cmd.data->str, "\015");
 
-		if (pos != -1) {
-			offset = next_cret - u->cmd.pos;
-			u->cmd.pos = pos - offset;
+		if (pos != NULL) {
+			offset = next_cr_p - u->cmd.data->str - u->cmd.pos;
+			u->cmd.pos = pos - offset - u->cmd.data->str;
 			if (u->cmd.pos >= 0) {
 				effect = ME_NO_EFFECT;
 				goto done;
@@ -1113,21 +1115,21 @@ static MatchEffect seq_term_cursor_up(Connection* b, struct user_shell*  u) {
    newline, command executed. */
 static MatchEffect seq_term_carriage_return(Connection* b, struct user_shell*  u) {
 	MatchEffect effect;
-	gint p;
+	gchar* p;
 
 	if (u->expect_newline) {
 		effect = ME_CMD_EXECUTED;
 		pass_segment(b);
 	}
 	else {
-		p = find_prev_cret(u->cmd.command, u->cmd.pos);
-		if (p == -1) {
-				u->cmd.pos = 0;
-				effect = ME_CMD_REBUILD;
+		p = g_strrstr_len(u->cmd.data->str, u->cmd.pos, "\015");
+		if (p == NULL) {
+			u->cmd.pos = 0;
+			effect = ME_CMD_REBUILD;
 		}
 		else {
 			/* Go to the character just after the ^M. */
-			u->cmd.pos = p + 1;
+			u->cmd.pos = p - u->cmd.data->str + 1;
 			effect = ME_NO_EFFECT;
 		}
 
@@ -1146,20 +1148,20 @@ static MatchEffect seq_term_carriage_return(Connection* b, struct user_shell*  u
    is interpreted as a command execution.  If not, then it is
    a command line wrap. */
 static MatchEffect seq_term_newline(Connection* b, struct user_shell*  u) {
-	gint p;
+	gchar* p;
 	MatchEffect effect;
 
 	DEBUG((df, "expect_newline: %d", u->expect_newline));
 
-	p = find_next_cret(u->cmd.command, u->cmd.length, u->cmd.pos);
-	if (p == -1) {
+	p = g_strstr_len(u->cmd.data->str + u->cmd.pos, u->cmd.data->len - u->cmd.pos, "\015");
+	if (p == NULL) {
 		if (u->expect_newline) {
 			/* Command must have been executed. */
 			effect = ME_CMD_EXECUTED;
 		}
 		else {
 			/* Newline must just be a wrap. */
-			u->cmd.pos = u->cmd.length;
+			u->cmd.pos = u->cmd.data->len;
 			if (cmd_overwrite_char(&u->cmd, '\015', FALSE))
 				effect = ME_NO_EFFECT;
 			else
@@ -1167,7 +1169,7 @@ static MatchEffect seq_term_newline(Connection* b, struct user_shell*  u) {
 		}
 	}
 	else {
-		u->cmd.pos = p + 1;
+		u->cmd.pos = p - u->cmd.data->str + 1;
 		effect = ME_NO_EFFECT;
 	}
 	pass_segment(b);

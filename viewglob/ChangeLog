@@ -1,3 +1,8 @@
+2005-03-11 22:40  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* cmdline.c, cmdline.h, sequences.c, vgseer.c:
+	  Use a GString to represent the command line.
+
 2005-03-11 16:07  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* hardened_io.c, hardened_io.h, cmdline.c, cmdline.h, sequences.c,
