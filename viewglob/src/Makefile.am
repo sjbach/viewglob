@@ -5,7 +5,7 @@ AM_CPPFLAGS = @X_CFLAGS@
 # It calls the other programs.
 bin_SCRIPTS = viewglob
 
-viewglob: Makefile
+viewglob:
 	rm -f viewglob.tmp
 	sed -e 's,@datadir\@,$(pkglibdir),g' \
 		-e 's,@BASH_FULL_PATH\@,$(BASH_FULL_PATH),g' \
@@ -16,14 +16,14 @@ viewglob: Makefile
 	chmod a+x viewglob.tmp
 	mv viewglob.tmp viewglob
 
-getopt.sh: Makefile
+getopt.sh:
 	rm -f getopt.sh.tmp
 	sed -e 's,@BASH_FULL_PATH\@,$(BASH_FULL_PATH),g' \
 		getopt.sh.in > getopt.sh.tmp
 	chmod a+x getopt.sh.tmp
 	mv getopt.sh.tmp getopt.sh
 
-.zshrc: Makefile
+.zshrc:
 	cp -f init-viewglob.zshrc .zshrc
 
 # Very slight modifications to these files from Marc J. Rochkind's
