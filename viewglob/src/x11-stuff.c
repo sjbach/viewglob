@@ -35,6 +35,7 @@
 #define MAX_PROPERTY_VALUE_LEN 4096
 
 #include <string.h>
+#include <time.h>
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
 
@@ -73,7 +74,8 @@ bool activate_window (Display* disp, Window win, bool switch_desktop) {
 		XFREE(desktop);
 	}
 
-	client_msg(disp, win, "_NET_ACTIVE_WINDOW", 0, 0, 0, 0, 0);
+	/*client_msg(disp, win, "_NET_ACTIVE_WINDOW", 0, 0, 0, 0, 0);*/
+	client_msg(disp, win, "_NET_ACTIVE_WINDOW", 2, time(NULL), 0, 0, 0);
 	XMapRaised(disp, win);
 
 	return true;
