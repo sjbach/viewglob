@@ -36,6 +36,7 @@ struct cmdline {
 	gboolean expect_newline;
 
 	gchar* pwd;
+	GString* mask;    /* The new mask as it's being built. */
 };
 
 
@@ -56,6 +57,9 @@ gboolean cmd_del_chars(struct cmdline* cmd, gint n);
 gboolean cmd_wipe_in_line(struct cmdline* cmd, enum direction dir);
 void     cmd_del_trailing_CRs(struct cmdline* cmd);
 
+void cmd_mask_add(struct cmdline* cmd, char c);
+void cmd_mask_clear(struct cmdline* cmd);
+void cmd_mask_del(struct cmdline* cmd);
 
 G_END_DECLS
 

@@ -1,3 +1,18 @@
+2005-03-25 19:05  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* common.h: added STRNEQ() macro
+	* param-io.c, param-io.h: added mask and developing-mask params
+	* vgd.c, x11-stuff.c, x11-stuff.h:
+	  - Keep track of the active X window.
+	  - Track mask and developing mask.
+	* actions.c, actions.h, cmdline.c, cmdline.h, connection.h,
+	  sequences.c, vgseer.c:
+	  - Rewrote sequence initialization.
+	  - Rewrote C-g key stuff to allow chaining together of navigation
+	    commands.
+	  - Added mask functionality.  Works now as far as vgseer is
+	    concerned.
+
 2005-03-24 20:50  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* common.h: got read of DEBUG stuff

@@ -30,3 +30,9 @@ Status...
 		key:<key>
 		file:<path>
 
+To display when active window changes...
+	Send:
+		win:<window id>       <-- only sent on a context switch
+		cmd:<command line>
+		<glob data>
+

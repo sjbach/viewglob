@@ -39,6 +39,7 @@ G_BEGIN_DECLS
 
 void refocus(Display* disp, Window w1, Window w2);
 Window get_xid_from_title(Display* disp, char* title);
+Window get_active_window(Display* disp);
 
 
 G_END_DECLS

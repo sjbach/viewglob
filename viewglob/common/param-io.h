@@ -47,6 +47,8 @@ enum parameter {
 	P_STATUS,
 	P_PWD,
 	P_CMD,
+	P_MASK,
+	P_DEVELOPING_MASK,
 
 	/* For remote vgseers. */
 	P_VGEXPAND_DATA,

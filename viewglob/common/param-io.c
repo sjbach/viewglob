@@ -39,6 +39,8 @@ static gchar* params[P_COUNT] = {
 	"status",
 	"pwd",
 	"cmd",
+	"mask",
+	"developing-mask",
 	"vgexpand-data",
 	"order",
 	"key",

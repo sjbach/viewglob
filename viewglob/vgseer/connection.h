@@ -40,6 +40,8 @@ enum process_level {
 	PL_AT_PROMPT,    /* When user is typing away. */
 	PL_EXECUTING,    /* When a command is executing. */
 	PL_AT_RPROMPT,   /* When the zsh RPROMPT is being printed. */
+	PL_VIEWGLOB,     /* User typed Ctrl-G. */
+	PL_COUNT,
 };
 
 

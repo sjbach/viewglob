@@ -25,6 +25,7 @@
 #include "cmdline.h"
 
 #include <string.h>
+#include <ctype.h>
 
 /* Initialize working command line and sequence buffer. */
 void cmd_init(struct cmdline* cmd) {
@@ -32,7 +33,9 @@ void cmd_init(struct cmdline* cmd) {
 	cmd->pos = 0;
 	cmd->rebuilding = FALSE;
 	cmd->expect_newline = FALSE;
+
 	cmd->pwd = NULL;
+	cmd->mask = g_string_new(NULL);
 }
 
 
@@ -229,6 +232,33 @@ void cmd_del_trailing_CRs(struct cmdline* cmd) {
 		cmd->pos = cmd->data->len - 1;
 		cmd_del_chars(cmd, 1);
 		cmd->pos = temp;
+	}
+}
+
+
+void cmd_mask_add(struct cmdline* cmd, char c) {
+	g_return_if_fail(cmd != NULL);
+	g_return_if_fail(isprint(c));
+
+	cmd->mask = g_string_append_c(cmd->mask, c);
+	action_queue(A_NEW_MASK);
+}
+
+
+void cmd_mask_clear(struct cmdline* cmd) {
+	g_return_if_fail(cmd != NULL);
+
+	cmd->mask = g_string_truncate(cmd->mask, 0);
+	action_queue(A_NEW_MASK);
+}
+
+
+void cmd_mask_del(struct cmdline* cmd) {
+	g_return_if_fail(cmd != NULL);
+
+	if (cmd->mask->len > 0) {
+		cmd->mask = g_string_truncate(cmd->mask, cmd->mask->len - 1);
+		action_queue(A_NEW_MASK);
 	}
 }
 

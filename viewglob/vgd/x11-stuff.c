@@ -40,17 +40,20 @@
 
 #include <glib.h>
 
-static void activate_window (Display* disp, Window win, gboolean switch_desktop);
+static void activate_window (Display* disp, Window win,
+		gboolean switch_desktop);
 static Window *get_client_list (Display *disp, gulong *size);
-static gchar* get_property (Display* disp, Window win, Atom xa_prop_type, gchar* prop_name, gulong* size);
+static gchar* get_property (Display* disp, Window win, Atom xa_prop_type,
+		gchar* prop_name, gulong* size);
 static gchar* get_window_title (Display* disp, Window win);
 static gboolean client_msg(Display* disp, Window win, gchar* msg,
-		gulong data0, gulong data1, 
-		gulong data2, gulong data3,
-		gulong data4);
+		gulong data0, gulong data1, gulong data2, gulong data3, gulong data4);
 
 
 void refocus(Display* disp, Window w1, Window w2) {
+
+	g_return_if_fail(disp != NULL);
+
 	Window active_window;
 	gint revert_to_return;
 
@@ -66,6 +69,19 @@ void refocus(Display* disp, Window w1, Window w2) {
 		activate_window(disp, w2, FALSE);
 		activate_window(disp, w1, FALSE);
 	}
+}
+
+
+Window get_active_window(Display* disp) {
+	
+	g_return_val_if_fail(disp != NULL, 0);
+	
+	Window active_window;
+	gint revert_to_return;
+
+	XGetInputFocus(disp, &active_window, &revert_to_return);
+	
+	return active_window;
 }
 
 

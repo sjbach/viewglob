@@ -35,7 +35,7 @@
 
 struct sandbox {
 	enum shell_type   shell;
-	int               fd;
+	gint               fd;
 	pid_t             pid;
 };
 
@@ -46,7 +46,7 @@ struct state {
 	struct sandbox zsh;
 	struct display d;
 	gboolean       persistent;
-	int            listen_fd;
+	gint            listen_fd;
 
 	Display*       Xdisplay;
 	Window         active_win;
@@ -60,32 +60,36 @@ struct vgseer_client {
 	Window            win;
 	enum shell_type   shell;
 	gchar*            expand_opts;
-	int               fd;
+	gint              fd;
 
 	/* Dynamic properties (change often) */
 	enum shell_status status;
 	gchar*            cli;
 	gchar*            pwd;
+	gchar*            developing_mask;
+	gchar*            mask;
 };
 
 
 void state_init(struct state* s);
 void vgseer_client_init(struct vgseer_client* v);
 static void poll_loop(struct state* s);
-static void die(struct state* s, int result);
+static void die(struct state* s, gint result);
 static gint setup_polling(struct state* s, fd_set* set);
 static void new_client(struct state* s);
-static void new_ping_client(int ping_fd);
-static void new_vgseer_client(struct state* s, int client_fd);
+static void new_ping_client(gint ping_fd);
+static void new_vgseer_client(struct state* s, gint client_fd);
 static void process_client(struct state* s, struct vgseer_client* v);
 static void drop_client(struct state* s, struct vgseer_client* v);
+static void context_switch(struct state* s, struct vgseer_client* v);
+static void check_active_window(struct state* s);
 
-int main(int argc, char** argv) {
+gint main(gint argc, gchar** argv) {
 
 	struct state s;
 	struct sockaddr_in sa;
 
-	int port = 16108;
+	gint port = 16108;
 
 	/* Set the program name. */
 	gchar* basename = g_path_get_basename(argv[0]);
@@ -132,8 +136,8 @@ static void poll_loop(struct state* s) {
 	struct vgseer_client* v;
 
 	fd_set rset;
-	int max_fd;
-	int nready;
+	gint max_fd;
+	gint nready;
 
 	while (TRUE) {
 
@@ -142,7 +146,8 @@ static void poll_loop(struct state* s) {
 		/* Wait for input for a half second. */
 		nready = hardened_select(max_fd + 1, &rset, 500);
 		if (nready == -1) {
-			g_critical("Problem while waiting for data: %s", g_strerror(errno));
+			g_critical("Problem while waiting for data: %s",
+					g_strerror(errno));
 			die(s, EXIT_FAILURE);
 		}
 		else if (nready > 0) {
@@ -160,8 +165,8 @@ static void poll_loop(struct state* s) {
 					v = iter->data;
 					if (FD_ISSET(v->fd, &rset)) {
 						process_client(s, v);
-						/* It's unsafe to process more than one client, as the list
-						   may have changed. */
+						/* It's unsafe to process more than one client, as
+						   the list may have changed. */
 						break;
 					}
 				}
@@ -170,10 +175,38 @@ static void poll_loop(struct state* s) {
 
 		}
 		
-		// - Figure out active window, etc.
-
-
+		check_active_window(s);
 	}
+}
+
+
+static void check_active_window(struct state* s) {
+
+	g_return_if_fail(s != NULL);
+
+	Window new_active_win = get_active_window(s->Xdisplay);
+	
+	/* If the currently active window has changed and is one of
+	   our vgseer client terminals, make a context switch. */
+	if (new_active_win != s->active_win) {
+		GList* iter;
+		struct vgseer_client* v;
+		for (iter = s->clients; iter; iter = g_list_next(iter)) {
+			v = iter->data;
+			if (new_active_win == v->win) {
+				s->active_win = new_active_win;
+				context_switch(s, v);
+				break;
+			}
+		}
+	}
+}
+
+
+static void context_switch(struct state* s, struct vgseer_client* v) {
+
+	g_message("Context switch to window %lu", v->win);
+
 }
 
 
@@ -228,6 +261,42 @@ static void process_client(struct state* s, struct vgseer_client* v) {
 			}
 			break;
 
+		case P_MASK:
+			/* Clear the developing mask, if any. */
+			g_free(v->developing_mask);
+			v->developing_mask = NULL;
+
+			if (strlen(value) == 0) {
+				g_free(v->mask);
+				v->mask = NULL;
+				g_message("(%d) Mask cleared", v->fd);
+				// FIXME update display with reglob if active
+			}
+			else if (v->mask == NULL || !STREQ(v->mask, value)) {
+				g_free(v->mask);
+				v->mask = g_strdup(value);
+				g_message("(%d) New mask: %s", v->fd, v->mask);
+				// FIXME update display with reglob if active
+			}
+			break;
+
+		case P_DEVELOPING_MASK:
+			if (strlen(value) == 0) {
+				g_free(v->developing_mask);
+				v->developing_mask = NULL;
+				g_message("(%d) Developing mask cleared", v->fd);
+				// FIXME update display (with no reglob)
+			}
+			else if (v->developing_mask == NULL || !STREQ(v->developing_mask,
+						value)) {
+				g_free(v->developing_mask);
+				v->developing_mask = g_strdup(value);
+				g_message("(%d) New developing mask: %s", v->fd,
+						v->developing_mask);
+				// FIXME update display (with no reglob)
+			}
+			break;
+
 		case P_ORDER:
 			g_message("(%d) Received P_ORDER: %s", v->fd, value);
 			break;
@@ -242,7 +311,8 @@ static void process_client(struct state* s, struct vgseer_client* v) {
 			break;
 
 		default:
-			g_warning("(%d) Unexpected parameter: %d = %s", v->fd, param, value);
+			g_warning("(%d) Unexpected parameter: %d = %s", v->fd, param,
+					value);
 			drop_client(s, v);
 			break;
 	}
@@ -269,7 +339,7 @@ static void new_client(struct state* s) {
 
 	g_return_if_fail(s != NULL);
 
-	int new_fd;
+	gint new_fd;
 	struct sockaddr_in sa;
 	socklen_t sa_len;
 
@@ -279,11 +349,13 @@ static void new_client(struct state* s) {
 	/* Accept the new client. */
 	again:
 	sa_len = sizeof(sa);
-	if ( (new_fd = accept(s->listen_fd, (struct sockaddr*) &sa, &sa_len)) == -1) {
+	if ( (new_fd = accept(s->listen_fd, (struct sockaddr*) &sa,
+					&sa_len)) == -1) {
 		if (errno == EINTR)
 			goto again;
 		else {
-			g_warning("Error while accepting new client: %s", g_strerror(errno));
+			g_warning("Error while accepting new client: %s",
+					g_strerror(errno));
 			return;
 		}
 	}
@@ -305,7 +377,7 @@ static void new_client(struct state* s) {
 }
 
 
-static void new_ping_client(int ping_fd) {
+static void new_ping_client(gint ping_fd) {
 
 	g_return_if_fail(ping_fd >= 0);
 
@@ -317,7 +389,7 @@ static void new_ping_client(int ping_fd) {
 }
 
 
-static void new_vgseer_client(struct state* s, int client_fd) {
+static void new_vgseer_client(struct state* s, gint client_fd) {
 
 	g_return_if_fail(s != NULL);
 	g_return_if_fail(client_fd >= 0);
@@ -361,7 +433,8 @@ static void new_vgseer_client(struct state* s, int client_fd) {
 	switch (v->pid = strtol(value, NULL, 10)) {
 		case LONG_MIN:
 		case LONG_MAX:
-			g_warning("(%d) Pid value is out of bounds: \"%s\"", client_fd, value);
+			g_warning("(%d) Pid value is out of bounds: \"%s\"",
+					client_fd, value);
 			goto reject;
 	}
 
@@ -440,9 +513,20 @@ static gint setup_polling(struct state* s, fd_set* set) {
 }
 
 
-static void die(struct state* s, int result) {
-	// - Tell vgseer clients to disable viewglob functionality
-	// - Kill display
+/* Tell vgseer clients to disable, kill the display, and exit. */
+static void die(struct state* s, gint result) {
+
+	GList* iter;
+	struct vgseer_client* v;
+
+	for (iter = s->clients; iter; iter = s->clients) {
+		v = iter->data;
+		(void) put_param(v->fd, P_STATUS, "dead");
+		(void) drop_client(s, v);
+	}
+
+	// TODO - Kill display
+
 	exit(result);
 }
 
@@ -477,5 +561,7 @@ void vgseer_client_init(struct vgseer_client* v) {
 	v->status = SS_LOST;
 	v->cli = NULL;
 	v->pwd = NULL;
+	v->developing_mask = NULL;
+	v->mask = NULL;
 }
 

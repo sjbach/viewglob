@@ -450,6 +450,16 @@ static gboolean action_loop(struct user_state* u, struct vgd_stuff* vgd) {
 				value = "pgdown";
 				break;
 
+			case A_NEW_MASK:
+				param = P_DEVELOPING_MASK;
+				value = u->cmd.mask->str;
+				break;
+
+			case A_MASK_FINAL:
+				param = P_MASK;
+				value = u->cmd.mask->str;
+				break;
+
 			case A_DONE:
 				break;
 
@@ -611,6 +621,9 @@ static void process_vgd(struct vgd_stuff* vgd, struct user_state* u) {
 
 		case P_EOF:
 			g_critical("vgd closed its connection");
+		case P_STATUS:
+			/* At this point we don't even need to check the value -- assumed
+			   to be "dead" */
 			disable_vgseer(vgd);
 			return;
 			/*break;*/
@@ -680,6 +693,7 @@ static gboolean scan_for_newline(const Connection* b) {
 	gsize i;
 
 	for (i = 0; i < b->filled; i++) {
+//		g_print("%c (%d)\n", *(b->buf + i), *(b->buf + i));
 		switch ( *(b->buf + i) ) {
 			case '\n':     /* Newline. */
 			case '\t':     /* Horizontal tab (for tab completion with
