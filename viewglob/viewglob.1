@@ -30,14 +30,11 @@ Copy a transcript of the shell's output to the given file.  Note that this keeps
 .B \-O, \-\-term\-output=filename
 Output a transcript of the terminal's input to the given file.  This is the stuff that you've typed, without any of the shell interpretation.
 .TP
-.B \-n, \-\-compare\-mode=<name|inode>
-Compare directories on the command\-line by name, or by inode and device id.  Inode mode is the more useful of the two, and is the default.  See \fBUSAGE\fP below.
-.TP
 .B \-s, \-\-sort-style=<windows|ls>
 Sort files with dirs first (Windows) or purely by name (ls).  ls mode is the default.
 .TP
 .B \-n, \-\-show-max=number
-Maximum number of files to show in the display for each directory.  A [Results Truncated] indicator will show if the max has been reached.  Note that you can always force show all files with the context menu.  If --show-max is passed 0, there is no limit.
+Maximum number of files to show in the display for each directory.  A [Results Truncated] indicator will show if the max has been reached.  Note that you can always force show all files with the context menu.  If \-\-show-max is passed 0, there is no limit.
 .TP
 .B \-b, \-\-disable\-icons
 Don't show file type icons in the display.
@@ -66,7 +63,7 @@ At the bottom of the display window is a textbox with your command\-line.  This 
 .PP
 If you close the display without exiting the viewglob-supervised shell, you'll get a single error mesage while viewglob figures out what's going on.  It will then mostly disable itself and you'll have a regular shell.
 .PP
-If "name" is passed to the \fB\-\-compare\-mode\fP option, viewglob will treat the same directory referenced in different ways as different directories.  For example, with this option set, the following are all different:
+Directories referenced in several different ways will always be interpreted as the same directory if they're on the same device and have the same inode (i.e. they are indeed the same).  Therefore these three names are equivalent to viewglob (and a trailing slash does not differentiate a directory from one without a trailing slash):
 .IP
 /usr/local/lib/
 .br
@@ -74,9 +71,7 @@ If "name" is passed to the \fB\-\-compare\-mode\fP option, viewglob will treat t
 .br
 /usr/local/lib/../lib/
 .PP
-(But a trailing slash does not differentiate a directory from one without a trailing slash.)
-.PP
-If inode mode is set (the default), directories referenced in several different ways will always be interpreted as the same directory if they're on the same device and have the same inode (i.e. they're the same).  So in the previous example, all three references to /usr/local/lib are equivalent.  However, the name of the first reference will be the name that appears in the viewglob display.  So if you refer to files in /usr/local/../local/lib and then /usr/local/lib on the same command\-line, viewglob understands they are the same directory, but will use the less practical name /usr/local/../local/lib, since it appears first (and is just as valid as /usr/local/lib)
+Note however that the name of the first reference will be the name that appears in the viewglob display.  So if you refer to files in /usr/local/../local/lib and then /usr/local/lib on the same command\-line, viewglob understands they are the same directory, but will use the less practical name /usr/local/../local/lib, since it appears first (and is just as valid as /usr/local/lib)
 .PP
 Since people generally don't type such things as /usr/local/../local/lib, this shouldn't be an issue.
 
@@ -110,7 +105,7 @@ Since viewglob doesn't track changes in shell variables, I've decided to take ou
 .PP
 While running viewglob, don't unset or change the following variables.
 .IP
-In bash: \fIPS1\fP, \fIPROMPT_COMMAND\fP;
+In bash: \fIPS1\fP, \fIPROMPT_COMMAND\fP, \fIhistchars\fP;
 .PP
 Doing so will probably confuse viewglob.  Note that if you do change one of these variables (maybe you were curious, or you just forgot), it won't affect the shell you were using, just the viewglob display.
 .br
@@ -135,7 +130,7 @@ The location of the default configuration file.
 .SH BUGS
 Sometimes the heading labels in the display enforce a minimum width (which I find annoying), sometimes they don't.  I haven't figured out why.
 .PP
-Resizing the terminal window after you've typed a multi-line command will often cause viewglob's command\-line to become out of sync with the true command\-line, though it tries really hard to keep up.
+Resizing the terminal window after you've typed a multi-line command will often cause viewglob's command\-line to become temporarily out of sync with the true command\-line, though it tries really hard to keep up.  No big deal if this happens -- viewglob will catch up at the start of the next command.
 .PP
 Ctrl-C may not work in terminals with FreeBSD.
 .PP

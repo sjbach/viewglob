@@ -63,14 +63,7 @@ static bool            mark_files(Directory* dir, char* file_name);
 static bool            have_dir(char* name, dev_t dev_id, ino_t inode, Directory** return_dir);
 
 
-/* By default, directory comparisons are done by inode and device id, but this can be changed by passing in
-   a -n.  If this is done, the following directories are different:
-      - /path/to/dir
-	  - /path/to/dir/./
-	  - /path/to/dir/../dir/
-	  - etc.
-   So a directory has an unlimited number of names (especially if you factor in symlinks). */
-static bool compare_by_name(char* name1, char* name2, dev_t dev_id1, ino_t inode1, dev_t dev_id2, ino_t inode2);
+/* Directory comparisons are done by inode and device id. */
 static bool compare_by_inode(char* name1, char* name2, dev_t dev_id1, ino_t inode1, dev_t dev_id2, ino_t inode2);
 
 static char* pwd;
@@ -82,8 +75,6 @@ static Directory* dirs = NULL;
 FILE* df;
 #endif
 
-static bool (*compare_func)(char* name1, char* name2, dev_t dev_id1, ino_t inode1, dev_t dev_id2, ino_t inode2);
-
 int main(int argc, char* argv[]) {
 	long max_path;
 	int offset;
@@ -94,7 +85,6 @@ int main(int argc, char* argv[]) {
 	df = fopen("/tmp/out2.txt", "w");
 #endif
 
-	compare_func = compare_by_inode;
 	offset = parse_args(argc, argv);
 
 	/* Get max path length. */
@@ -138,10 +128,8 @@ static int parse_args(int argc, char** argv) {
 
 	if (has_double_dash) {
 		for (j = 1; j < i; j++) {
-			if ( strcmp("-n", *(argv + j)) == 0)
-				compare_func = compare_by_name;
-			else if ( (strcmp("-v", *(argv + j)) == 0) ||
-			          (strcmp("-V", *(argv + j)) == 0))
+			if ( (strcmp("-v", *(argv + j)) == 0) ||
+			     (strcmp("-V", *(argv + j)) == 0))
 				report_version();
 		}
 		i++;
@@ -291,7 +279,7 @@ static bool have_dir(char* name, dev_t dev_id, ino_t inode, Directory** return_d
 
 	dir_iter = dirs;
 	do {
-		if (compare_func(name, dir_iter->name, dev_id, inode, dir_iter->dev_id, dir_iter->inode)) {
+		if (compare_by_inode(name, dir_iter->name, dev_id, inode, dir_iter->dev_id, dir_iter->inode)) {
 			*return_dir = dir_iter;
 			return true;
 		}
@@ -300,14 +288,6 @@ static bool have_dir(char* name, dev_t dev_id, ino_t inode, Directory** return_d
 
 	*return_dir = dir_iter;  /* This is the last directory struct in the list. */
 	return false;
-}
-
-
-static bool compare_by_name(char* name1, char* name2, dev_t dev_id1, ino_t inode1, dev_t dev_id2, ino_t inode2) {
-	if (strcmp(name1, name2) == 0)
-		return true;
-	else
-		return false;
 }
 
 

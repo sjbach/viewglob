@@ -34,7 +34,6 @@ usage: $SCRIPT_NAME [-d <display program>] [-f <config file>]
 -o, --shell-output  Output a transcript of the shell's output to the given file.
 -O, --term-output   Output a transcript of the terminal's input to given file.
                     (i.e. the stuff you type into the shell)
--p, --compare-mode  Method for directory comparison (see man page).
 -s, --sort-style    File sorting style.
 -n, --show-max      Maximum number of files to show per directory
                     (you can still force show if max is reached).
@@ -99,12 +98,6 @@ vg_test_output_file() {
 	fi
 }
 
-vg_test_compare_mode() {
-	if [ "$1" != name ] && [ "$1" != inode ]
-		then vg_error "Compare mode must be \"name\" or \"inode\"" 1
-	fi
-}
-
 vg_test_sort_style() {
 	if [ "$1" != ls ] && [ "$1" != win ]
 		then vg_error "Unknown sort style \"$1\"" 1
@@ -134,7 +127,7 @@ export VG_ASTERISK=yep
 . $VG_DIR/getopt.sh
 
 # Parse the options.
-while getoptex "b; c: e: d: f: n: o: O: p: s: t; w; h; v; V; shell-mode: executable: display: config-file: shell-output: show-hidden; show-max: sort-style: term-output: disable-star; disable-icons; compare-mode; help; version;" "$@"
+while getoptex "b; c: e: d: f: n: o: O: s: t; w; h; v; V; shell-mode: executable: display: config-file: shell-output: show-hidden; show-max: sort-style: term-output: disable-star; disable-icons; help; version;" "$@"
 	do case "$OPTOPT" in
 
 		b|disable-icons)
@@ -169,11 +162,6 @@ while getoptex "b; c: e: d: f: n: o: O: p: s: t; w; h; v; V; shell-mode: executa
 		O|term-output)
 			vg_test_output_file "$OPTARG"
 			VG_TERM_OUTPUT="$OPTARG"
-			;;
-
-		p|compare-mode)
-			vg_test_compare_mode "$OPTARG"
-			VG_COMPARE_MODE=$OPTARG
 			;;
 
 		s|sort-style)
@@ -231,7 +219,7 @@ if [ -r "$VG_CONFIG_FILE" ]; then
 				VG_ASTERISK=nope
 				;;
 			compare-mode)
-				[[ -z "$VG_COMPARE_MODE" ]] && vg_test_compare_mode "$arg" && VG_COMPARE_MODE=$arg
+				# Do nothing -- this is for compatibility with old config files.
 				;;
 			show-max)
 				[[ -z "$VG_SHOW_MAX" ]] && vg_test_show_max "$arg" && VG_SHOW_MAX=$arg
@@ -263,7 +251,6 @@ fi
 
 [[ -z "$VG_EXECUTABLE" ]] && VG_EXECUTABLE="$VG_SHELL_MODE"
 [[ -z "$VG_DISPLAY" ]] && VG_DISPLAY="$VG_DIR/gviewglob"
-[[ -z "$VG_COMPARE_MODE" ]] && VG_COMPARE_MODE=inode
 [[ -z "$VG_SHOW_MAX" ]] && VG_SHOW_MAX=500
 [[ -z "$VG_SORT_STYLE" ]] && VG_SORT_STYLE=ls
 
@@ -275,15 +262,11 @@ else
 	VG_SHELL_INIT="$VG_DIR"
 fi
 
-if [ $VG_COMPARE_MODE = name ]; then
-	VG_EXPAND_OPTS="${VG_EXPAND_OPTS} -n"
-fi
-
 # Exec seer.
 exec "$VG_DIR"/seer -c "$VG_SHELL_MODE" -e "$VG_EXECUTABLE" -f "$VG_CONFIG_FILE"  \
                     -o "$VG_SHELL_OUTPUT" -O "$VG_TERM_OUTPUT"                    \
                     -d "$VG_DISPLAY" $VG_DISPLAY_OPTS                             \
                     -n "$VG_SHOW_MAX" -s "$VG_SORT_STYLE"                         \
                     -i "$VG_SHELL_INIT"                                           \
-                    -x "$VG_DIR/glob-expand $VG_EXPAND_OPTS --"
+                    -x "$VG_DIR/glob-expand --"
 

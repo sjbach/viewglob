@@ -2,6 +2,9 @@
 
 	* init-viewglob.zshrc: hardened the sandbox and user shell.
 	* seer.c: have the bash sandbox shell use the init-viewglob file.
+	* glob-expand.c, viewglob.in, viewglob.1:
+	  Removing compare-mode flag.  Comparisons will always be done by inode,
+	  since that's really the only sensible way.
 
 2004-09-04 21:06  Stephen Bach <sjbach@users.sourceforge.net>
 
