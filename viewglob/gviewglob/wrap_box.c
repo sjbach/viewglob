@@ -588,7 +588,7 @@ static guint get_upper_bound_cols(WrapBox* this, guint optimal_width) {
 	WrapBoxChild* child;
 	GtkRequisition child_req;
 
-	guint width = 0;
+	gint width = 0;
 	guint cols = 0;
 
 	for (child = this->children; child; child = child->next) {
@@ -602,6 +602,8 @@ static guint get_upper_bound_cols(WrapBox* this, guint optimal_width) {
 
 			if (width <= optimal_width)
 				cols++;
+			else
+				break;
 		}
 	}
 
@@ -624,7 +626,7 @@ static guint get_n_visible_children(WrapBox* this) {
 }
 
 
-/* This is the smart size request; we try to maximize the width of the file box. */
+/* This is the smart size request; we try to maximize use of the width of the wrap box. */
 void wrap_box_size_request_optimal(GtkWidget* widget, GtkRequisition* requisition, guint optimal_width) {
 	WrapBox* this = WRAP_BOX(widget);
 	WrapBoxChild* child;
@@ -637,7 +639,6 @@ void wrap_box_size_request_optimal(GtkWidget* widget, GtkRequisition* requisitio
 
 	guint col_height;
 	guint max_col_height;
-	guint max_child_height = 0;
 
 	guint col, cols;
 	guint16 n_visible_children;
@@ -656,47 +657,49 @@ void wrap_box_size_request_optimal(GtkWidget* widget, GtkRequisition* requisitio
 		col_height = 0;
 		max_col_height = 0;
 		rows = n_visible_children / cols + CLAMP(n_visible_children % cols, 0, 1);
-		row = 1;
+		row = 0;
 		col = 1;
 
 		/*g_printerr("__");*/
 		child = this->children;
 		while (child) {
 			if (GTK_WIDGET_VISIBLE(child->widget)) {
+
+				row++;
+
 				gtk_widget_size_request(child->widget, &child_req);
 				child_width = child_req.width;
+
 				/*g_printerr("{%d}", child_width);*/
 
-				if (col > 1) {
+				if (col > 1)
 					child_width += this->hspacing;
+				if (row > 1)
 					col_height += this->vspacing;
-				}
 
-				max_child_height = MAX(max_child_height, child_req.height);
-
+				col_height += child_req.height;
 				col_width = MAX(col_width, child_width);
+
 				if (total_width + col_width > optimal_width) {
-					/* Too many columns.  Start over with one less. */
+					/* Too many columns.  Start over with one fewer. */
 					cols--;
 					goto start;
 				}
-				else if (row < rows) {
-					col_height += child_req.height;
-					row++;
-					child = child->next;
-				}
 				else {
-					/*g_printerr("<%d>", col_height);*/
+					g_assert(row <= rows);
+					if (row == rows) {
+						/*g_printerr("<%d>", col_width);*/
 
-					/* Add the column. */
-					total_width += col_width;
-					max_col_height = MAX(max_col_height, col_height);
-					/*g_print("(col_height: %d)", col_height);*/
+						/* Add the column. */
+						total_width += col_width;
+						max_col_height = MAX(max_col_height, col_height);
 
-					row = 1;
-					col++;
-					col_width = 0;
-					col_height = 0;
+						row = 0;
+						col++;
+						col_width = 0;
+						col_height = 0;
+					}
+					child = child->next;
 				}
 			}
 		}
@@ -710,15 +713,23 @@ void wrap_box_size_request_optimal(GtkWidget* widget, GtkRequisition* requisitio
 		requisition->height = max_col_height + GTK_CONTAINER(this)->border_width * 2;
 	}
 	else {
-		/* Make the best of the situation. */
+		/* Make the best of the situation -- request a long single column, even though we don't have the width. */
+		for (requisition->height = 0, row = 1, child = this->children; child; row++, child = child->next) {
+			if (GTK_WIDGET_VISIBLE(child->widget)) {
+				if (row > 1)
+					requisition->height += this->vspacing;
+				gtk_widget_size_request(child->widget, &child_req);
+				requisition->height += child_req.height;
+			}
+		}
+		requisition->height += GTK_CONTAINER(this)->border_width * 2;
 		requisition->width = optimal_width + GTK_CONTAINER(this)->border_width * 2;
-		requisition->height = n_visible_children * this->vspacing + n_visible_children * max_child_height + GTK_CONTAINER(this)->border_width * 2;
 	}
 
-	/*g_printerr("(cols: %u, rows: %u, max_height: %u, max_col: %u)", cols, rows, max_child_height, max_col_height);*/
+	/*g_printerr("(cols: %u, rows: %u, max_col: %u)", cols, rows, max_col_height);*/
 	/*g_printerr("(req: width: %d, height: %d)", requisition->width, requisition->height);*/
 	/*g_printerr("(optimal: %d)", optimal_width += GTK_CONTAINER(this)->border_width * 2);*/
-	/*g_printerr("(p width: %d, height: %d)", GTK_WIDGET(this)->parent->allocation.width, GTK_WIDGET(this)->parent->allocation.height);*/
+	/*g_printerr("(p width: %d, height: %d)|", GTK_WIDGET(this)->parent->allocation.width, GTK_WIDGET(this)->parent->allocation.height);*/
 }
 
 
@@ -729,10 +740,12 @@ static void wrap_box_size_request(GtkWidget* widget, GtkRequisition* requisition
 	WrapBoxChild* child;
 	GtkRequisition child_req;
 
-	guint width = 0, height = 0;
+	guint width = 0, height = 0, row = 1;
 
-	for (child = this->children; child; child = child->next) {
+	for (child = this->children; child; row++, child = child->next) {
 		if (GTK_WIDGET_VISIBLE(child->widget)) {
+			if (row > 1)
+				height += this->vspacing;
 			gtk_widget_size_request(child->widget, &child_req);
 			width = MAX(width, child_req.width);
 			height += child_req.height;
