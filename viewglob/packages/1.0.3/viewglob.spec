@@ -17,7 +17,10 @@ Requires:      bash, gtk2 >= 2.4.0
 BuildRequires: gtk2-devel >= 2.4.0
 
 %description
-Viewglob is a utility designed to add a kind of visualization to Bash and Zsh when used in windowing environments.  It tracks changes in the command line as they are typed and reveals file selections and globbing in a GTK+ display showing the layouts of relevant directories.
+Viewglob is a utility designed to add a kind of visualization to Bash and Zsh
+when used in windowing environments.  It tracks changes in the command line
+as they are typed and reveals file selections and globbing in a GTK+ display
+showing the layouts of relevant directories.
 
 %prep
 %setup -q -a 0
