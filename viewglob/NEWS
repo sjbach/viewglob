@@ -1,7 +1,8 @@
 New in 1.0.1, released 2004-10-12:
 	Features:
 	  * Added options to display directories in reverse order or
-	    reverse order with the current directory first.
+	    reverse order with the current directory first.  Idea
+	    contributed by Artis Rozentals.
 
 New in 1.0, released 2004-09-28:
 	Features:
