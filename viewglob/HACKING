@@ -1,5 +1,5 @@
 
-The viewglob CVS repository is accessible from here:
+The Viewglob CVS repository is accessible from here:
 
 	http://sourceforge.net/cvs/?group_id=116249
 
@@ -7,28 +7,28 @@ The viewglob CVS repository is accessible from here:
 Preamble
 --------
 
-viewglob looks like a little program, but it's actually been fairly
+Viewglob looks like a little program, but it's actually been fairly
 complicated to implement (certainly more so than it should need to be).
-viewglob's usefulness hinges on knowing the developing command line, but
+Viewglob's usefulness hinges on knowing the developing command line, but
 there's no functionality within bash or zsh to present the command line to
-another program.  So viewglob fakes it by pretending to be a terminal, reading
+another program.  So Viewglob fakes it by pretending to be a terminal, reading
 ALL of bash's output as the user does his or her thing, and tries to isolate
 command line information.
 
-This is very hard to do well, so viewglob's tracking is far from perfect - and
+This is very hard to do well, so Viewglob's tracking is far from perfect - and
 it probably won't substantially improve using this method (it's just a huge
 hack).  The only good solution is for there to be a hook from the shell, but
 this would require a code change to the shells themselves.  That would be
 great, but it's not something I'm going to pursue right now.
 
-Still, for general usage viewglob is usually Good Enough at tracking the
+Still, for general usage Viewglob is usually Good Enough at tracking the
 command line; and when it fails, it usually catches up on the next command.
 
 
 Overview
 --------
 
-These are the main pieces of viewglob:
+These are the main pieces of Viewglob:
 
 	viewglob (also symlinked at install as gviewglob)
 	 - A bash script which parses the command line flags and config file,
@@ -40,7 +40,7 @@ These are the main pieces of viewglob:
 	  other as a "sandbox".  Seer examines all data coming into and out of
 	  the user shell, looking at different times for different groups of
 	  character sequences (some of which are general terminal sequences,
-	  some of which are placed by viewglob as semaphores).
+	  some of which are placed by Viewglob as semaphores).
 	- When seer finds the command line, it tries to track changes to it by
 	  watching changes in the terminal, NOT by emulating the shell (that
 	  would be a lost cause).  Every time the command line changes, seer
@@ -55,7 +55,7 @@ These are the main pieces of viewglob:
 	init-viewglob.bashrc
 	init-viewglob.zshrc (installed as .zshrc)
 	- Initialization files for the shells forked by seer.  These try to
-	  "harden" the sandbox shell, and insert viewglob semaphores into the
+	  "harden" the sandbox shell, and insert Viewglob semaphores into the
 	  user shell.
 
 	glob-expand
@@ -77,20 +77,20 @@ Source Files
 seer:
 	sequences.c, sequences.h, circular.h
 	- Defines "sequence groups" for each "process level", which are defined
-	  only for viewglob's purposes.  The sequence group for PL_EXECUTING is
-	  checked against while viewglob has not located the command line
+	  only for Viewglob's purposes.  The sequence group for PL_EXECUTING is
+	  checked against while Viewglob has not located the command line
 	  (usually after a command has been run) and PL_AT_PROMPT while at the
 	  command line.  These are mostly differentiated for performance
 	  reasons (the PL_EXECUTING sequence group is much smaller than for
 	  PL_PROMPT) and to decrease the chance of hitting false positives.
-	  A sequence match in a sequence group can modify viewglob's command
+	  A sequence match in a sequence group can modify Viewglob's command
 	  line, remove itself from the buffer (so the destination never knows
 	  it's there), and/or change the process level.
 	- Determining which sequences should be in each process level has been
 	  done completely based on what I see the shells spitting out.  That
 	  is, I don't check for any terminal sequences which I haven't seen
 	  the shells use.  This means if your shell usage is substantially
-	  different from mine, viewglob may be less accomodating to you.
+	  different from mine, Viewglob may be less accomodating to you.
 	  Improvement here requires feedback.
 	- I don't use regular expressions for the sequence matching, but I
 	  wish I could.  The problem is that regexes either match or don't --
@@ -107,7 +107,7 @@ seer:
 	  are for the shell buffer.
 
 	cmdline.c, cmdline.h
-	- viewglob's representation of the shell's command line.  This should be
+	- Viewglob's representation of the shell's command line.  This should be
 	  as close as possible to the true command line.  It's modified based on
 	  different sequence matches (or lack there of).  Ideally all calls to
 	  modify the internal command line should be isolated to sequences.c,
