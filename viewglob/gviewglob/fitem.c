@@ -149,7 +149,7 @@ void fitem_unmark_all(GSList* fi_slist) {
 
 	while (fi_slist) {
 		fi = fi_slist->data;
-		DEBUG((df, "unmarking %s\n", fi->name->str));
+		/*DEBUG((df, "unmarking %s\n", fi->name->str));*/
 		fi->marked = FALSE;
 		fi_slist = g_slist_next(fi_slist);
 	}
@@ -157,7 +157,7 @@ void fitem_unmark_all(GSList* fi_slist) {
 
 
 void fitem_mark(FItem* fi) {
-	DEBUG((df, "marking %s\n", fi->name->str));
+	/*DEBUG((df, "marking %s\n", fi->name->str));*/
 	fi->marked = TRUE;
 }
 

@@ -88,9 +88,9 @@ DListing* dlisting_new(const GString* name, gint rank, const GString* selected_c
 	GtkWidget* menu_item_image;
 	GtkWidget* image_menu_item;
 
-	char* temp1;
-	char* temp2;
-	char* temp3;
+	gchar* temp1;
+	gchar* temp2;
+	gchar* temp3;
 	gsize length;
 
 	/* Create the struct. */
@@ -161,7 +161,7 @@ DListing* dlisting_new(const GString* name, gint rank, const GString* selected_c
 	new_dl->file_table = wrap_box_new();
 	/* wrap_box_set_optimal_width(WRAP_BOX(new_dl->file_table), width - 4); */
 	wrap_box_set_optimal_width(WRAP_BOX(new_dl->file_table), width);
-	wrap_box_set_hspacing(WRAP_BOX(new_dl->file_table), 3);
+	wrap_box_set_hspacing(WRAP_BOX(new_dl->file_table), 5);
 	wrap_box_set_line_justify(WRAP_BOX(new_dl->file_table), GTK_JUSTIFY_LEFT);
 	gtk_box_pack_start(GTK_BOX(vbox), new_dl->file_table, FALSE, FALSE, 0);
 	gtk_widget_show(new_dl->file_table);
@@ -198,7 +198,6 @@ DListing* dlisting_new(const GString* name, gint rank, const GString* selected_c
 	gtk_widget_show(menu);
 	g_signal_connect_swapped(vbox, "button_press_event", G_CALLBACK(show_context_menu), menu);
 
-
 	new_dl->listing_vbox = vbox;
 	new_dl->name_label = dir_label;
 	new_dl->menu = menu;
@@ -212,7 +211,7 @@ void dlisting_unmark_all(GSList* dl_slist) {
 
 	while (dl_slist) {
 		dl = dl_slist->data;
-		DEBUG((df, "unmarking %s\n", dl->name->str));
+		/*DEBUG((df, "unmarking %s\n", dl->name->str));*/
 		dl->marked = FALSE;
 		dl_slist = g_slist_next(dl_slist);
 	}
@@ -330,10 +329,10 @@ void dlisting_file_table_update(DListing* dl) {
 	fi_iter = dl->fi_slist;
 	while (fi_iter) {
 		fi = fi_iter->data;
-		DEBUG((df, "(%s", fi->name->str));
+		/*DEBUG((df, "(%s", fi->name->str));*/
 
 		if ( ! fi->marked ) {
-			DEBUG((df, "!)"));
+			/*DEBUG((df, "!)"));*/
 			/* Marked for death - No holds barred. */
 			GSList* tmp;
 			tmp = fi_iter;
@@ -343,11 +342,11 @@ void dlisting_file_table_update(DListing* dl) {
 			continue;
 		}
 		else if (fi->is_new) {
-			DEBUG((df, "?"));
+			/*DEBUG((df, "?"));*/
 
 			/* Pack it (in the correct position) if it has widgets. */
 			if (fi->widget) {
-				DEBUG((df, "x"));
+				/*DEBUG((df, "x"));*/
 				wrap_box_pack(WRAP_BOX(dl->file_table), fi->widget);
 				wrap_box_reorder_child(WRAP_BOX(dl->file_table), fi->widget, pos);
 
@@ -356,7 +355,7 @@ void dlisting_file_table_update(DListing* dl) {
 				   - we should show hidden files on this DListing, or
 				   - the file isn't hidden. */
 				if (v.show_hidden_files || dl->force_show_hidden || !g_str_has_prefix(fi->name->str, ".")) {
-					DEBUG((df, "y"));
+					/*DEBUG((df, "y"));*/
 					gtk_widget_show(fi->widget);
 					gtk_widget_queue_resize(dl->file_table);
 				}
@@ -366,7 +365,7 @@ void dlisting_file_table_update(DListing* dl) {
 		}
 		if (fi->widget)
 			pos++;
-		DEBUG((df, ")\n"));
+		/*DEBUG((df, ")\n"));*/
 		fi_iter = g_slist_next(fi_iter);
 	}
 }

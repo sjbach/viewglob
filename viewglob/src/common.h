@@ -39,6 +39,8 @@
 #include <unistd.h>
 #include <stdlib.h>
 
+#define DEBUG_ON 0
+
 #if HAVE_STDBOOL_H
 #  include <stdbool.h>
 #else
@@ -90,8 +92,6 @@ extern int errno;
 #define XFREE(stale)                            do {        \
         if (stale) { free (stale);  stale = 0; }            \
                                                 } while (0)
-
-#define DEBUG_ON 0
 
 #if DEBUG_ON
 #define DEBUG(blah)	do {					\

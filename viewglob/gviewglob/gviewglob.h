@@ -41,6 +41,10 @@ struct viewable_preferences {
 	gboolean show_hidden_files;
 	glong file_display_limit;
 	GCompareFunc sort_function;
+
+	/* Input Fifos */
+	gchar* glob_fifo;
+	gchar* cmd_fifo;
 };
 
 
@@ -55,11 +59,16 @@ struct _Exhibit {
 };
 
 
+/* Used in the read_string function. */
+struct holdover {
+	GString* string;
+	gboolean has_holdover;
+};
+
+
 enum read_state {
 	RS_DONE,
-	RS_DATA_SOURCE,
 	RS_CMD,
-	RS_GLOB,
 	RS_SELECTED_COUNT, 
 	RS_FILE_COUNT,
 	RS_HIDDEN_COUNT,
@@ -71,17 +80,18 @@ enum read_state {
 };
 
 
-static gboolean receive_data(GIOChannel*, GIOCondition, gpointer);
-static GString* read_string(const char* buff, gsize* start, gsize n, char delim, gboolean* finished);
+static gboolean receive_data(GIOChannel* source, gchar* buff, gsize size, gsize* bytes_read);
+static GString* read_string(const gchar* buff, gsize* start, gsize n, gchar delim, struct holdover* ho, gboolean* finished);
 
-static void set_icons(Exhibit* e);
-static GdkPixbuf* make_pixbuf_scaled(const guint8 icon_inline[]);
+static void        set_icons(Exhibit* e);
+static GdkPixbuf*  make_pixbuf_scaled(const guint8 icon_inline[]);
+
 static void parse_args(int argc, char** argv);
-static void process_data(const char* buff, gsize bytes, Exhibit* e);
+static void process_cmd_data(const gchar* buff, gsize bytes, Exhibit* e);
+static void process_glob_data(const gchar* buff, gsize bytes, Exhibit* e);
 static void rearrange_and_show(Exhibit* e);
 static void delete_old_dlistings(Exhibit* e);
 
-static enum read_state       get_data_type(const GString* s);
 static enum selection_state  map_selection_state(const GString* string);
 static enum file_type        map_file_type(const GString* string);
 

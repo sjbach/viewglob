@@ -34,8 +34,6 @@ BEGIN_C_DECLS
 struct options {
 	char* executable;
 	char* display;
-	char** display_argv;
-	int    display_args;
 	char* config_file;
 	char* shell_out_file;
 	char* term_out_file;
@@ -59,9 +57,7 @@ struct user_shell {
 
 /* Data structure for seer's sandbox shell. */
 struct glob_shell {
-	char* out_file;
 	char* glob_cmd;
-
 	struct pty_child s;
 };
 
@@ -88,7 +84,6 @@ static void analyze_effect(MatchEffect effect);
 static void send_sane_cmd(struct display* d);
 
 static void parse_args(int argc, char** argv);
-static void add_display_arg(char* new_arg);
 
 enum action action_queue(enum action);
 

@@ -1,3 +1,5 @@
+-V option to seer, glob-expand, and gviewglob?
+
 seer:
 	- zsh functionality
 	- screen compatibility

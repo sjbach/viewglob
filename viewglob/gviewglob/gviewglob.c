@@ -123,12 +123,10 @@ static gint cmp_fitem_ordering_alphabetical(gconstpointer a, gconstpointer b) {
 }
 
 
-/* Try to get a string from the given buffer.  If delim is not seen, save the string for
-   the next call (combining with whatever is already saved).  When delim is seen, return
+/* Try to get a string from the given buffer.  If delim is not seen, save the string for the
+   next call (combining with whatever is already saved) in ho.  When delim is seen, return
    the completed string. */
-static GString* read_string(const char* buff, gsize* start, gsize n, char delim, gboolean* finished) {
-	static GString* holdover = NULL;
-	static gboolean has_holdover = FALSE;
+static GString* read_string(const gchar* buff, gsize* start, gsize n, gchar delim, struct holdover* ho, gboolean* finished) {
 
 	GString* string;
 	gsize i;
@@ -144,23 +142,23 @@ static GString* read_string(const char* buff, gsize* start, gsize n, char delim,
 
 	if (delim_reached) {
 		string = g_string_new_len(buff + *start, i - *start);
-		if (has_holdover) {
-			g_string_prepend(string, holdover->str);
-			has_holdover = FALSE;
+		if (ho->has_holdover) {
+			g_string_prepend(string, ho->string->str);
+			ho->has_holdover = FALSE;
 		}
 	}
 	else {
-		if (has_holdover)
-			g_string_append_len(holdover, buff + *start, i - *start);
+		if (ho->has_holdover)
+			g_string_append_len(ho->string, buff + *start, i - *start);
 		else {
-			if ( ! holdover )   /* This will only be true once. */
-				holdover = g_string_new_len(buff + *start, i - *start);
+			if ( ! ho->has_holdover )   /* This will only be true once. */
+				ho->string = g_string_new_len(buff + *start, i - *start);
 			else {
-				g_string_truncate(holdover, 0);
-				g_string_append_len(holdover, buff + *start, i - *start);
+				g_string_truncate(ho->string, 0);
+				g_string_append_len(ho->string, buff + *start, i - *start);
 			}
 
-			has_holdover = TRUE;
+			ho->has_holdover = TRUE;
 		}
 	}
 
@@ -177,34 +175,62 @@ static gboolean win_delete_event(GtkWidget* widget, GdkEvent* event, gpointer da
 }
 
 
-static gboolean receive_data(GIOChannel* source, GIOCondition condition, gpointer data) {
-	static char buff[2048];   /* BUFSIZ? */
+static gboolean get_glob_data(GIOChannel* source, GIOCondition condition, gpointer data) {
+	static gchar buff[2048];   /* TODO BUFSIZ */
 	gsize bytes_read;
+
+	if (receive_data(source, buff, sizeof buff, &bytes_read)) {
+		process_glob_data(buff, bytes_read, (Exhibit*) data);
+	}
+	else
+		gtk_main_quit();
+
+	return TRUE;
+
+}
+
+
+static gboolean get_cmd_data(GIOChannel* source, GIOCondition condition, gpointer data) {
+	static gchar buff[2048];   /* TODO BUFSIZ */
+	gsize bytes_read;
+
+	if (receive_data(source, buff, sizeof buff, &bytes_read)) {
+		process_cmd_data(buff, bytes_read, (Exhibit*) data);
+	}
+	else
+		gtk_main_quit();
+
+	return TRUE;
+
+}
+
+
+/* Attempt to read size bytes into buff from source. */
+static gboolean receive_data(GIOChannel* source, gchar* buff, gsize size, gsize* bytes_read) {
 
 	GError* error = NULL;
 	gboolean in_loop = TRUE;
+	gboolean data_read;
 
 	DEBUG((df, "=="));
 
 	while (in_loop) {
-		switch ( g_io_channel_read_chars(source, buff, 2048, &bytes_read, &error) ) {
+		switch ( g_io_channel_read_chars(source, buff, size, bytes_read, &error) ) {
 
 			case (G_IO_STATUS_ERROR):
-				DEBUG((df, error->message));
-				gtk_main_quit();
-				in_loop = FALSE;
+				g_printerr("gviewglob: %s\n", error->message);
+				in_loop = data_read = FALSE;
 				break;
 
 			case (G_IO_STATUS_NORMAL):
-				process_data(buff, bytes_read, (Exhibit*) data);
+				data_read = TRUE;
 				in_loop = FALSE;
 				break;
 
 			case (G_IO_STATUS_EOF):
 				DEBUG((df, "Shutdown\n"));
 				g_io_channel_shutdown(source, FALSE, NULL);
-				gtk_main_quit();
-				in_loop = FALSE;
+				in_loop = data_read = FALSE;
 				break;
 
 			case (G_IO_STATUS_AGAIN):
@@ -212,13 +238,12 @@ static gboolean receive_data(GIOChannel* source, GIOCondition condition, gpointe
 
 			default:
 				DEBUG((df, "Unexpected result from g_io_channel_read_chars\n"));
-				gtk_main_quit();
-				in_loop = FALSE;
+				in_loop = data_read = FALSE;
 				break;
 		}
 	}
 
-	return TRUE;
+	return data_read;
 }
 
 
@@ -247,22 +272,60 @@ static void fitem_debug_print_names(const GSList* fi_slist) {
 }
 
 
-static enum read_state get_data_type(const GString* s) {
-	if (strcmp(s->str, "glob") == 0)
-		return RS_GLOB;
-	else if (strcmp(s->str, "cmd") == 0)
-		return RS_CMD;
-	else
-		return RS_DONE;    /* This should not happen */
-}
-
-
-/* Finite state machine to interpret data.
-   There is too much logic in this function. */
-static void process_data(const char* buff, gsize bytes, Exhibit* e) {
+/* Finite state machine to interpret cmd data. */
+static void process_cmd_data(const gchar* buff, gsize bytes, Exhibit* e) {
 	static enum read_state rs = RS_DONE;  /* These variables are all static because they may need */
 	static gboolean advance = FALSE;      /* to be preserved between calls to this function (in   */
 	                                      /* the case that buff is not the whole input).          */
+
+	static struct holdover ho = { NULL, FALSE };
+
+	GString* string = NULL;
+	gboolean completed = FALSE;
+
+	gsize pos = 0;
+
+	while (pos < bytes) {
+
+		/* Skip the next character (the delimiter). */
+		if (advance) {
+			pos++;
+			advance = FALSE;
+			continue;
+		}
+
+		switch (rs) {
+			case RS_DONE:
+				DEBUG((df, ":::"));
+				rs = RS_CMD;
+				break;
+
+			case RS_CMD:
+				string = read_string(buff, &pos, bytes, '\n', &ho, &completed);
+				if (completed) {
+					/* Set the cmdline text. */
+					DEBUG((df, "cmd: %s\n", string->str));
+					gtk_entry_set_text(GTK_ENTRY(e->cmdline), string->str);
+					rs = RS_DONE;
+					advance = TRUE;
+					g_string_free(string, TRUE);
+				}
+				break;
+		}
+	}
+
+	DEBUG((df, "***out\n"));
+}
+
+
+/* Finite state machine to interpret glob data. */
+static void process_glob_data(const gchar* buff, gsize bytes, Exhibit* e) {
+	static enum read_state rs = RS_DONE;  /* These variables are all static because they may need */
+	static gboolean advance = FALSE;      /* to be preserved between calls to this function (in   */
+	                                      /* the case that buff is not the whole input).          */
+
+	static struct holdover ho = { NULL, FALSE };
+
 	static GString* selected_count;
 	static GString* total_count;
 	static GString* hidden_count;
@@ -278,23 +341,8 @@ static void process_data(const char* buff, gsize bytes, Exhibit* e) {
 	GSList* search_result;
 	gboolean completed = FALSE;
 
-	/* It's possible to receive the end of one set of glob data and the start of another in the
-	   same buffer.  If that happens, there's no point in updating the screen with the first set,
-	   as it'll immediately be superseded.  This variable is set when glob data is processed, and
-	   unset when glob data is started.  At the end of this function it is checked against to see
-	   if the widgets should be updated. */
-	gboolean full_glob_data_processed = FALSE;
-
 	gsize pos = 0;
 	DEBUG((df, "&&"));
-
-	DEBUG((df, "((("));
-	for (pos = 0; pos < bytes; pos++) {
-		DEBUG((df, "%c", buff[pos]));
-
-	}
-	pos = 0;
-	DEBUG((df, ")))"));
 
 	while (pos < bytes) {
 
@@ -308,43 +356,13 @@ static void process_data(const char* buff, gsize bytes, Exhibit* e) {
 		switch (rs) {
 			case RS_DONE:
 				DEBUG((df, ":::"));
-				rs = RS_DATA_SOURCE;
-				break;
-
-
-			case RS_DATA_SOURCE:
-				/* Determine type of data (glob or cmd). */
-				string = read_string(buff, &pos, bytes, ':', &completed);
-				if (completed) {
-					DEBUG((df, "[[%s]]\n", string->str));
-					rs = get_data_type(string);
-					advance = TRUE;
-					g_string_free(string, TRUE);
-				}
-				break;
-
-			case RS_CMD:
-				string = read_string(buff, &pos, bytes, '\n', &completed);
-				if (completed) {
-					/* Set the cmdline text. */
-					DEBUG((df, "cmd: %s\n", string->str));
-					gtk_entry_set_text(GTK_ENTRY(e->cmdline), string->str);
-					rs = RS_DONE;
-					advance = TRUE;
-					g_string_free(string, TRUE);
-				}
-				break;
-
-			case RS_GLOB:
-				/* dlisting_debug_print_marked(e->dl_slist); */
-				full_glob_data_processed = FALSE;
 				dir_rank = 0;
 				dlisting_unmark_all(e->dl_slist);
 				rs = RS_SELECTED_COUNT;
 				break;
 
 			case RS_SELECTED_COUNT:
-				selected_count = read_string(buff, &pos, bytes, ' ', &completed);
+				selected_count = read_string(buff, &pos, bytes, ' ', &ho, &completed);
 				if (completed) {
 					dir_rank++;
 					rs = RS_FILE_COUNT;
@@ -353,7 +371,7 @@ static void process_data(const char* buff, gsize bytes, Exhibit* e) {
 				break;
 
 			case RS_FILE_COUNT:
-				total_count = read_string(buff, &pos, bytes, ' ', &completed);
+				total_count = read_string(buff, &pos, bytes, ' ', &ho, &completed);
 				if (completed) {
 					rs = RS_HIDDEN_COUNT;
 					advance = TRUE;
@@ -361,7 +379,7 @@ static void process_data(const char* buff, gsize bytes, Exhibit* e) {
 				break;
 
 			case RS_HIDDEN_COUNT:
-				hidden_count = read_string(buff, &pos, bytes, ' ', &completed);
+				hidden_count = read_string(buff, &pos, bytes, ' ', &ho, &completed);
 				if (completed) {
 					rs = RS_DIR_NAME;
 					advance = TRUE;
@@ -370,7 +388,7 @@ static void process_data(const char* buff, gsize bytes, Exhibit* e) {
 
 			/* Get dl, the DListing we're currently working on, from here. */
 			case RS_DIR_NAME:
-				string = read_string(buff, &pos, bytes, '\n', &completed);
+				string = read_string(buff, &pos, bytes, '\n', &ho, &completed);
 				if (completed) {
 
 					search_result = g_slist_find_custom(e->dl_slist, string, cmp_dlisting_same_name);
@@ -384,7 +402,6 @@ static void process_data(const char* buff, gsize bytes, Exhibit* e) {
 					else {
 						/* It's a new DListing. */
 						/* DEBUG((df, "<new_dir>")); */
-						//DEBUG((df, "(copt: %d)", e->optimal_width));
 						dl = dlisting_new(string, dir_rank, selected_count, total_count, hidden_count, e->optimal_width);
 						e->dl_slist = g_slist_append(e->dl_slist, dl);
 					}
@@ -408,7 +425,6 @@ static void process_data(const char* buff, gsize bytes, Exhibit* e) {
 				else if ( *(buff + pos) == '\n' ) {   /* End of glob-expand data. */
 					advance = TRUE;
 					DEBUG((df, "~~~"));
-					full_glob_data_processed = TRUE;
 					rs = RS_DONE;
 				}
 				else {                                /* Another DListing. */
@@ -421,7 +437,7 @@ static void process_data(const char* buff, gsize bytes, Exhibit* e) {
 
 			/* Have to save file_state and file_type until we get file_name */
 			case RS_FILE_STATE:
-				string = read_string(buff, &pos, bytes, ' ', &completed);
+				string = read_string(buff, &pos, bytes, ' ', &ho, &completed);
 				if (completed) {
 					state = map_selection_state(string);
 					g_string_free(string, TRUE);
@@ -432,7 +448,7 @@ static void process_data(const char* buff, gsize bytes, Exhibit* e) {
 				break;
 				
 			case RS_FILE_TYPE:
-				string = read_string(buff, &pos, bytes, ' ', &completed);
+				string = read_string(buff, &pos, bytes, ' ', &ho, &completed);
 				if (completed) {
 					type = map_file_type(string);
 					g_string_free(string, TRUE);
@@ -443,7 +459,7 @@ static void process_data(const char* buff, gsize bytes, Exhibit* e) {
 				break;
 
 			case RS_FILE_NAME:
-				string = read_string(buff, &pos, bytes, '\n', &completed);
+				string = read_string(buff, &pos, bytes, '\n', &ho, &completed);
 				if (completed) {
 
 					search_result = g_slist_find_custom(dl->fi_slist, string, cmp_fitem_same_name);
@@ -459,21 +475,18 @@ static void process_data(const char* buff, gsize bytes, Exhibit* e) {
 						}
 					}
 					else {
-						//DEBUG((df, "here1: %s\n", string->str));
 						/* It's a new FItem. */
 						gboolean hidden = g_str_has_prefix(string->str, ".");    /* Check if it's a hidden file. */
 
 						/* Big huge logic test. */
-						if ( (v.file_display_limit == 0 || dl->n_v_fis < v.file_display_limit) &&          /* Check if we're under the limit. */
+						if ( (v.file_display_limit == 0 || dl->n_v_fis < v.file_display_limit) &&         /* Check if we're under the limit. */
 						     ((hidden && (v.show_hidden_files || dl->force_show_hidden)) || !hidden)) {   /* Check if we should display it. */
 							/* We're good to go.  Build the widgets. */
-						//DEBUG((df, "here2\n"));
 							fi = fitem_new(string, state, type, TRUE);
 							dl->n_v_fis++;
 							dl->update_file_table = TRUE;
 						}
 						else {
-						//DEBUG((df, "here3\n"));
 							/* Don't build the widgets. */
 							fi = fitem_new(string, state, type, FALSE);
 						}
@@ -491,7 +504,11 @@ static void process_data(const char* buff, gsize bytes, Exhibit* e) {
 
 	DEBUG((df, "***out\n"));
 
-	if (full_glob_data_processed) {
+
+	/* We only display the glob data if we've read a set AND it's at the end of the buffer.  Otherwise,
+	   the stuff we'd display would immediately be overwritten by the stuff we're going to read in the
+	   next iteration (which should happen immediately). */
+	if (rs == RS_DONE) {
 		delete_old_dlistings(e);
 		rearrange_and_show(e);
 		DEBUG((df, "^^"));
@@ -675,7 +692,7 @@ static void parse_args(int argc, char** argv) {
 
 	opterr = 0;
 	while (in_loop) {
-		switch (getopt(argc, argv, "bn:s:w")) {
+		switch (getopt(argc, argv, "bc:g:n:s:w")) {
 			case -1:
 				DEBUG((df, "done\n"));
 				in_loop = FALSE;
@@ -688,6 +705,14 @@ static void parse_args(int argc, char** argv) {
 				/* No icons. */
 				v.show_icons = FALSE;
 				DEBUG((df, "icons\n"));
+				break;
+			case 'c':
+				g_free(v.cmd_fifo);
+				v.cmd_fifo = g_strdup(optarg);
+				break;
+			case 'g':
+				g_free(v.glob_fifo);
+				v.glob_fifo = g_strdup(optarg);
 				break;
 			case 'n':
 				/* Maximum files to display. */
@@ -727,7 +752,9 @@ int main(int argc, char *argv[]) {
 	e.dl_slist = NULL;
 	e.optimal_width = 340 - 34;
 	
-	GIOChannel* read_channel;
+	GIOChannel* glob_channel;
+	GIOChannel* cmd_channel;
+	//int glob_fd, cmd_fd;
 
 	gtk_init (&argc, &argv);
 
@@ -740,6 +767,7 @@ int main(int argc, char *argv[]) {
 	v.show_hidden_files = FALSE;
 	v.file_display_limit = 300;
 	v.sort_function = cmp_fitem_ordering_alphabetical;
+	v.glob_fifo = v.cmd_fifo = NULL;
 	parse_args(argc, argv);
 
 	/* Create gviewglob window. */
@@ -775,7 +803,7 @@ int main(int argc, char *argv[]) {
 	v.separator_color = &style->fg[GTK_STATE_NORMAL];
 
 	/* Setup the listings display. */
-	e.display = gtk_vbox_new(FALSE, 4);
+	e.display = gtk_vbox_new(FALSE, 7);
 	gtk_box_set_homogeneous(GTK_BOX(e.display), FALSE);
 	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scrolled_window), e.display);
 	gtk_container_set_resize_mode(GTK_CONTAINER(e.display), GTK_RESIZE_IMMEDIATE);
@@ -788,11 +816,32 @@ int main(int argc, char *argv[]) {
 
 	set_icons(&e);
 
-	/* Wait for input. */
-	read_channel = g_io_channel_unix_new(0);
-	g_io_channel_set_encoding(read_channel, NULL, NULL);
-	g_io_channel_set_flags(read_channel, G_IO_FLAG_NONBLOCK, NULL);
-	g_io_add_watch(read_channel, G_IO_IN, receive_data, &e);
+	/* Setup watch for glob input. */
+	if (v.glob_fifo)
+		glob_channel = g_io_channel_new_file(v.glob_fifo, "r", NULL);
+	else {
+		/* Use stdin if a fifo wasn't provided. */
+		glob_channel = g_io_channel_unix_new(0);
+	}
+	if (!glob_channel) {
+		g_print("error opening glob channel\n");
+		return 1;
+	}
+	g_io_channel_set_encoding(glob_channel, NULL, NULL);
+	g_io_channel_set_flags(glob_channel, G_IO_FLAG_NONBLOCK, NULL);
+	g_io_add_watch(glob_channel, G_IO_IN, get_glob_data, &e);
+
+	/* Setup watch for cmd input (only if a fifo name was passed as an argument). */
+	if (v.cmd_fifo) {
+		cmd_channel = g_io_channel_new_file(v.cmd_fifo, "r", NULL);
+		if (!cmd_channel) {
+			g_printerr("error opening cmd channel\n");
+			return 2;
+		}
+		g_io_channel_set_encoding(cmd_channel, NULL, NULL);
+		g_io_channel_set_flags(cmd_channel, G_IO_FLAG_NONBLOCK, NULL);
+		g_io_add_watch(cmd_channel, G_IO_IN, get_cmd_data, &e);
+	}
 
 	/* And we're off... */
 	gtk_widget_show(window);

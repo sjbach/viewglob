@@ -1,3 +1,10 @@
+2004-08-11 13:00  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* dlisting.c: more hspacing between FItems in WrapBoxes.
+	* gviewglob.c: more vspacing between DListings.
+	* seer.c, seer.h, children.c, children.h, gviewglob.c, gviewglob.h:
+	  Using separate fifos for glob and cmd data so that they don't bleed into each other.
+
 2004-08-10 18:10  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* seer.c, seer.h, misc.c: graceful exit on SIGTERM.

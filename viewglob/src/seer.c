@@ -58,7 +58,7 @@ bool viewglob_enabled;  /* This controls whether or not viewglob should actively
 
 int main(int argc, char* argv[]) {
 
-	int devnull_fd, fifo_fd;
+	int devnull_fd;
 
 	bool ok = true;
 	viewglob_enabled = true;
@@ -69,15 +69,15 @@ int main(int argc, char* argv[]) {
 	opts.executable = opts.display = opts.config_file = NULL;
 	opts.shell_out_file = opts.term_out_file = NULL;
 	opts.init_command = opts.expand_command = NULL;
-	opts.display_argv = XMALLOC(char*, 1);
-	*(opts.display_argv) = NULL;
-	opts.display_args = 1;
+	disp.argv = XMALLOC(char*, 1);
+	*(disp.argv) = NULL;
+	disp.args = 1;
 
 	/* Initialize the shell and display structs. */
 	u.s.pid = x.s.pid = disp.pid = -1;
-	u.s.fd = x.s.fd = disp.fifo_fd = -1;
+	u.s.fd = x.s.fd = disp.glob_fifo_fd = -1;
 	u.pl = PL_EXECUTING;
-	disp.fifo_name = x.out_file = x.glob_cmd = NULL;
+	disp.glob_fifo_name = x.glob_cmd = NULL;
 
 	/* This fills in the opts struct. */
 	parse_args(argc, argv);
@@ -117,12 +117,11 @@ int main(int argc, char* argv[]) {
 	close_warning(devnull_fd, "/dev/null");
 
 	/* Open the display. */
-	if ( ! display_fork(&disp, opts.display_argv) ) {
+	if ( ! display_fork(&disp) ) {
 		viewglob_error("Could not create display");
 		ok = false;
 		goto done;
 	}
-	x.out_file = disp.fifo_name;
 
 #if DEBUG_ON
 	df = fopen("/tmp/out1.txt", "w");
@@ -200,7 +199,7 @@ static void parse_args(int argc, char** argv) {
 
 			case 'b':
 				/* Disable icons in display. */
-				add_display_arg("-b");
+				display_add_arg(&disp, "-b");
 				break;
 			case 'd':
 				/* Display program */
@@ -229,8 +228,8 @@ static void parse_args(int argc, char** argv) {
 				break;
 			case 'n':
 				/* Maximum number of files to display per directory (unless forced). */
-				add_display_arg("-n");
-				add_display_arg(optarg);
+				display_add_arg(&disp, "-n");
+				display_add_arg(&disp, optarg);
 				break;
 			case 'o':
 				/* Duplicate shell output file */
@@ -246,12 +245,12 @@ static void parse_args(int argc, char** argv) {
 				break;
 			case 's':
 				/* Display sorting style. */
-				add_display_arg("-s");
-				add_display_arg(optarg);
+				display_add_arg(&disp, "-s");
+				display_add_arg(&disp, optarg);
 				break;
 			case 'w':
 				/* Show hidden files by default in display. */
-				add_display_arg("-w");
+				display_add_arg(&disp, "-w");
 				break;
 			case 'x':
 				/* Expand command (glob-expand) */
@@ -261,9 +260,6 @@ static void parse_args(int argc, char** argv) {
 				break;
 		}
 	}
-
-	/* Add the NULL argv delimiter. */
-	add_display_arg(NULL);
 
 	if (!opts.display)
 		viewglob_fatal("No display program specified");
@@ -275,23 +271,6 @@ static void parse_args(int argc, char** argv) {
 		viewglob_fatal("No shell expansion command specified");
 
 	return;
-}
-
-
-/* Add a new argument to the display's argv. */
-static void add_display_arg(char* new_arg) {
-	char* temp;
-
-	if (new_arg) {
-		temp = XMALLOC(char, strlen(new_arg));
-		strcpy(temp, new_arg);
-	}
-	else
-		temp = NULL;
-
-	opts.display_argv = XREALLOC(char*, opts.display_argv, opts.display_args + 1);
-	*(opts.display_argv + opts.display_args) = temp;
-	opts.display_args++;
 }
 
 
@@ -676,7 +655,7 @@ static void analyze_effect(MatchEffect effect) {
 
 /* This function writes out stuff that looks like this:
    cmd:<command>
-   cd <u.pwd> && { builtin echo -n "glob:" && <glob-command> <sane_cmd> ;} >> <fifo> ; cd /
+   cd <u.pwd> && <glob-command> <sane_cmd> >> <glob fifo> ; cd /
 */
 static void send_sane_cmd(struct display* d) {
 
@@ -686,33 +665,34 @@ static void send_sane_cmd(struct display* d) {
 	sane_cmd = make_sane_cmd(u.cmd.command, u.cmd.length);
 
 	/* sane_cmd_delimited gets sent directly to the display. */
-	sane_cmd_delimited = XMALLOC(char, strlen("cmd:") + strlen(sane_cmd) + strlen("\n") + 1);
-	(void)strcpy(sane_cmd_delimited, "cmd:");
-	(void)strcat(sane_cmd_delimited, sane_cmd);
+	sane_cmd_delimited = XMALLOC(char, strlen(sane_cmd) + strlen("\n") + 1);
+	(void)strcpy(sane_cmd_delimited, sane_cmd);
 	(void)strcat(sane_cmd_delimited, "\n");
 
+	/* Write the sanitized command-line to the cmd_fifo. */
 	DEBUG((df, "\n^^^%s^^^\n", sane_cmd_delimited));
-	if ( ! hardened_write(d->fifo_fd, sane_cmd_delimited, strlen(sane_cmd_delimited)) ) {
+	if ( ! hardened_write(d->cmd_fifo_fd, sane_cmd_delimited, strlen(sane_cmd_delimited)) ) {
 		viewglob_enabled = false;
 		goto done;
 	}
 
 	XFREE(x.glob_cmd);
 	x.glob_cmd = XMALLOC(char,
-		strlen("cd ") + strlen(u.pwd) + strlen(" && { builtin echo -n \"glob:\" && ") +
+		strlen("cd ") + strlen(u.pwd) + strlen(" && ") +
 		strlen(opts.expand_command) + strlen(" ") + strlen(sane_cmd) +
-		strlen(" ;} >> ") + strlen(d->fifo_name) + strlen(" ; cd /\n") + 1);
+		strlen(" >> ") + strlen(d->glob_fifo_name) + strlen(" ; cd /\n") + 1);
 
 	strcpy(x.glob_cmd, "cd ");
 	strcat(x.glob_cmd, u.pwd);
-	strcat(x.glob_cmd, " && { builtin echo -n \"glob:\" && ");
+	strcat(x.glob_cmd, " && ");
 	strcat(x.glob_cmd, opts.expand_command);
 	strcat(x.glob_cmd, " ");
 	strcat(x.glob_cmd, sane_cmd);
-	strcat(x.glob_cmd, " ;} >> ");
-	strcat(x.glob_cmd, d->fifo_name);
+	strcat(x.glob_cmd, " >> ");
+	strcat(x.glob_cmd, d->glob_fifo_name);
 	strcat(x.glob_cmd, " ; cd /\n");
 
+	/* Write the glob command to the sandbox shell. */
 	DEBUG((df, "\n[[[%s]]]\n", x.glob_cmd));
 	if ( ! hardened_write(x.s.fd, x.glob_cmd, strlen(x.glob_cmd)) )
 		viewglob_enabled = false;

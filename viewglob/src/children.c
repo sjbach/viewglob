@@ -28,34 +28,19 @@
 #include <signal.h>
 #include <fcntl.h>
 
+static bool create_fifo(char* name);
 
-/* Open the display and set it up. */
-bool display_fork(struct display* d, char** new_argv) {
-	pid_t pid;
-	char* pid_str;
+static bool create_fifo(char* name) {
 	int i;
 	bool ok = true;
 
-	new_argv[0] = d->name;
-
-	/* Get the current pid and turn it into a string. */
-	pid_str = XMALLOC(char, 10 + 1);    /* 10 for the length of the pid, 1 for \0. */
-	pid = getpid();
-	sprintf(pid_str, "%ld", pid);
-
-	/* Create the fifo name. */
-	d->fifo_name = XMALLOC(char, strlen("/tmp/viewglob") + strlen(pid_str) + 1);
-	(void)strcpy(d->fifo_name, "/tmp/viewglob");
-	(void)strcat(d->fifo_name, pid_str);
-	XFREE(pid_str);
-
-	/* Try five times to create the fifo (deleting if present). */
+	/* Try five times to create the fifo, deleting if present. */
 	for (i = 0; i < 5; i++) {
 		/* Only read/writable by this user. */
-		if (mkfifo(d->fifo_name, S_IRUSR | S_IWUSR) == -1) {
+		if (mkfifo(name, S_IRUSR | S_IWUSR) == -1) {
 			if (errno == EEXIST) {
 				viewglob_warning("Fifo already exists");
-				if (unlink(d->fifo_name) == -1) {
+				if (unlink(name) == -1) {
 					viewglob_error("Could not remove old file");
 					ok = false;
 					break;
@@ -70,8 +55,69 @@ bool display_fork(struct display* d, char** new_argv) {
 		else
 			break;
 	}
-	if (!ok)
+	return ok;
+}
+
+/* Add a new argument to this display's argv. */
+void display_add_arg(struct display* d, char* new_arg) {
+	char* temp;
+
+	if (new_arg) {
+		temp = XMALLOC(char, strlen(new_arg) + 1);
+		strcpy(temp, new_arg);
+	}
+	else
+		temp = NULL;
+
+	d->argv = XREALLOC(char*, d->argv, d->args + 1);
+	d->argv = realloc(d->argv, sizeof(char*) * (d->args + 1));
+	*(d->argv + d->args) = temp;
+	d->args++;
+}
+
+
+/* Open the display and set it up. */
+bool display_fork(struct display* d) {
+	pid_t pid;
+	char* pid_str;
+	int i;
+	bool ok = true;
+
+	d->argv[0] = d->name;
+
+	/* Get the current pid and turn it into a string. */
+	pid_str = XMALLOC(char, 10 + 1);    /* 10 for the length of the pid, 1 for \0. */
+	pid = getpid();
+	sprintf(pid_str, "%ld", pid);
+
+	/* Create the glob fifo name. */
+	d->glob_fifo_name = XMALLOC(char, strlen("/tmp/viewglob") + strlen(pid_str) + strlen("-1") + 1);
+	(void)strcpy(d->glob_fifo_name, "/tmp/viewglob");
+	(void)strcat(d->glob_fifo_name, pid_str);
+	(void)strcat(d->glob_fifo_name, "-1");
+
+	/* Create the cmd fifo name. */
+	d->cmd_fifo_name = XMALLOC(char, strlen("/tmp/viewglob") + strlen(pid_str) + strlen("-2") + 1);
+	(void)strcpy(d->cmd_fifo_name, "/tmp/viewglob");
+	(void)strcat(d->cmd_fifo_name, pid_str);
+	(void)strcat(d->cmd_fifo_name, "-2");
+
+	XFREE(pid_str);
+
+	/* Create the fifos. */
+	if ( ! create_fifo(d->glob_fifo_name) )
 		return false;
+	if ( ! create_fifo(d->cmd_fifo_name) )
+		return false;
+
+	/* Add the fifo's to the arguments. */
+	display_add_arg(d, "-g");
+	display_add_arg(d, d->glob_fifo_name);
+	display_add_arg(d, "-c");
+	display_add_arg(d, d->cmd_fifo_name);
+
+	/* Delimit with NULL. */
+	display_add_arg(d, NULL);
 
 	switch (d->pid = fork()) {
 		case -1:
@@ -80,34 +126,25 @@ bool display_fork(struct display* d, char** new_argv) {
 
 		case 0:
 
-			/* Note: reusing variable i. */
-			if ( (i = open(d->fifo_name, O_RDONLY)) == -1) {
-				viewglob_error("Could not open fifo for reading");
-				goto child_fail;
-			}
+			/* Open the display. */
+			execvp(d->argv[0], d->argv);
 
-			/* The stdin of the display will come from the fifo. */
-			if ( dup2(i, STDIN_FILENO) == -1 ) {
-				viewglob_error("Could not replace stdin in display process");
-				goto child_fail;
-			}
-
-			(void)close(i);
-			execvp(new_argv[0], new_argv);
-
-			child_fail:
-			viewglob_error("Exec failed");
+			viewglob_error("Display exec failed");
 			viewglob_error("If viewglob does not exit, you should do so manually");
 			_exit(EXIT_FAILURE);
 
 			break;
 	}
 
-
-	/* Open the fifo for writing in parent -- this is so when the glob_shell sends its
-	   output to the fifo, it doesn't receive EOF. */
-	if ( (d->fifo_fd = open(d->fifo_name, O_WRONLY)) == -1) {
-		viewglob_error("Could not open fifo for writing");
+	/* Open the fifos for writing in parent. */
+	/* The sandbox shell will be outputting to the glob fifo, but seer opens it too
+	   to make sure it doesn't get EOF'd by the sandbox shell accidentally. */
+	if ( (d->glob_fifo_fd = open(d->glob_fifo_name, O_WRONLY)) == -1) {
+		viewglob_error("Could not open glob fifo for writing");
+		ok = false;
+	}
+	if ( (d->cmd_fifo_fd = open(d->cmd_fifo_name, O_WRONLY)) == -1) {
+		viewglob_error("Could not open cmd fifo for writing");
 		ok = false;
 	}
 
@@ -118,9 +155,13 @@ bool display_fork(struct display* d, char** new_argv) {
 bool display_terminate(struct display* d) {
 	bool ok = true;
 
-	/* Close the fifo, if open. */
-	if ( (d->fifo_fd != -1) && (close(d->fifo_fd) == -1) ) {
-		viewglob_error("Could not close fifo");
+	/* Close the fifos, if open. */
+	if ( (d->glob_fifo_fd != -1) && (close(d->glob_fifo_fd) == -1) ) {
+		viewglob_error("Could not close glob fifo");
+		ok = false;
+	}
+	if ( (d->cmd_fifo_fd != -1) && (close(d->cmd_fifo_fd) == -1) ) {
+		viewglob_error("Could not close cmd fifo");
 		ok = false;
 	}
 
@@ -139,17 +180,26 @@ bool display_terminate(struct display* d) {
 		}
 	}
 
-	/* Remove the fifo. */
-	if (d->fifo_name) {
-		if ( unlink(d->fifo_name) == -1 ) {
+	/* Remove the fifos. */
+	if (d->glob_fifo_name) {
+		if ( unlink(d->glob_fifo_name) == -1 ) {
 			if (errno != ENOENT) {
-				viewglob_warning("Could not delete fifo");
-				viewglob_warning(d->fifo_name);
+				viewglob_warning("Could not delete glob fifo");
+				viewglob_warning(d->glob_fifo_name);
+			}
+		}
+	}
+	if (d->cmd_fifo_name) {
+		if ( unlink(d->cmd_fifo_name) == -1 ) {
+			if (errno != ENOENT) {
+				viewglob_warning("Could not delete cmd fifo");
+				viewglob_warning(d->cmd_fifo_name);
 			}
 		}
 	}
 
-	XFREE(d->fifo_name);
+	XFREE(d->glob_fifo_name);
+	XFREE(d->cmd_fifo_name);
 
 	return ok;
 }
