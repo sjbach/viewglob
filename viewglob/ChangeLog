@@ -1,3 +1,15 @@
+2004-09-23 19:37  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* children.c, children.h:
+	  - Unlink the feedback fifo (whoops).
+	  - CLOSE_FD argument to pty_child_fork instead of /dev/null.
+	* common.h: adding MAX macro
+	* seer.c:
+	  - Initialize all the fifo fds.
+	  - Use CLOSE_FD instead of /dev/null.
+	  - Read garbage data from sandbox shell instead of letting it
+	    stop up the fifo.
+
 2004-09-22 18:55  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* children.c:

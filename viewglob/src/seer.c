@@ -77,7 +77,6 @@ bool viewglob_enabled;  /* This controls whether or not viewglob should actively
 
 int main(int argc, char* argv[]) {
 
-	int devnull_fd;
 	bool ok = true;
 
 	viewglob_enabled = true;
@@ -92,7 +91,8 @@ int main(int argc, char* argv[]) {
 
 	/* Initialize the shell and display structs. */
 	u.s.pid = x.s.pid = disp.pid = -1;
-	u.s.fd = x.s.fd = disp.glob_fifo_fd = -1;
+	u.s.fd = x.s.fd = -1;
+	disp.glob_fifo_fd = disp.cmd_fifo_fd = disp.feedback_fifo_fd = -1;
 	disp.glob_fifo_name = x.glob_cmd = NULL;
 
 #if DEBUG_ON
@@ -157,23 +157,13 @@ int main(int argc, char* argv[]) {
 		goto done;
 	}
 
-	/* Open /dev/null for use in setting up the sandbox shell. */
-	if ( (devnull_fd = open_warning("/dev/null", O_WRONLY, 0)) == -1) {
-		viewglob_error("(Attempted on purpose)");
-		ok = false;
-		goto done;
-	}
-
 	/* Setup another shell to glob stuff in. */
 	putenv("VG_SANDBOX=yep");
-	if ( ! pty_child_fork(&(x.s), NEW_PTY_FD, devnull_fd, devnull_fd) ) {
+	if ( ! pty_child_fork(&(x.s), NEW_PTY_FD, CLOSE_FD, CLOSE_FD) ) {
 		viewglob_error("Could not create sandbox shell");
 		ok = false;
 		goto done;
 	}
-
-	/* Don't need /dev/null anymore. */
-	close_warning(devnull_fd, "/dev/null");
 
 	/* Open the display. */
 	if ( (!display_init(&disp)) || (!display_fork(&disp)) ) {
@@ -440,19 +430,21 @@ static bool main_loop(struct display* disp) {
    the shell receives input, it's examined thoroughly with process_input. */
 static bool user_activity(void) {
 
-	static Buffer termb =  { NULL, BUFSIZ, 0, 0, 0, PL_TERMINAL,  MS_NO_MATCH, NULL };
-	static Buffer shellb = { NULL, BUFSIZ, 0, 0, 0, PL_EXECUTING, MS_NO_MATCH, NULL };
-	static Buffer displayb = { NULL, BUFSIZ, 0, 0, 0, PL_TERMINAL, MS_NO_MATCH, NULL };
+	static Buffer term_b =  { NULL, BUFSIZ, 0, 0, 0, PL_TERMINAL,  MS_NO_MATCH, NULL };
+	static Buffer shell_b = { NULL, BUFSIZ, 0, 0, 0, PL_EXECUTING, MS_NO_MATCH, NULL };
+	static Buffer sandbox_b = { NULL, BUFSIZ, 0, 0, 0, PL_EXECUTING, MS_NO_MATCH, NULL };
+	static Buffer display_b = { NULL, BUFSIZ, 0, 0, 0, PL_TERMINAL, MS_NO_MATCH, NULL };
 
 	fd_set fdset_read;
 	bool ok = true;
 	int max_fd;
 
 	/* This only happens once. */
-	if (!termb.buf && !shellb.buf) {
-		termb.buf = XMALLOC(char, termb.size);
-		shellb.buf = XMALLOC(char, shellb.size);
-		displayb.buf = XMALLOC(char, displayb.size);
+	if (!term_b.buf && !shell_b.buf) {
+		term_b.buf = XMALLOC(char, term_b.size);
+		shell_b.buf = XMALLOC(char, shell_b.size);
+		sandbox_b.buf = XMALLOC(char, sandbox_b.size);
+		display_b.buf = XMALLOC(char, display_b.size);
 	}
 
 	/* Check to see if the user shell has been closed.  This is necessary
@@ -476,14 +468,14 @@ static bool user_activity(void) {
 	/* Setup the polling. */
 	FD_ZERO(&fdset_read);
 	FD_SET(STDIN_FILENO, &fdset_read);    /* Terminal. */
-	FD_SET(u.s.fd, &fdset_read);          /* Shell. */
+	FD_SET(u.s.fd, &fdset_read);          /* User shell. */
+	FD_SET(x.s.fd, &fdset_read);          /* Sandbox shell. */
 	if (display_running(&disp)) {
 		FD_SET(disp.feedback_fifo_fd, &fdset_read);    /* Display feedback. */
-		max_fd = STDIN_FILENO + u.s.fd + disp.feedback_fifo_fd;
+		max_fd = MAX(MAX(MAX(STDIN_FILENO, x.s.fd), u.s.fd), disp.feedback_fifo_fd);
 	}
 	else
-		max_fd = STDIN_FILENO + u.s.fd;
-
+		max_fd = MAX(MAX(STDIN_FILENO, u.s.fd), x.s.fd);
 
 	/* Poll for output from the shell, terminal, and maybe the display. */
 	if (!hardened_select(max_fd + 1, &fdset_read, NULL)) {
@@ -495,7 +487,7 @@ static bool user_activity(void) {
 	/* If data has been written by the display... */
 	if (display_running(&disp)) {
 		if (FD_ISSET(disp.feedback_fifo_fd, &fdset_read)) {
-			if (!hardened_read(disp.feedback_fifo_fd, displayb.buf, displayb.size, &displayb.filled)) {
+			if (!hardened_read(disp.feedback_fifo_fd, display_b.buf, display_b.size, &display_b.filled)) {
 				if (errno == EIO)
 					goto done;
 				else {
@@ -504,7 +496,7 @@ static bool user_activity(void) {
 					goto done;
 				}
 			}
-			else if (displayb.filled == 0) {
+			else if (display_b.filled == 0) {
 				/* The display was closed ("toggled"). */
 				DEBUG((df, "~~0~~"));
 				action_queue(A_TOGGLE);
@@ -513,12 +505,11 @@ static bool user_activity(void) {
 		}
 	}
 
-
 	/* If data has been written by the terminal... */
 	if (FD_ISSET(STDIN_FILENO, &fdset_read)) {
 
 		/* Read in from terminal. */
-		if (!hardened_read(STDIN_FILENO, termb.buf, termb.size, &termb.filled)) {
+		if (!hardened_read(STDIN_FILENO, term_b.buf, term_b.size, &term_b.filled)) {
 			if (errno == EIO)
 				goto done;
 			else {
@@ -527,7 +518,7 @@ static bool user_activity(void) {
 				goto done;
 			}
 		}
-		else if (termb.filled == 0) {
+		else if (term_b.filled == 0) {
 			DEBUG((df, "~~1~~"));
 			action_queue(A_EXIT);
 			goto done;
@@ -535,15 +526,15 @@ static bool user_activity(void) {
 
 		#if DEBUG_ON
 			size_t x;
-			DEBUG((df, "read %d bytes from the terminal:\n===============\n", termb.filled));
-			for (x = 0; x < termb.filled; x++)
-				DEBUG((df, "%c", termb.buf[x]));
+			DEBUG((df, "read %d bytes from the terminal:\n===============\n", term_b.filled));
+			for (x = 0; x < term_b.filled; x++)
+				DEBUG((df, "%c", term_b.buf[x]));
 			DEBUG((df, "\n===============\n"));
 		#endif
 
 		/* Process the buffer. */
 		if (viewglob_enabled) {
-			ok = process_input(&termb);
+			ok = process_input(&term_b);
 			if (!ok) goto done;
 		}
 
@@ -556,24 +547,24 @@ static bool user_activity(void) {
 		   but less well when text is pasted in (i.e. multichar length buffers).
 		   Ideas for improvement are welcome. */
 		if (viewglob_enabled)
-			u.expect_newline = scan_for_newline(&termb);
+			u.expect_newline = scan_for_newline(&term_b);
 
 		/* Write it out. */
-		if (!hardened_write(u.s.fd, termb.buf + termb.skip, termb.filled - termb.skip)) {
+		if (!hardened_write(u.s.fd, term_b.buf + term_b.skip, term_b.filled - term_b.skip)) {
 			viewglob_error("Problem writing to shell");
 			ok = false;
 			goto done;
 		}
-		if (u.term_transcript_fd != -1 && !hardened_write(u.term_transcript_fd, termb.buf + termb.skip, termb.filled - termb.skip))
+		if (u.term_transcript_fd != -1 && !hardened_write(u.term_transcript_fd, term_b.buf + term_b.skip, term_b.filled - term_b.skip))
 			viewglob_warning("Could not write term transcript");
 
 	}
 
-	/* If data has been written by the shell... */
+	/* If data has been written by the user's shell... */
 	if (FD_ISSET(u.s.fd, &fdset_read)) {
 
 		/* Read in from the shell. */
-		if (!hardened_read(u.s.fd, shellb.buf, shellb.size, &shellb.filled)) {
+		if (!hardened_read(u.s.fd, shell_b.buf, shell_b.size, &shell_b.filled)) {
 			if (errno == EIO) {
 				DEBUG((df, "~~2~~"));
 				action_queue(A_EXIT);
@@ -585,7 +576,7 @@ static bool user_activity(void) {
 				goto done;
 			}
 		}
-		else if (shellb.filled == 0) {
+		else if (shell_b.filled == 0) {
 			DEBUG((df, "~~3~~"));
 			action_queue(A_EXIT);
 			goto done;
@@ -593,26 +584,38 @@ static bool user_activity(void) {
 
 		#if DEBUG_ON
 			size_t x;
-			DEBUG((df, "read %d bytes from the shell:\n===============\n", shellb.filled));
-			for (x = 0; x < shellb.filled; x++)
-				DEBUG((df, "%c", shellb.buf[x]));
+			DEBUG((df, "read %d bytes from the shell:\n===============\n", shell_b.filled));
+			for (x = 0; x < shell_b.filled; x++)
+				DEBUG((df, "%c", shell_b.buf[x]));
 			DEBUG((df, "\n===============\n"));
 		#endif
 
 		/* Process the buffer. */
 		if (viewglob_enabled) {
-			ok = process_input(&shellb);
+			ok = process_input(&shell_b);
 			if (!ok) goto done;
 		}
 
 		/* Write out the full buffer. */
-		if (shellb.filled && !hardened_write(STDOUT_FILENO, shellb.buf + shellb.skip, shellb.filled - shellb.skip)) {
+		if (shell_b.filled && !hardened_write(STDOUT_FILENO, shell_b.buf + shell_b.skip, shell_b.filled - shell_b.skip)) {
 			viewglob_error("Problem writing to stdout");
 			ok = false;
 			goto done;
 		}
-		if (u.shell_transcript_fd != -1 && !hardened_write(u.shell_transcript_fd, shellb.buf + shellb.skip, shellb.filled - shellb.skip))
+		if (u.shell_transcript_fd != -1 && !hardened_write(u.shell_transcript_fd, shell_b.buf + shell_b.skip, shell_b.filled - shell_b.skip))
 			viewglob_warning("Could not write shell transcript");
+	}
+
+	/* If data has been written by the sandbox shell...
+	   This shouldn't happen, but it does.  The shell seems to echo data if it's given input while
+	   a command is running.  I can't figure out how to disable that, so we've got to periodically
+	   read the data so that the pipe doesn't fill up and lock the program in send_*(). */
+	if (FD_ISSET(x.s.fd, &fdset_read)) {
+		if (!hardened_read(x.s.fd, sandbox_b.buf, sandbox_b.size, &sandbox_b.filled)) {
+			viewglob_error("Read problem from sandbox");
+			viewglob_error(strerror(errno));
+		}
+		/* We just read this data to clear the pipe -- we don't actually use it. */
 	}
 
 	done:
@@ -743,6 +746,8 @@ static void send_sane_cmd(struct display* d) {
 	if ( (! hardened_write(d->cmd_fifo_fd, sane_cmd_delimited, strlen(sane_cmd_delimited))) ||
 	     (! hardened_write(x.s.fd, x.glob_cmd, strlen(x.glob_cmd))))
 		disable_viewglob();
+
+	DEBUG((df, "done writing\n"));
 
 	XFREE(sane_cmd_delimited);
 	XFREE(sane_cmd);

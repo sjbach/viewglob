@@ -102,6 +102,7 @@ extern int errno;
 #define DEBUG(blah)	do { } while(0)
 #endif
 
+#define MAX(a, b)  (((a) > (b)) ? (a) : (b))
 
 /* extern void *xcalloc    (size_t num, size_t size); */
 extern void *xmalloc    (size_t num);

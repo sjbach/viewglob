@@ -56,6 +56,7 @@ struct display {
 };
 
 #define NEW_PTY_FD -99
+#define CLOSE_FD -98
 bool pty_child_fork(struct pty_child* c, int new_stdin_fd, int new_stdout_fd, int new_stderr_fd);
 bool pty_child_terminate(struct pty_child* c);
 

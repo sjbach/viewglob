@@ -261,6 +261,7 @@ bool display_terminate(struct display* d) {
 			d->feedback_fifo_fd = -1;
 		else {
 			viewglob_error("Could not close feedback fifo");
+			viewglob_error(strerror(errno));
 			ok = false;
 		}
 	}
@@ -289,9 +290,20 @@ bool display_cleanup(struct display* d) {
 			}
 		}
 	}
+	if (d->feedback_fifo_name) {
+		if ( unlink(d->feedback_fifo_name) == -1 ) {
+			if (errno != ENOENT) {
+				viewglob_warning("Could not delete feedback fifo");
+				viewglob_warning(d->feedback_fifo_name);
+			}
+		}
+	}
 
 	XFREE(d->glob_fifo_name);
 	XFREE(d->cmd_fifo_name);
+	XFREE(d->feedback_fifo_name);
+
+	d->glob_fifo_name = d->cmd_fifo_name = d->feedback_fifo_name = NULL;
 
 	return ok;
 }
@@ -333,6 +345,8 @@ bool pty_child_fork(struct pty_child* c, int new_stdin_fd, int new_stdout_fd, in
 			}
 
 			/* A parameter of NEW_PTY_FD means to use the slave side of the new pty. */
+			/* A parameter of CLOSE_FD means to just close that fd right out. */
+
 			if (new_stdin_fd == NEW_PTY_FD)
 				new_stdin_fd = PT_GET_SLAVE_FD(p);
 			if (new_stdout_fd == NEW_PTY_FD)
@@ -340,17 +354,23 @@ bool pty_child_fork(struct pty_child* c, int new_stdin_fd, int new_stdout_fd, in
 			if (new_stderr_fd == NEW_PTY_FD)
 				new_stderr_fd = PT_GET_SLAVE_FD(p);
 
-			if ( dup2(new_stdin_fd, STDIN_FILENO) == -1 ) {
+			if (new_stdin_fd == CLOSE_FD)
+				(void)close(STDIN_FILENO);
+			else if ( dup2(new_stdin_fd, STDIN_FILENO) == -1 ) {
 				viewglob_error("Could not replace stdin in child process");
 				goto child_fail;
 			}
 
-			if ( dup2(new_stdout_fd, STDOUT_FILENO) == -1 ) {
+			if (new_stdout_fd == CLOSE_FD)
+				(void)close(STDOUT_FILENO);
+			else if ( dup2(new_stdout_fd, STDOUT_FILENO) == -1 ) {
 				viewglob_error("Could not replace stdout in child process");
 				goto child_fail;
 			}
 
-			if ( dup2(new_stderr_fd, STDERR_FILENO) == -1 ) {
+			if (new_stderr_fd == CLOSE_FD)
+				(void)close(STDERR_FILENO);
+			else if ( dup2(new_stderr_fd, STDERR_FILENO) == -1 ) {
 				viewglob_error("Could not replace stderr in child process");
 				goto child_fail;
 			}
