@@ -58,15 +58,11 @@ Show summary of options.
 Show the version of the program.
 
 .SH USAGE
-When you start viewglob, you'll be presented with your familiar bash prompt and a new window showing the file layout of the current directory.  As you begin to type a command, the display window will highlight to show potential filename completions (dull highlight) and file selections and globs/expansions (vibrant highlight).  Also, if you reference files from other directories (e.g. \fI../*\fP or \fI/usr/local\fP), the display will pop in the layouts of those directories as well, with the highlighting.
+When you start viewglob, you'll be presented with your familiar bash prompt and a new window showing the file layout of the current directory.  As you begin to type a command, the display window will highlight to show potential filename completions (dull highlight) and file selections and globs/expansions (vibrant highlight).  Also, as you reference other directories (e.g. \fI../\fP or \fI/usr/local/\fP), their layouts will appear as well.
 .PP
-A trick I use to quickly find out what's located in a given directory without running a new command is to reference the directory, followed by dot (.), eg: "a/dir/.".  The display will immediately pop in the layout of that directory.  This works, because "." is a file guaranteed to be in every directory.
+If the number of files in a shown directory is above the given max, viewglob will truncate the results (with an indicator).  You can force viewglob to display the whole directory by right-clicking anywhere on the listing for that directory and choosing "Show all files".  By default hidden files are not shown, but you can view them using the same mechanism.
 .PP
-The display will always show at least the layout of your current directory.
-.PP
-If the number of files in a displayed directory is above the given max, viewglob will truncate the results (with an indicator).  You can force viewglob to display the whole directory by right-clicking anywhere on the listing for that directory and choosing "Show all files".  By default hidden files are not shown, but you can view them using the same mechanism.
-.PP
-At the bottom of the display window is a textbox with your command\-line.  This is the command\-line that viewglob is actually globbing on; if you find the display is not showing what you expected, check to make sure the display's command\-line is the same as the one in the shell, as they can be different (see \fBNOTES\fP below).
+At the bottom of the display window is a textbox with your command\-line.  This is what viewglob is actually globbing on; if you find the display is not showing what you expected, check to make sure the display's command\-line is the same as the one in the shell, as they can be different (see \fBNOTES\fP below).
 .PP
 If you close the display without exiting the viewglob-supervised shell, you'll get a single error mesage while viewglob figures out what's going on.  It will then mostly disable itself and you'll have a regular shell.
 .PP
@@ -139,10 +135,6 @@ The location of the default configuration file.
 .SH BUGS
 Sometimes the heading labels in the display enforce a minimum width (which I find annoying), sometimes they don't.  I haven't figured out why.
 .PP
-Window resizing can be very slow in directories with many files (give /usr/bin or /usr/local/bin a shot to see what I mean).
-.PP
-Adding to the above, writing "blah *" in a directory with a huge number of files which have been truncated (over the limit) is punishing to viewglob as it struggles to display them all.  This is most definitely a fixable bug and priority #1.
-.PP
 Resizing the terminal window after you've typed a multi-line command will often cause viewglob's command\-line to become out of sync with the true command\-line, though it tries really hard to keep up.
 .PP
 Ctrl-C may not work in terminals with FreeBSD.
@@ -154,4 +146,3 @@ Stephen Bach <sjbach@users.sourceforge.net>
 .BR bash (1),
 .BR ls (1),
 .BR glob (7).
-

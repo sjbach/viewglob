@@ -1,6 +1,7 @@
 2004-08-25 22:06  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* dlisting.c, file_box.c, gviewglob.c, wrap_box.c: tweaked the layout.
+	* viewglob.1: info about new directory reference method, removed bugs.
 
 2004-08-25 20:25  Stephen Bach <sjbach@users.sourceforge.net>
 
