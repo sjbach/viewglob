@@ -29,6 +29,9 @@
 
 G_BEGIN_DECLS
 
+void connection_init(Connection* cnct, char* name, int fd_in, int fd_out,
+		size_t buflen, enum process_level pl);
+void connection_free(Connection* cnct);
 void prepend_holdover(Connection* b);
 void create_holdover(Connection* b, gboolean write_later);
 void eat_segment(Connection* b);

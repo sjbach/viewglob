@@ -168,7 +168,11 @@ static enum shell_type shell;
 static gint parse_digits(const gchar* string, size_t len) {
 	guint i;
 	gboolean digits = FALSE;
-	for (i = 0; string[i] != '\0' && i < len && !digits; i++) {
+
+	g_return_val_if_fail(string != NULL, 0);
+	g_return_val_if_fail(len != 0, 0);
+
+	for (i = 0; i < len; i++) {
 		if (isdigit(string[i])) {
 			digits = TRUE;
 			break;
@@ -191,6 +195,9 @@ static gchar* parse_printables(const gchar* string, const gchar* sequence) {
 	gint pos, nbytes;
 	gchar delimiter;
 
+	g_return_val_if_fail(string != NULL, NULL);
+	g_return_val_if_fail(sequence != NULL, NULL);
+
 	/* Find the location of the printables in the sequence. */
 	p = strchr(sequence, PRINTABLE_C);
 	if (!p)
@@ -199,8 +206,9 @@ static gchar* parse_printables(const gchar* string, const gchar* sequence) {
 	pos = p - sequence;
 	delimiter = *(p + 1);
 
-	for (nbytes = 0; *(string + pos + nbytes) != delimiter; nbytes++) ;
-	printables = g_new(gchar, nbytes + 1);
+	for (nbytes = 0; *(string + pos + nbytes) != delimiter; nbytes++)
+		;
+	printables = g_malloc(nbytes + 1);
 
 	/* Make a copy. */
 	(void)strncpy(printables, string + pos, nbytes);
@@ -639,7 +647,7 @@ void check_seqs(Connection* b, struct user_shell* u) {
 	gint i;
 	MatchEffect effect;
 
-	gchar c = b->buf[b->pos + (b->n - 1)];
+	gchar c = b->buf[b->pos + b->seglen];
 	SeqGroup seq_group = seq_groups[b->pl];
 
 	b->status = MS_NO_MATCH;
@@ -663,8 +671,8 @@ void check_seqs(Connection* b, struct user_shell* u) {
 }
 
 
-/* Assumes that the chosen sequences are intelligently chosen
-   and are not malformed.  To elaborate:
+/* Assumes that the sequences are intelligently chosen and are not
+   malformed.  To elaborate:
    	- Do not have a special character delimiter after a special character.
 	- Do not end a sequence with a special character.
 
@@ -827,19 +835,19 @@ static MatchEffect seq_ps1_separator(Connection* b, struct user_shell* u) {
 }
 
 
-static MatchEffect seq_rprompt_separator_start(Connection* b, struct user_shell*  u) {
+static MatchEffect seq_rprompt_separator_start(Connection* b, struct user_shell* u) {
 	pass_segment(b);
 	return ME_RPROMPT_STARTED;
 }
 
 
-static MatchEffect seq_rprompt_separator_end(Connection* b, struct user_shell*  u) {
+static MatchEffect seq_rprompt_separator_end(Connection* b, struct user_shell* u) {
 	pass_segment(b);
 	return ME_CMD_STARTED;
 }
 
 
-static MatchEffect seq_new_pwd(Connection* b, struct user_shell*  u) {
+static MatchEffect seq_new_pwd(Connection* b, struct user_shell* u) {
 	if (u->pwd != NULL)
 		g_free(u->pwd);
 
@@ -851,7 +859,7 @@ static MatchEffect seq_new_pwd(Connection* b, struct user_shell*  u) {
 }
 
 
-static MatchEffect seq_zsh_completion_done(Connection* b, struct user_shell*  u) {
+static MatchEffect seq_zsh_completion_done(Connection* b, struct user_shell* u) {
 	u->cmd.rebuilding = TRUE;
 	pass_segment(b);
 	return ME_NO_EFFECT;
@@ -860,7 +868,7 @@ static MatchEffect seq_zsh_completion_done(Connection* b, struct user_shell*  u)
 
 /* Add a carriage return to the present location in the command line,
    or if we're expecting a newline, command executed. */
-static MatchEffect seq_term_cmd_wrapped(Connection* b, struct user_shell*  u) {
+static MatchEffect seq_term_cmd_wrapped(Connection* b, struct user_shell* u) {
 	MatchEffect effect;
 
 	if (u->expect_newline)
@@ -871,14 +879,14 @@ static MatchEffect seq_term_cmd_wrapped(Connection* b, struct user_shell*  u) {
 		effect = ME_NO_EFFECT;
 
 	/* Don't want to pass over the NOT_LF char. */
-	b->n--;
+	b->seglen--;
 	pass_segment(b);
 	return effect;
 }
 
 
 /* Back up one character. */
-static MatchEffect seq_term_backspace(Connection* b, struct user_shell*  u) {
+static MatchEffect seq_term_backspace(Connection* b, struct user_shell* u) {
 	MatchEffect effect;
 
 	if (u->cmd.pos > 0) {
@@ -898,7 +906,7 @@ static MatchEffect seq_term_cursor_forward(Connection* b, struct user_shell* u) 
 	MatchEffect effect = ME_NO_EFFECT;
 	gint n;
 	
-	n = parse_digits(b->buf + b->pos, b->n);
+	n = parse_digits(b->buf + b->pos, b->seglen + 1);
 	if (n == 0) {
 		/* Default is 1. */
 		n = 1;
@@ -930,7 +938,7 @@ static MatchEffect seq_term_cursor_backward(Connection* b, struct user_shell*  u
 	MatchEffect effect = ME_NO_EFFECT;
 	gint n;
 	
-	n = parse_digits(b->buf + b->pos, b->n);
+	n = parse_digits(b->buf + b->pos, b->seglen + 1);
 	if (n == 0) {
 		/* Default is 1. */
 		n = 1;
@@ -950,7 +958,7 @@ static MatchEffect seq_term_delete_chars(Connection* b, struct user_shell*  u) {
 	MatchEffect effect = ME_NO_EFFECT;
 	gint n;
 	
-	n = parse_digits(b->buf + b->pos, b->n);
+	n = parse_digits(b->buf + b->pos, b->seglen + 1);
 	if (n == 0) {
 		/* Default is 1. */
 		n = 1;
@@ -967,7 +975,7 @@ static MatchEffect seq_term_insert_blanks(Connection* b, struct user_shell*  u) 
 	MatchEffect effect = ME_NO_EFFECT;
 	gint n;
 
-	n = parse_digits(b->buf + b->pos, b->n);
+	n = parse_digits(b->buf + b->pos, b->seglen + 1);
 	if (n == 0) {
 		/* Default is 1. */
 		n = 1;
@@ -989,7 +997,7 @@ static MatchEffect seq_term_erase_in_line(Connection* b, struct user_shell*  u) 
 	gint n;
 	
 	/* Default is 0. */
-	n = parse_digits(b->buf + b->pos, b->n);
+	n = parse_digits(b->buf + b->pos, b->seglen + 1);
 
 	if (!cmd_wipe_in_line(&u->cmd, n))
 		effect = ME_ERROR;
@@ -1015,7 +1023,7 @@ static MatchEffect seq_term_cursor_up(Connection* b, struct user_shell*  u) {
 	gchar* next_cr_p;
 	gchar* pos;
 
-	n = parse_digits(b->buf + b->pos, b->n);
+	n = parse_digits(b->buf + b->pos, b->seglen + 1);
 	if (n == 0) {
 		/* Default is 1. */
 		n = 1;
@@ -1057,7 +1065,9 @@ static MatchEffect seq_term_cursor_up(Connection* b, struct user_shell*  u) {
 			pos = g_strrstr_len(u->cmd.data->str, pos - u->cmd.data->str, "\015");
 
 		if (pos != NULL) {
+			/* Cursor is offset chars from the end of the line. */
 			offset = next_cr_p - u->cmd.data->str - u->cmd.pos;
+			/* Position cursor on new line at same position. */
 			u->cmd.pos = pos - offset - u->cmd.data->str;
 			if (u->cmd.pos >= 0) {
 				effect = ME_NO_EFFECT;
@@ -1102,7 +1112,7 @@ static MatchEffect seq_term_carriage_return(Connection* b, struct user_shell*  u
 		}
 
 		/* We don't want to pop off the character following the ^M. */
-		b->n--;
+		b->seglen--;
 		pass_segment(b);
 	}
 
@@ -1179,9 +1189,12 @@ static MatchEffect seq_nav_pgdown(Connection* b, struct user_shell*  u) {
 
 static MatchEffect seq_nav_ctrl_g(Connection* b, struct user_shell*  u) {
 	DEBUG((df, "seq_nav_ctrlg!\n"));
-	b->n--;
+
+	/* Let one of the Ctrl-Gs get read by the terminal. */
+	b->seglen--;
 	b->pos++;
 	eat_segment(b);
+
 	return ME_NO_EFFECT;
 }
 
