@@ -11,7 +11,6 @@
 
 2005-03-07 14:04  Stephen Bach <sjbach@users.sourceforge.net>
 
-	* gviewglob.c: no more window padding
 	* lscolors.c:
 	  Don't set the foreground colour through Pango so that its
 	  colour can change when active or selected.

@@ -735,7 +735,7 @@ int main(int argc, char *argv[]) {
 
 	/* Create gviewglob window. */
 	e.window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	gtk_container_set_border_width(GTK_CONTAINER(e.window), 0);
+	gtk_container_set_border_width(GTK_CONTAINER(e.window), 5);
 	gtk_window_set_title(GTK_WINDOW(e.window), (gchar *) "gviewglob");
 	gtk_window_set_default_size(GTK_WINDOW(e.window), 340, 420);
 	e.width_change = 0;
