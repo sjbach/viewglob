@@ -38,8 +38,6 @@ struct _DListing {
 	GtkWidget* name_label;
 	GtkWidget* count_label;
 
-	gboolean force_show_hidden;
-	gboolean force_show_all;
 	GtkWidget* menu;
 
 	GtkWidget* file_box;

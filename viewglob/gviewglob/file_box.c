@@ -287,6 +287,18 @@ void file_box_set_icon(FileType type, GdkPixbuf* icon) {
 }
 
 
+gboolean file_box_get_show_hidden_files(FileBox* fbox) {
+	g_return_if_fail(IS_FILE_BOX(fbox));
+	return fbox->show_hidden_files;
+}
+
+
+guint file_box_get_file_display_limit(FileBox* fbox) {
+	g_return_if_fail(IS_FILE_BOX(fbox));
+	return fbox->file_display_limit;
+}
+
+
 
 void file_box_add(FileBox* fbox, GString* name, FileType type, FileSelection selection) {
 	g_return_if_fail(IS_FILE_BOX(fbox));

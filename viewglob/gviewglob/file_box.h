@@ -111,6 +111,8 @@ void        file_box_set_show_hidden_files(FileBox* fbox, gboolean show);
 void        file_box_set_file_display_limit(FileBox* fbox, guint limit);
 void        file_box_set_ordering(FileBoxOrdering fbo);
 void        file_box_set_icon(FileType type, GdkPixbuf* icon);
+gboolean    file_box_get_show_hidden_files(FileBox* fbox);
+guint       file_box_get_file_display_limit(FileBox* fbox);
 void        file_box_add(FileBox* fbox, GString* name, FileType type, FileSelection selection);
 void        file_box_unmark_all(FileBox* fbox);
 void        file_box_cull(FileBox* fbox);

@@ -59,7 +59,6 @@ static void show_hidden_files_activate_handler(GtkMenuItem* menu_item, DListing*
 
 	DEBUG((df, "in show_hidden_blah: %s\n", dl->name->str));
 	file_box_set_show_hidden_files(FILE_BOX(dl->file_box), TRUE);
-	dl->force_show_hidden = TRUE;
 	dlisting_reset_file_count_label(dl);
 	gtk_widget_set_state(GTK_WIDGET(menu_item), GTK_STATE_INSENSITIVE);
 }
@@ -69,7 +68,6 @@ static void show_all_files_activate_handler(GtkMenuItem* menu_item, DListing* dl
 
 	DEBUG((df, "in show_all_blah: %s\n", dl->name->str));
 	file_box_set_file_display_limit(FILE_BOX(dl->file_box), 0);
-	dl->force_show_all = TRUE;
 	dlisting_reset_file_count_label(dl);
 	gtk_widget_set_state(GTK_WIDGET(menu_item), GTK_STATE_INSENSITIVE);
 }
@@ -106,9 +104,6 @@ DListing* dlisting_new(const GString* name, gint rank, const GString* selected_c
 	new_dl->hidden_count = g_string_new(hidden_count->str);
 
 	new_dl->file_box = NULL;
-
-	new_dl->force_show_hidden = v.show_hidden_files;
-	new_dl->force_show_all = v.file_display_limit == 0;
 
 	/* This is the vbox for this whole listing. */
 	vbox = gtk_vbox_new(FALSE, 0);
@@ -148,22 +143,24 @@ DListing* dlisting_new(const GString* name, gint rank, const GString* selected_c
 
 	/* Create file selection number label and align it to the left. */
 	file_num_label = gtk_label_new(NULL);
-	new_dl->count_label = file_num_label;
-	dlisting_reset_file_count_label(new_dl);
 	gtk_misc_set_alignment(GTK_MISC(file_num_label), 0, 0);
 	gtk_box_pack_start(GTK_BOX(dir_heading_vbox), file_num_label, FALSE, FALSE, 0);
 	gtk_widget_show(file_num_label);
+	new_dl->count_label = file_num_label;
 
 	/* Create the file box. */
 	new_dl->file_box = file_box_new();
 	/* wrap_box_set_optimal_width(WRAP_BOX(new_dl->file_box), width - 4); */
 	file_box_set_optimal_width(FILE_BOX(new_dl->file_box), width);
-	file_box_set_show_hidden_files(FILE_BOX(new_dl->file_box), new_dl->force_show_hidden);    /* TODO does a dl need force_show_hidden variable? */
-	file_box_set_file_display_limit(FILE_BOX(new_dl->file_box), v.file_display_limit);        /* Or a file_display_limit variable? */
+	file_box_set_show_hidden_files(FILE_BOX(new_dl->file_box), v.show_hidden_files);
+	file_box_set_file_display_limit(FILE_BOX(new_dl->file_box), v.file_display_limit);
 	wrap_box_set_hspacing(WRAP_BOX(new_dl->file_box), 5);
 	wrap_box_set_line_justify(WRAP_BOX(new_dl->file_box), GTK_JUSTIFY_LEFT);
 	gtk_box_pack_start(GTK_BOX(vbox), new_dl->file_box, FALSE, FALSE, 0);
 	gtk_widget_show(new_dl->file_box);
+
+	/* Must do this after creating the filebox. */
+	dlisting_reset_file_count_label(new_dl);
 
 	/* Setup the context menu. */
 	menu = gtk_menu_new();
@@ -204,6 +201,7 @@ DListing* dlisting_new(const GString* name, gint rank, const GString* selected_c
 	return new_dl;
 }
 
+
 void dlisting_mark(DListing* d, gint new_rank) {
 	d->marked = TRUE;
 	d->old_rank = d->rank;
@@ -243,32 +241,26 @@ void dlisting_reset_file_count_label(DListing* dl) {
 	gchar* temp_string;
 
 	glong n_displayed;
-	glong temp_long;
+	guint display_limit;
 
-	if (v.show_hidden_files || dl->force_show_hidden)
+	display_limit = file_box_get_file_display_limit( FILE_BOX(dl->file_box) );
+
+	if (file_box_get_show_hidden_files(FILE_BOX(dl->file_box)))
 		n_displayed = atol(dl->total_count->str);
 	else
 		n_displayed = atol(dl->total_count->str) - atol(dl->hidden_count->str);
 
-	if (v.file_display_limit == 0 || n_displayed <= v.file_display_limit) {
+	if (display_limit == 0 || n_displayed <= display_limit) {
 		temp_string = g_strconcat("<small>",
 				dl->selected_count->str, " selected, ",
 				dl->total_count->str, " total (",
 				dl->hidden_count->str, " hidden)</small>", NULL);
 	}
 	else {
-		if (dl->force_show_all) {
-			temp_string = g_strconcat("<small>",
-					dl->selected_count->str, " selected, <b>",
-					dl->total_count->str, "</b> total (",
-					dl->hidden_count->str, " hidden)</small>", NULL);
-		}
-		else {
 			temp_string = g_strconcat("<small>",
 					dl->selected_count->str, " selected, <b>",
 					dl->total_count->str, "</b> total (",
 					dl->hidden_count->str, " hidden) [Results truncated]</small>", NULL);
-		}
 	}
 
 	gtk_label_set_markup(GTK_LABEL(dl->count_label), temp_string);
@@ -289,11 +281,11 @@ void dlisting_free(DListing* dl) {
 
 	gtk_widget_hide(dl->widget);
 
-	file_box_destroy(FILE_BOX(dl->file_box));  /* This also gets the FItems associated with the file box. */
-	gtk_widget_destroy(dl->widget);              /* Should take care of everything else. */
+	file_box_destroy(FILE_BOX(dl->file_box));   /* This also gets the FItems associated with the file box. */
+	gtk_widget_destroy(dl->widget);             /* Should take care of everything else. */
 
 
-	gtk_widget_destroy(dl->menu);          /* Delete the menu.  This should get the menu items too. */
+	gtk_widget_destroy(dl->menu);    /* Delete the menu.  This should get the menu items too. */
 
 	g_string_free(dl->name, TRUE);
 	g_string_free(dl->selected_count, TRUE);

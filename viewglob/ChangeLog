@@ -1,3 +1,10 @@
+2004-08-20 21:35  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* dlisting.c, dlisting.h: cleanup.
+	* file_box.c, file_box.h:
+	  Added file_box_get_show_hidden_files() and
+	  file_box_get_file_display_limit().
+
 2004-08-20 19:35  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* dlisting.c, dlisting.h: migrated some code.
