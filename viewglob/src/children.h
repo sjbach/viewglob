@@ -48,9 +48,11 @@ struct display {
 	struct args a;
 	pid_t pid;
 	char* glob_fifo_name;
-	int glob_fifo_fd;
 	char* cmd_fifo_name;
+	char* feedback_fifo_name;
+	int glob_fifo_fd;
 	int cmd_fifo_fd;
+	int feedback_fifo_fd;
 };
 
 #define NEW_PTY_FD -99

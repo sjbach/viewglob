@@ -55,6 +55,7 @@ Action action_queue(Action o) {
 	static bool send_lost = false;
 	static bool send_cmd = false;
 	static bool send_pwd = false;
+	static bool disable = false;
 	static bool do_exit = false;
 
 	switch (o) {
@@ -82,6 +83,10 @@ Action action_queue(Action o) {
 			al_push(o);
 			break;
 
+		case (A_DISABLE):
+			disable = true;
+			break;
+
 		case (A_EXIT):
 			do_exit = true;
 			break;
@@ -89,6 +94,10 @@ Action action_queue(Action o) {
 		case (A_POP):
 			if (do_exit)
 				result = A_EXIT;
+			else if (disable) {
+				disable = false;
+				result = A_DISABLE;
+			}
 			else if (send_lost) {
 				send_lost = false;
 				result = A_SEND_LOST;

@@ -54,6 +54,7 @@ static bool create_fifo(char* name) {
 			}
 			else {
 				viewglob_error("Could not create fifo");
+				viewglob_error(name);
 				ok = false;
 				break;
 			}
@@ -115,6 +116,12 @@ bool display_init(struct display* d) {
 	(void)strcat(d->cmd_fifo_name, pid_str);
 	(void)strcat(d->cmd_fifo_name, "-2");
 
+	/* And the feedback fifo name. */
+	d->feedback_fifo_name = XMALLOC(char, strlen("/tmp/viewglob") + strlen(pid_str) + strlen("-3") + 1);
+	(void)strcpy(d->feedback_fifo_name, "/tmp/viewglob");
+	(void)strcat(d->feedback_fifo_name, pid_str);
+	(void)strcat(d->feedback_fifo_name, "-3");
+
 	XFREE(pid_str);
 
 	/* Create the fifos. */
@@ -122,12 +129,16 @@ bool display_init(struct display* d) {
 		return false;
 	if ( ! create_fifo(d->cmd_fifo_name) )
 		return false;
+	if ( ! create_fifo(d->feedback_fifo_name) )
+		return false;
 
 	/* Add the fifo's to the arguments. */
 	args_add(&(d->a), "-g");
 	args_add(&(d->a), d->glob_fifo_name);
 	args_add(&(d->a), "-c");
 	args_add(&(d->a), d->cmd_fifo_name);
+	args_add(&(d->a), "-f");
+	args_add(&(d->a), d->feedback_fifo_name);
 
 	/* Delimit the args with NULL. */
 	args_add(&(d->a), NULL);
@@ -168,6 +179,11 @@ bool display_fork(struct display* d) {
 		viewglob_error("Could not open cmd fifo for writing");
 		ok = false;
 	}
+	if ( (d->feedback_fifo_fd = open(d->feedback_fifo_name, O_RDONLY)) == -1) {
+		viewglob_error("Could not open feedback fifo for reading");
+		ok = false;
+	}
+
 
 	return ok;
 }
@@ -198,6 +214,15 @@ bool display_terminate(struct display* d) {
 			ok = false;
 		}
 	}
+	if (d->feedback_fifo_fd != -1) {
+		if (close(d->feedback_fifo_fd) != -1)
+			d->feedback_fifo_fd = -1;
+		else {
+			viewglob_error("Could not close feedback fifo");
+			ok = false;
+		}
+	}
+
 
 	/* Terminate the child's process. */
 	if (d->pid != -1) {

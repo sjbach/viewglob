@@ -61,6 +61,8 @@ static void send_order(struct display* d, Action a);
 static void parse_args(int argc, char** argv);
 static void report_version(void);
 
+static void disable_viewglob(void);
+
 
 /* Globals */
 struct options opts;
@@ -370,6 +372,13 @@ static bool main_loop(struct display* disp) {
 					in_loop = false;
 					break;
 
+				case A_DISABLE:
+					DEBUG((df, "::disable::\n"));
+					disable_viewglob();
+					if (display_running(disp))
+						display_terminate(disp);
+					break;
+
 				case A_SEND_CMD:
 					DEBUG((df, "::send cmd::\n"));
 					if (viewglob_enabled && display_running(disp))
@@ -383,6 +392,7 @@ static bool main_loop(struct display* disp) {
 
 				case A_TOGGLE:
 					/* Fork or terminate the display. */
+					DEBUG((df, "::toggle::\n"));
 					if (viewglob_enabled) {
 						if (display_running(disp))
 							display_terminate(disp);
@@ -427,9 +437,11 @@ static bool user_activity(void) {
 
 	static Buffer termb =  { NULL, BUFSIZ, 0, 0, 0, PL_TERMINAL,  MS_NO_MATCH, NULL };
 	static Buffer shellb = { NULL, BUFSIZ, 0, 0, 0, PL_EXECUTING, MS_NO_MATCH, NULL };
+	static Buffer displayb = { NULL, BUFSIZ, 0, 0, 0, PL_TERMINAL, MS_NO_MATCH, NULL };
 
 	fd_set fdset_read;
 	bool ok = true;
+	int max_fd;
 
 	/* This only happens once. */
 	if (!termb.buf && !shellb.buf) {
@@ -455,15 +467,49 @@ static bool user_activity(void) {
 			break;
 	}
 
-	/* Poll for output from the shell and from the terminal */
+	/* Setup the polling. */
 	FD_ZERO(&fdset_read);
 	FD_SET(STDIN_FILENO, &fdset_read);    /* Terminal. */
 	FD_SET(u.s.fd, &fdset_read);          /* Shell. */
-	if (!hardened_select(u.s.fd + 1, &fdset_read, NULL)) {
+	if (display_running(&disp)) {
+		FD_SET(disp.feedback_fifo_fd, &fdset_read);    /* Display feedback. */
+		max_fd = STDIN_FILENO + u.s.fd + disp.feedback_fifo_fd;
+	}
+	else
+		max_fd = STDIN_FILENO + u.s.fd;
+
+
+	/* Poll for output from the shell, terminal, and maybe the display. */
+	if (!hardened_select(max_fd + 1, &fdset_read, NULL)) {
 		viewglob_error("Problem while waiting for input");
 		ok = false;
 		goto done;
 	}
+
+	/* If data has been written by the display... */
+	if (display_running(&disp)) {
+		if (FD_ISSET(disp.feedback_fifo_fd, &fdset_read)) {
+			viewglob_warning("Data written!");
+			//hardened_read(disp.feedback_fifo_fd, displayb.buf, displayb.size, &displayb.filled);
+
+			if (!hardened_read(disp.feedback_fifo_fd, displayb.buf, displayb.size, &displayb.filled)) {
+				if (errno == EIO)
+					goto done;
+				else {
+					viewglob_error("Read problem from display");
+					ok = false;
+					goto done;
+				}
+			}
+			else if (displayb.filled == 0) {
+				DEBUG((df, "~~0~~"));
+				action_queue(A_EXIT);
+				viewglob_warning("No filled!");
+				goto done;
+			}
+		}
+	}
+
 
 	/* If data has been written by the terminal... */
 	if (FD_ISSET(STDIN_FILENO, &fdset_read)) {
@@ -692,10 +738,8 @@ static void send_sane_cmd(struct display* d) {
 	/* Write the sanitized command line to the cmd_fifo, then the glob command to the sandbox
 	   shell (which sends it to the display). */
 	if ( (! hardened_write(d->cmd_fifo_fd, sane_cmd_delimited, strlen(sane_cmd_delimited))) ||
-	     (! hardened_write(x.s.fd, x.glob_cmd, strlen(x.glob_cmd)))) {
-		fprintf(stderr, "(viewglob disabled)");
-		viewglob_enabled = false;
-	}
+	     (! hardened_write(x.s.fd, x.glob_cmd, strlen(x.glob_cmd))))
+		disable_viewglob();
 
 	XFREE(sane_cmd_delimited);
 	XFREE(sane_cmd);
@@ -726,10 +770,14 @@ static void send_order(struct display* d, Action a) {
 			return;
 	}
 
-	if (!hardened_write(d->cmd_fifo_fd, order, strlen(order))) {
-		fprintf(stderr, "(viewglob disabled)");
-		viewglob_enabled = false;
-	}
+	if (!hardened_write(d->cmd_fifo_fd, order, strlen(order)))
+		disable_viewglob();
+}
+
+
+static void disable_viewglob(void) {
+	fprintf(stderr, "(viewglob disabled)");
+	viewglob_enabled = false;
 }
 
 

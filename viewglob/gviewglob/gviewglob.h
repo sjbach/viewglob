@@ -31,9 +31,10 @@ struct viewable_preferences {
 	gboolean show_hidden_files;
 	guint file_display_limit;
 
-	/* Input Fifos */
+	/* Fifos */
 	gchar* glob_fifo;
 	gchar* cmd_fifo;
+	gchar* feedback_fifo;
 };
 
 

@@ -104,16 +104,12 @@ void exhibit_rearrange_and_show(Exhibit* e) {
 		/* Ordering */
 		if (dlisting_is_new(dl)) {
 			DEBUG((df, "(new dl %s)", dl->name->str));
-			//gtk_box_pack_start(GTK_BOX(e->listings_box), dl->widget, FALSE, FALSE, 0);
-			//gtk_box_reorder_child(GTK_BOX(e->listings_box), dl->widget, next_rank - 1);
-			//gtk_widget_show(dl->widget);
 			gtk_box_pack_start(GTK_BOX(e->listings_box), GTK_WIDGET(dl), FALSE, FALSE, 0);
 			gtk_box_reorder_child(GTK_BOX(e->listings_box), GTK_WIDGET(dl), next_rank - 1);
 			gtk_widget_show(GTK_WIDGET(dl));
 		}
 		else if (dl->rank != dl->old_rank) {
 			DEBUG((df, "(reorder dl %s)", dl->name->str));
-			//gtk_box_reorder_child(GTK_BOX(e->listings_box), dl->widget, next_rank - 1);
 			gtk_box_reorder_child(GTK_BOX(e->listings_box), GTK_WIDGET(dl), next_rank - 1);
 		}
 
@@ -186,6 +182,14 @@ void exhibit_do_order(Exhibit* e, GString* order) {
 		change = -page_increment;
 	else if (strcmp(order->str, "pgdown") == 0)
 		change = +page_increment;
+	/*
+	else if (strcmp(order->str, "hide") == 0) {
+		if (e->iconified)
+			gtk_window_deiconify(GTK_WINDOW(e->window));
+		else
+			gtk_window_iconify(GTK_WINDOW(e->window));
+	}
+	*/
 	else {
 		g_error("Unexpected order in process_cmd_data.");
 		return;

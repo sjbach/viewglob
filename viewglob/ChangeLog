@@ -1,9 +1,17 @@
+2004-09-19 20:11  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* actions.c, actions.h, seer.c, sequences.c:
+	  viewglob can be disabled (irrecoverably) with Ctrl-G Q (but not Ctr-G
+	  Ctrl-Q because that's too easy to type).
+	* children.c, children.h, seer.c, exhibit.c, exhibit.h, gviewglob.c,
+	  gviewglob.h:
+	  Started implementing display-to-seer feedback communication.
+
 2004-09-19 18:58  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* actions.c, actions.h, children.c, children.h, seer.c, sequences.c:
 	  The display is now toggleable with Ctrl-G <space> (or Ctrl-G
 	  Ctrl-<space>).
-	  
 
 2004-09-19 17:40  Stephen Bach <sjbach@users.sourceforge.net>
 
