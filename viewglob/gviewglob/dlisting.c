@@ -27,9 +27,13 @@
 extern FILE* df;
 #endif
 
+#define WIDTH_BUFFER 0
+
 /* --- prototypes --- */
 static void  dlisting_class_init(DListingClass* klass);
 static void  dlisting_init(DListing* dl);
+static void  dlisting_size_request(GtkWidget* widget, GtkRequisition* requisition);
+static void  dlisting_size_allocate(GtkWidget *widget, GtkAllocation *allocation);
 static void  dlisting_reset_file_count_label(DListing* dl);
 
 static gboolean is_zero(const gchar* string);
@@ -47,7 +51,7 @@ static GdkPixbuf* show_all_pixbuf = NULL;
 static gboolean show_hidden_files;
 static gboolean show_all_files;
 
-/*--- functions --- */
+/* --- functions --- */
 GType dlisting_get_type(void) {
 	static GType dlisting_type = 0;
 
@@ -79,8 +83,8 @@ static void dlisting_class_init(DListingClass* class) {
 	widget_class = GTK_WIDGET_CLASS(class);
 
 	parent_class = g_type_class_peek_parent(class);
-	//widget_class->size_request = dlisting_size_request;
-	//widget_class->size_allocate = dlisting_size_allocate;
+	widget_class->size_request = dlisting_size_request;
+	widget_class->size_allocate = dlisting_size_allocate;
 }
 
 
@@ -109,6 +113,7 @@ static void dlisting_init(DListing* dl) {
 	dl->hidden_count = g_string_new("0");
 
 	gtk_box_set_homogeneous(box, FALSE);
+
 
 	/* Event box for the directory header (so it can be a different colour). */
 	dl->heading_event_box = gtk_event_box_new();
@@ -156,6 +161,10 @@ static void dlisting_init(DListing* dl) {
 	gtk_box_pack_start(box, dl->file_box, FALSE, FALSE, 0);
 	gtk_widget_show(dl->file_box);
 
+		//gtk_container_set_resize_mode(GTK_CONTAINER(dl), GTK_RESIZE_IMMEDIATE);
+		//gtk_container_set_resize_mode(GTK_CONTAINER(dl->file_box), GTK_RESIZE_PARENT);
+		//gtk_container_set_resize_mode(GTK_CONTAINER(dl->heading_event_box), GTK_RESIZE_IMMEDIATE);
+
 	/* Setup the context menu. */
 	dl->menu = gtk_menu_new();
 
@@ -197,6 +206,49 @@ static void dlisting_init(DListing* dl) {
 	/* Initialize the labels. */
 	dlisting_set_name(dl, "<unset>");
 	dlisting_reset_file_count_label(dl);
+}
+
+static void dlisting_size_request(GtkWidget* widget, GtkRequisition* requisition) {
+	DListing* dl;
+	GtkRequisition heading_req = { 0, 0 }, file_box_req = { 0, 0 };
+
+	dl = DLISTING(widget);
+	
+	if (GTK_WIDGET_VISIBLE(GTK_WIDGET(dl->heading_event_box)))
+		gtk_widget_size_request(GTK_WIDGET(dl->heading_event_box), &heading_req);
+	if (GTK_WIDGET_VISIBLE(GTK_WIDGET(dl->file_box)))
+		gtk_widget_size_request(GTK_WIDGET(dl->file_box), &file_box_req);
+
+	requisition->width = heading_req.width + file_box_req.width + GTK_CONTAINER(dl)->border_width * 2;
+	requisition->height = heading_req.height + file_box_req.height + GTK_CONTAINER(dl)->border_width * 2;
+
+	requisition->width = MIN(requisition->width, dl->optimal_width - WIDTH_BUFFER);
+	//g_printerr("(%d %d)", requisition->width, requisition->height);
+}
+
+
+static void dlisting_size_allocate(GtkWidget* widget, GtkAllocation* allocation) {
+	DListing* dl;
+	GtkRequisition child_requisition;
+	GtkAllocation child_allocation;
+
+	dl = DLISTING(widget);
+
+	child_allocation.x = allocation->x + GTK_CONTAINER(dl)->border_width;
+	child_allocation.width = MIN(child_allocation.width, dl->optimal_width - WIDTH_BUFFER);
+	child_allocation.width = MAX(1, (gint) allocation->width - (gint) GTK_CONTAINER(dl)->border_width * 2);
+
+	gtk_widget_get_child_requisition(GTK_WIDGET(dl->heading_event_box), &child_requisition);
+	child_allocation.height = MIN(child_requisition.height, allocation->height);
+	child_allocation.y = allocation->y + GTK_CONTAINER(dl)->border_width;
+
+	gtk_widget_size_allocate (GTK_WIDGET(dl->heading_event_box), &child_allocation);
+
+	//child_allocation.width = MIN(child_allocation.width, dl->optimal_width - WIDTH_BUFFER);
+	child_allocation.y = child_allocation.y + child_allocation.height;
+	child_allocation.height = MAX(1, allocation->height - child_allocation.height);
+
+	gtk_widget_size_allocate (GTK_WIDGET(dl->file_box), &child_allocation);
 }
 
 
@@ -334,7 +386,12 @@ void dlisting_set_optimal_width(DListing* dl, gint width) {
 	g_return_if_fail(width >= 0);
 
 	dl->optimal_width = width;
-	file_box_set_optimal_width(FILE_BOX(dl->file_box), dl->optimal_width);
+	file_box_set_optimal_width(FILE_BOX(dl->file_box), dl->optimal_width - WIDTH_BUFFER);
+	//g_printerr("!");
+
+	//gtk_widget_queue_resize(GTK_WIDGET(dl->file_box));
+	//gtk_widget_queue_resize(GTK_WIDGET(dl->heading_event_box));
+	//gtk_container_resize_children(GTK_CONTAINER(dl));
 	// FIXME
 }
 

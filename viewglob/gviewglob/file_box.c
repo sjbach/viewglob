@@ -494,8 +494,10 @@ void file_box_flush(FileBox* fbox) {
 
 static void file_box_size_request(GtkWidget* widget, GtkRequisition* requisition) {
 	FileBox* this = FILE_BOX(widget);
-	if (!this->eat_size_requests)
+	if (!this->eat_size_requests) {
+		//g_printerr(".");
 		wrap_box_size_request_optimal(widget, requisition, this->optimal_width);
+	}
 }
 
 

@@ -634,12 +634,16 @@ static gboolean configure_event(GtkWidget* window, GdkEventConfigure* event, Exh
 	GSList* dl_iter;
 	DListing* dl;
 
-	/*g_print("<configure-event (%d --> %d)>", window->allocation.width, event->width);*/
+	//g_print("<configure-event (%d --> %d)>", window->allocation.width, event->width);
 	if (event->width != window->allocation.width) {
 		for (dl_iter = e->dl_slist; dl_iter; dl_iter = g_slist_next(dl_iter)) {
 			dl = dl_iter->data;
+			//g_printerr("?");
 			dlisting_set_optimal_width(dl, ((gint)dl->optimal_width) + event->width - window->allocation.width);
 		}
+
+		//gtk_widget_queue_resize(GTK_WIDGET(e->listings_box));
+		//gtk_container_resize_children(GTK_CONTAINER(e->listings_box));
 	}
 
 	return FALSE;
@@ -720,8 +724,6 @@ int main(int argc, char *argv[]) {
 
 	GtkStyle* style;
 
-	GtkWidget* command_line_entry;
-
 	Exhibit	e;        /* This is pretty central -- it gets passed around a lot. */
 	e.dl_slist = NULL;
 	
@@ -763,12 +765,11 @@ int main(int argc, char *argv[]) {
 	e.vadjustment = gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(scrolled_window));
 
 	/* Command line text widget. */
-	command_line_entry = gtk_entry_new();
-	gtk_editable_set_editable(GTK_EDITABLE(command_line_entry), FALSE);
-	gtk_widget_set_sensitive(command_line_entry, FALSE);
-	gtk_box_pack_start(GTK_BOX(vbox), command_line_entry, FALSE, FALSE, 0);
-	gtk_widget_show(command_line_entry);
-	e.cmdline = command_line_entry;
+	e.cmdline = gtk_entry_new();
+	gtk_editable_set_editable(GTK_EDITABLE(e.cmdline), FALSE);
+	gtk_widget_set_sensitive(e.cmdline, FALSE);
+	gtk_box_pack_start(GTK_BOX(vbox), e.cmdline, FALSE, FALSE, 0);
+	gtk_widget_show(e.cmdline);
 
 	/* The DListing separator looks better if it's filled instead of sunken, so use the text color.
 	   This probably isn't the best way to do this. */
@@ -782,8 +783,10 @@ int main(int argc, char *argv[]) {
 	/* Setup the listings display. */
 	e.listings_box = gtk_vbox_new(FALSE, 5);
 	gtk_box_set_homogeneous(GTK_BOX(e.listings_box), FALSE);
+		//gtk_box_pack_start(GTK_BOX(vbox), e.listings_box, TRUE, TRUE, 0);
 	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scrolled_window), e.listings_box);
-	gtk_container_set_resize_mode(GTK_CONTAINER(e.listings_box), GTK_RESIZE_IMMEDIATE);
+	//gtk_container_set_resize_mode(GTK_CONTAINER(e.listings_box->parent), GTK_RESIZE_IMMEDIATE);
+	//gtk_container_set_resize_mode(GTK_CONTAINER(e.listings_box), GTK_RESIZE_IMMEDIATE);
 	/* g_object_set(e.listings_box, "width-request", 150, NULL); */
 	gtk_widget_show(e.listings_box);
 

@@ -726,10 +726,10 @@ void wrap_box_size_request_optimal(GtkWidget* widget, GtkRequisition* requisitio
 		requisition->width = optimal_width + GTK_CONTAINER(this)->border_width * 2;
 	}
 
-	/*g_printerr("(cols: %u, rows: %u, max_col: %u)", cols, rows, max_col_height);*/
-	/*g_printerr("(req: width: %d, height: %d)", requisition->width, requisition->height);*/
-	/*g_printerr("(optimal: %d)", optimal_width += GTK_CONTAINER(this)->border_width * 2);*/
-	/*g_printerr("(p width: %d, height: %d)|", GTK_WIDGET(this)->parent->allocation.width, GTK_WIDGET(this)->parent->allocation.height);*/
+	//g_printerr("(cols: %u, rows: %u, max_col: %u)", cols, rows, max_col_height);
+	//g_printerr("(req: width: %d, height: %d)", requisition->width, requisition->height);
+	//g_printerr("(optimal: %d)", optimal_width += GTK_CONTAINER(this)->border_width * 2);
+	//g_printerr("(p width: %d, height: %d)|", GTK_WIDGET(this)->parent->allocation.width, GTK_WIDGET(this)->parent->allocation.height);
 }
 
 
@@ -1020,7 +1020,7 @@ static void wrap_box_size_allocate(GtkWidget *widget, GtkAllocation *allocation)
 	area.height = MAX (1, (gint) allocation->height - border * 2);
 	area.width = MAX (1, (gint) allocation->width - border * 2);
 
-	/*g_printerr ("(f got: width %d, height %d)", allocation->width, allocation->height);*/
+	//g_printerr ("(f got: width %d, height %d)", allocation->width, allocation->height);
 	/*g_printerr ("(p got: width %d, height %d)", widget->parent->allocation.width, widget->parent->allocation.height);*/
 
 	layout_cols (wbox, &area);
