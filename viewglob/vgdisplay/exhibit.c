@@ -19,17 +19,13 @@
 
 #include "common.h"
 #include "file_box.h"
-#include "gviewglob.h"
+#include "vgclassic.h"
 #include "exhibit.h"
 #include <string.h>    /* For strcmp */
 
 /* Prototypes. */
 static gint cmp_dlisting_same_name(gconstpointer a, gconstpointer b);
 static gint cmp_dlisting_same_rank(gconstpointer a, gconstpointer b);
-
-#if DEBUG_ON
-extern FILE* df;
-#endif
 
 extern struct viewable_preferences v;
 
@@ -96,7 +92,6 @@ void exhibit_rearrange_and_show(Exhibit* e) {
 	GSList* search_result;
 
 	while ( (search_result = g_slist_find_custom(e->dl_slist, &next_rank, cmp_dlisting_same_rank)) ) {
-		DEBUG((df, "(dl iter)"));
 		dl = search_result->data;
 
 		/* Commit the updates to the file box. */
@@ -104,20 +99,16 @@ void exhibit_rearrange_and_show(Exhibit* e) {
 
 		/* Ordering */
 		if (dlisting_is_new(dl)) {
-			DEBUG((df, "(new dl %s)", dl->name->str));
 			gtk_box_pack_start(GTK_BOX(e->listings_box), GTK_WIDGET(dl), FALSE, FALSE, 0);
 			gtk_box_reorder_child(GTK_BOX(e->listings_box), GTK_WIDGET(dl), next_rank - 1);
 			gtk_widget_show(GTK_WIDGET(dl));
 		}
 		else if (dl->rank != dl->old_rank) {
-			DEBUG((df, "(reorder dl %s)", dl->name->str));
 			gtk_box_reorder_child(GTK_BOX(e->listings_box), GTK_WIDGET(dl), next_rank - 1);
 		}
 
 		next_rank++;
-		DEBUG((df, "(~~)"));
 	}
-	DEBUG((df, "(@@)"));
 	gtk_widget_queue_resize(e->listings_box);  /* To make the scrollbars rescale. */
 }
 
@@ -136,7 +127,6 @@ void exhibit_cull(Exhibit* e) {
 			iter = g_slist_next(iter);
 		else {
 			/* Take no prisoners. */
-			/* DEBUG((df, "removing %s\n", dl->name->str)); */
 			GSList* tmp;
 			tmp = iter;
 			iter = g_slist_next(iter);

@@ -51,9 +51,12 @@ extern int errno;
 #  define EXIT_FAILURE  1
 #endif
 
+#define DEFAULT_FILE_DISPLAY_LIMIT 500
+
 #define STREQ(a,b)    (strcmp  ((a), (b)) == 0)
 #define STRNEQ(a,b,n) (strncmp ((a), (b), (n)) == 0)
 
 #define PERM_FILE	(S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)
 
 #endif /* !COMMON_H */
+

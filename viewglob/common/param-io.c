@@ -37,10 +37,7 @@
 static gchar* params[P_COUNT] = {
 	"none",
 	"purpose",
-	"locality",
-	"shell",
 	"pid",
-	"vgexpand-opts",
 	"status",
 	"pwd",
 	"cmd",

@@ -47,11 +47,8 @@ struct state {
 
 struct vgseer_client {
 	/* Static properties (set once) */
-	gboolean          local;
 	pid_t             pid;
 	Window            win;
-	enum shell_type   shell;
-	gchar*            expand_opts;
 	gint              fd;
 
 	/* Dynamic properties (change often) */
@@ -310,7 +307,11 @@ static void drop_client(struct state* s, struct vgseer_client* v) {
 
 	(void) close(v->fd);
 	g_message("(%d) Dropped client", v->fd);
-	g_free(v->expand_opts);
+	g_string_free(v->cli, TRUE);
+	g_string_free(v->pwd, TRUE);
+	g_string_free(v->developing_mask, TRUE);
+	g_string_free(v->mask, TRUE);
+	g_string_free(v->expanded, TRUE);
 	g_free(v);
 }
 
@@ -384,30 +385,6 @@ static void new_vgseer_client(struct state* s, gint client_fd) {
 	v = g_new(struct vgseer_client, 1);
 	vgseer_client_init(v);
 
-	/* Locality */
-	if (!get_param(client_fd, &param, &value) || param != P_LOCALITY)
-		goto out_of_sync;
-	if (STREQ(value, "local"))
-		v->local = TRUE;
-	else if (STREQ(value, "remote"))
-		v->local = FALSE;
-	else {
-		g_warning("(%d) Unexpected locality: \"%s\"", client_fd, value);
-		goto reject;
-	}
-
-	/* Shell */
-	if (!get_param(client_fd, &param, &value) || param != P_SHELL)
-		goto out_of_sync;
-	if (STREQ(value, "bash"))
-		v->shell = ST_BASH;
-	else if (STREQ(value, "zsh"))
-		v->shell = ST_ZSH;
-	else {
-		g_warning("(%d) Unexpected shell: \"%s\"", client_fd, value);
-		goto reject;
-	}
-
 	/* Pid */
 	if (!get_param(client_fd, &param, &value) || param != P_PROC_ID)
 		goto out_of_sync;
@@ -418,12 +395,6 @@ static void new_vgseer_client(struct state* s, gint client_fd) {
 					client_fd, value);
 			goto reject;
 	}
-
-	/* Vgexpand Opts */
-	// FIXME make sure vgexpand opts are safe
-	if (!get_param(client_fd, &param, &value) || param != P_VGEXPAND_OPTS)
-		goto out_of_sync;
-	v->expand_opts = g_strdup(value);
 
 	/* Tell vgseer client to set a title on its terminal. */
 	if (!put_param(client_fd, P_ORDER, "set-title"))
@@ -526,11 +497,8 @@ void state_init(struct state* s) {
 
 void vgseer_client_init(struct vgseer_client* v) {
 
-	v->local = TRUE;
 	v->pid = -1;
 	v->win = 0;
-	v->shell = ST_BASH;
-	v->expand_opts = NULL;
 	v->fd = -1;
 
 	v->status = SS_LOST;

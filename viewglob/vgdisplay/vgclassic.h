@@ -17,13 +17,14 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#ifndef GVIEWGLOB_H
-#define GVIEWGLOB_H
+#ifndef VGCLASSIC_H
+#define VGCLASSIC_H
 
 #include <gtk/gtk.h>
 #include <gdk/gdk.h>
 
 G_BEGIN_DECLS
+
 
 struct viewable_preferences {
 	/* Options. */
@@ -64,6 +65,7 @@ enum cmd_read_state {
 	CRS_ORDER,
 };
 
+
 G_END_DECLS
 
-#endif /* !GVIEWGLOB_H */
+#endif /* !VGCLASSIC_H */

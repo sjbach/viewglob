@@ -1,3 +1,13 @@
+2005-03-29 01:15  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* shrink_label.c, shrink_label.h: removed (wasn't used anyway)
+	* vgdisplay/common.h: removed
+	* vgdisplay/Makefile.am, gviewglob.c, gviewglob.h:
+	  Renamed to vgclassic.{c,h}
+	* param-io.c, param-io.h, vgd.c, vgseer.c:
+	  Removed locality, shell, and vgexpand-opts parameters.  Simplified
+	  handshake.
+
 2005-03-29 00:21  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* vgexpand.c: added special directory-only case for masks

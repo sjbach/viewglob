@@ -38,10 +38,8 @@ enum parameter {
 	P_PURPOSE,
 
 	/* Used in vgseer initialization. */
-	P_LOCALITY,           /* Local or remote */
 	P_SHELL,
 	P_PROC_ID,            /* P_PID conflicts with wait.h. */
-	P_VGEXPAND_OPTS,
 
 	/* Volatile vgseer properties. */
 	P_STATUS,

@@ -243,13 +243,7 @@ static gint connect_to_vgd(gchar* server, gint port, struct user_state* u,
 	gchar* value = NULL;
 	if (!put_param(fd, P_PURPOSE, "vgseer"))
 		goto fail;
-	if (!put_param(fd, P_LOCALITY, "local"))
-		goto fail;
-	if (!put_param(fd, P_SHELL, shell_type_to_string(u->type)))
-		goto fail;
 	if (!put_param(fd, P_PROC_ID, string))
-		goto fail;
-	if (!put_param(fd, P_VGEXPAND_OPTS, expand_opts))
 		goto fail;
 
 	/* Wait for acknowledgement. */

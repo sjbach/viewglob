@@ -363,8 +363,6 @@ gboolean child_fork(struct child* c) {
 			(void) close(pfdin[0]);
 			(void) close(pfdin[1]);
 
-			g_printerr("(%s)(%s)\n", getenv("ZDOTDIR"), getenv("VG_DIR"));
-
 			execvp(c->exec_name, c->args.argv);
 
 			child_fail:

@@ -1,19 +1,19 @@
 /*
 	Copyright (C) 2004, 2005 Stephen Bach
-	This file is part of the viewglob package.
+	This file is part of the Viewglob package.
 
-	viewglob is free software; you can redistribute it and/or modify
+	Viewglob is free software; you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
 	the Free Software Foundation; either version 2 of the License, or
 	(at your option) any later version.
 
-	viewglob is distributed in the hope that it will be useful,
+	Viewglob is distributed in the hope that it will be useful,
 	but WITHOUT ANY WARRANTY; without even the implied warranty of
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 	GNU General Public License for more details.
 
 	You should have received a copy of the GNU General Public License
-	along with viewglob; if not, write to the Free Software
+	along with Viewglob; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
@@ -24,7 +24,7 @@
 #include "dlisting.h"
 #include "exhibit.h"
 #include "feedback.h"
-#include "gviewglob.h"
+#include "vgclassic.h"
 
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
@@ -58,10 +58,6 @@ static gboolean  window_key_press_event(GtkWidget* window, GdkEventKey* event, g
 
 /* Globals. */
 struct viewable_preferences v;
-
-#if DEBUG_ON
-FILE* df;
-#endif
 
 
 /* Chooses a selection state based on the string's first char. */
@@ -193,8 +189,6 @@ static gboolean receive_data(GIOChannel* source, gchar* buff, gsize size, gsize*
 	gboolean in_loop = TRUE;
 	gboolean data_read = FALSE;
 
-	DEBUG((df, "=="));
-
 	while (in_loop) {
 		switch ( g_io_channel_read_chars(source, buff, size, bytes_read, &error) ) {
 
@@ -209,7 +203,6 @@ static gboolean receive_data(GIOChannel* source, gchar* buff, gsize size, gsize*
 				break;
 
 			case (G_IO_STATUS_EOF):
-				DEBUG((df, "Shutdown\n"));
 				g_io_channel_shutdown(source, FALSE, NULL);
 				in_loop = data_read = FALSE;
 				break;
@@ -244,16 +237,6 @@ static void process_cmd_data(const gchar* buff, gsize bytes, Exhibit* e) {
 
 	gsize pos = 0;
 
-	#if DEBUG_ON
-		DEBUG((df,"\n[["));
-		while (pos < bytes) {
-			DEBUG((df,"%c", buff[pos]));
-			pos++;
-		}
-		DEBUG((df,"\n]]"));
-		pos = 0;
-	#endif
-
 	while (pos < bytes) {
 
 		/* Skip the next character (the delimiter). */
@@ -266,7 +249,6 @@ static void process_cmd_data(const gchar* buff, gsize bytes, Exhibit* e) {
 		switch (rs) {
 
 			case CRS_DONE:
-				DEBUG((df, ":::"));
 
 				/* Determine what type of data is being read. */
 				string = read_string(buff, &pos, bytes, ':', &ho, &completed);
@@ -289,7 +271,6 @@ static void process_cmd_data(const gchar* buff, gsize bytes, Exhibit* e) {
 				string = read_string(buff, &pos, bytes, '\n', &ho, &completed);
 				if (completed) {
 					/* Set the cmdline text. */
-					DEBUG((df, "cmd: %s\n", string->str));
 					gtk_entry_set_text(GTK_ENTRY(e->cmdline), string->str);
 					rs = CRS_DONE;
 					advance = TRUE;
@@ -313,8 +294,6 @@ static void process_cmd_data(const gchar* buff, gsize bytes, Exhibit* e) {
 				break;
 		}
 	}
-
-	DEBUG((df, "***out\n"));
 }
 
 
@@ -344,7 +323,6 @@ static void process_glob_data(const gchar* buff, gsize bytes, Exhibit* e) {
 	gboolean completed = FALSE;
 
 	gsize pos = 0;
-	DEBUG((df, "&&(glob)"));
 
 	while (pos < bytes) {
 
@@ -357,7 +335,6 @@ static void process_glob_data(const gchar* buff, gsize bytes, Exhibit* e) {
 
 		switch (rs) {
 			case GRS_DONE:
-				DEBUG((df, ":::"));
 				dir_rank = 0;
 				exhibit_unmark_all(e);
 				rs = GRS_SELECTED_COUNT;
@@ -420,7 +397,6 @@ static void process_glob_data(const gchar* buff, gsize bytes, Exhibit* e) {
 				}
 				else if ( *(buff + pos) == '\n' ) {   /* End of glob-expand data. */
 					advance = TRUE;
-					DEBUG((df, "~~~"));
 					rs = GRS_DONE;
 				}
 				else {                                /* Another DListing. */
@@ -471,19 +447,14 @@ static void process_glob_data(const gchar* buff, gsize bytes, Exhibit* e) {
 		}
 	}
 
-	DEBUG((df, "---out\n"));
-
-
-	/* We only display the glob data if we've read a set AND it's at the end of the buffer.  Otherwise,
-	   the stuff we'd display would immediately be overwritten by the stuff we're going to read in the
-	   next iteration (which should happen immediately). */
+	/* We only display the glob data if we've read a set AND it's at the end
+	   of the buffer.  Otherwise, the stuff we'd display would immediately be
+	   overwritten by the stuff we're going to read in the next iteration
+	   (which should happen immediately). */
 	if (rs == GRS_DONE) {
 		exhibit_cull(e);
 		exhibit_rearrange_and_show(e);
-		DEBUG((df, "(^^)"));
 	}
-
-	DEBUG((df, "(**)"));
 }
 
 
@@ -635,17 +606,14 @@ static gboolean parse_args(int argc, char** argv) {
 	while (in_loop) {
 		switch (getopt(argc, argv, "bc:g:f:n:s:vVwz:")) {
 			case -1:
-				DEBUG((df, "done\n"));
 				in_loop = FALSE;
 				break;
 			case '?':
-				DEBUG((df, "Unknown argument\n"));
 				gtk_main_quit();
 				break;
 			case 'b':
 				/* No icons. */
 				v.show_icons = FALSE;
-				DEBUG((df, "icons\n"));
 				break;
 			case 'c':
 				g_free(v.cmd_fifo);
@@ -662,7 +630,6 @@ static gboolean parse_args(int argc, char** argv) {
 			case 'n':
 				/* Maximum files to display. */
 				max = atoi(optarg);
-				DEBUG((df, "max: %d\n", max));
 				if (max < 0)
 					v.file_display_limit = DEFAULT_FILE_DISPLAY_LIMIT;
 				else
@@ -707,7 +674,8 @@ int main(int argc, char *argv[]) {
 
 	GtkStyle* style;
 
-	Exhibit	e;        /* This is pretty central -- it gets passed around a lot. */
+	/* This is pretty central -- it gets passed around a lot. */
+	Exhibit	e;
 	e.dl_slist = NULL;
 	
 	GIOChannel* glob_channel;
@@ -715,10 +683,6 @@ int main(int argc, char *argv[]) {
 	GIOChannel* feedback_channel;
 
 	gtk_init(&argc, &argv);
-
-#if DEBUG_ON
-	df = fopen("/tmp/debug.txt", "w");
-#endif
 
 	/* Option defaults. */
 	v.show_icons = TRUE;
@@ -834,10 +798,6 @@ int main(int argc, char *argv[]) {
 	write_xwindow_id(e.window);
 
 	gtk_main();
-
-#if DEBUG_ON
-	(void)fclose(df);
-#endif
 
 	return 0;
 }

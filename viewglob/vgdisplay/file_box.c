@@ -26,10 +26,6 @@
 #include <gtk/gtk.h>
 #include <string.h>      /* For strcmp */
 
-#if DEBUG_ON
-extern FILE* df;
-#endif
-
 #define BASE_FONT_SIZE 0
 
 /* --- properties --- */
@@ -794,8 +790,6 @@ static void fitem_free(FItem* fi, gboolean destroy_widgets) {
 	if (!fi)
 		return;
 
-	/*DEBUG((df, "destroying: %s (%d)\n", fi->name, destroy_widgets));*/
-
 	g_free(fi->name);
 	if (destroy_widgets && fi->widget)
 		gtk_widget_destroy(fi->widget);   /* This will grab all the stuff inside, too. */
@@ -823,7 +817,6 @@ static void fitem_update_type_selection_and_order(FItem* fi, FileType t, FileSel
 
 	/* File type. */
 	if (fi->type != t) {
-		DEBUG((df, "%s type changed.\n", fi->name));
 		fi->type = t;
 
 		/* Remove the widgets for this fitem (if it has any).
