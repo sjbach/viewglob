@@ -47,13 +47,14 @@
 static gint  parse_args(gint argc, gchar** argv);
 static void  report_version(void);
 static void  compile_data(gint argc, gchar** argv);
-static void mask_match(void);
+static void  mask_match(void);
 static void  home_to_tilde(void);
 static void  report(void);
 static void  print_dir(Directory* dir);
 static void  initiate(dev_t pwd_dev_id, ino_t pwd_inode);
 static void  correlate(gchar* dir_name, gchar* file_name, dev_t dev_id,
 		ino_t dir_inode);
+static gchar** split(gchar* mask);
 
 static Directory* reverse_list(Directory* head);
 
@@ -69,7 +70,6 @@ static enum file_type  determine_type(const struct stat* file_stat);
 static File*           make_new_file(gchar* name, enum file_type type);
 static Directory*      make_new_dir(gchar* dir_name, dev_t dev_id,
 		ino_t inode);
-//static gboolean        mark_files(Directory* dir, gchar* file_name);
 static gboolean        have_dir(gchar* name, dev_t dev_id, ino_t inode,
 		Directory** return_dir);
 
@@ -96,6 +96,7 @@ static gchar* pwd;
 static size_t pwd_length;
 
 gchar* mask = "*";
+gchar** masks = NULL;
 
 static Directory* dirs = NULL;
 
@@ -110,6 +111,7 @@ gint main(gint argc, gchar* argv[]) {
 	g_free(basename);
 
 	offset = parse_args(argc, argv);
+	masks = split(mask);
 
 	/* Get max path length. */
 	max_path = get_max_path(".");
@@ -471,9 +473,13 @@ gboolean mask_traverse(gpointer key, gpointer value, gpointer data) {
 	Directory* dir = data;
 
 	if (file->selected != S_YES) {
-		if (fnmatch(mask, file->name, FNM_PERIOD) == 0) {
-			file->shown = TRUE;
-			dir->hidden_count--;
+		gchar** mask_iter = masks;
+		while (*mask_iter) {
+			if (fnmatch(*mask_iter, file->name, FNM_PERIOD) == 0) {
+				file->shown = TRUE;
+				dir->hidden_count--;
+			}
+			mask_iter++;
 		}
 	}
 
@@ -799,5 +805,75 @@ static gint cmp_win(gconstpointer a, gconstpointer b) {
 		else
 			return strcmp(aa->name, bb->name);
 	}
+}
+
+
+/* Split the given mask into words (mini-masks). E.g.:
+	   "*.c *.h" is split into "*.c" and "*.h".
+   This function performs very little error checking, as it's assumed the
+   mask has been sanitized by vgseer. */
+static gchar** split(gchar* mask) {
+
+	g_return_val_if_fail(mask != NULL, NULL);
+
+	GPtrArray* ptrarray = g_ptr_array_new();
+	gchar* start = NULL;
+	gchar* end = NULL;
+
+	mask = g_strdup(mask);
+	mask = g_strchug(mask);
+
+	/* Split the mask into words. */
+	start = end = mask;
+	while (*start != '\0') {
+
+		switch (*end) {
+
+			case ' ':
+				/* End of word. */
+				*end = '\0';
+				g_ptr_array_add(ptrarray, start);
+				start = end + 1;
+				while (*start == ' ')
+					start++;
+				end = start;
+				continue;
+				break;
+
+			case '\0':
+				g_ptr_array_add(ptrarray, start);
+				start = end;
+				break;
+
+			case '\\':
+				end++;
+				break;
+
+			case '\"':
+				end++;
+				while (*end != '\"')
+					end++;
+				break;
+
+			case '\'':
+				end++;
+				while (*end != '\'')
+					end++;
+				break;
+		}
+
+		end++;
+	}
+
+	/* Take the pointer array and delimit it with NULL.  This might not be
+	   necessary. */
+	gchar** array = g_new(gchar*, ptrarray->len + 1);
+	gint i;
+	for (i = 0; i < ptrarray->len; i++)
+		array[i] = ptrarray->pdata[i];
+	array[i] = NULL;
+
+	g_ptr_array_free(ptrarray, FALSE);
+	return array;
 }
 
