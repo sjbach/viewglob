@@ -60,7 +60,6 @@ static void analyze_effect(MatchEffect effect);
 
 /* Pattern completion actions. */
 static MatchEffect seq_ps1_separator(void);
-static MatchEffect seq_ps2_separator(void);
 static MatchEffect seq_rprompt_separator_start(void);
 static MatchEffect seq_rprompt_separator_end(void);
 static MatchEffect seq_zsh_completion_done(void);
@@ -93,7 +92,6 @@ static MatchEffect seq_term_newline(void);
 /* viewglob escape sequences.
    Note: if these are changed, the init-viewglob.*rc files must be updated. */
 static char* const PS1_SEPARATOR_SEQ = "\033[0;30m\033[0m\033[1;37m\033[0m";
-static char* const PS2_SEPARATOR_SEQ = "\033[0;34m\033[0m\033[0;31m\033[0m";
 static char* const RPROMPT_SEPARATOR_START_SEQ = "\033[0;34m\033[0m\033[0;31m\033[0m";
 static char* const RPROMPT_SEPARATOR_END_SEQ = "\033[0;34m\033[0m\033[0;31m\033[0m" "\033[" DIGIT_S "D";
 static char* const EAT_START_SEQ  = "\033P";
@@ -223,11 +221,11 @@ static void init_bash_seqs(void) {
 
 	shell = ST_BASH;
 
-	seq_groups[PL_AT_PROMPT].n = 14;
-	seq_groups[PL_AT_PROMPT].seqs = XMALLOC(Sequence, 14);
+	seq_groups[PL_AT_PROMPT].n = 13;
+	seq_groups[PL_AT_PROMPT].seqs = XMALLOC(Sequence, 13);
 
-	seq_groups[PL_EXECUTING].n = 3;
-	seq_groups[PL_EXECUTING].seqs = XMALLOC(Sequence, 3);
+	seq_groups[PL_EXECUTING].n = 2;
+	seq_groups[PL_EXECUTING].seqs = XMALLOC(Sequence, 2);
 
 	seq_groups[PL_EATING].n = 1;
 	seq_groups[PL_EATING].seqs = XMALLOC(Sequence, 1);
@@ -252,10 +250,10 @@ static void init_bash_seqs(void) {
 	seq_groups[PL_AT_PROMPT].seqs[0].length = strlen(PS1_SEPARATOR_SEQ);
 	seq_groups[PL_AT_PROMPT].seqs[0].func = seq_ps1_separator;
 
-	strcpy(seq_groups[PL_AT_PROMPT].seqs[1].name, "PS2 separator");
-	seq_groups[PL_AT_PROMPT].seqs[1].seq = PS2_SEPARATOR_SEQ;
-	seq_groups[PL_AT_PROMPT].seqs[1].length = strlen(PS2_SEPARATOR_SEQ);
-	seq_groups[PL_AT_PROMPT].seqs[1].func = seq_ps2_separator;
+	strcpy(seq_groups[PL_AT_PROMPT].seqs[1].name, "Eat start");
+	seq_groups[PL_AT_PROMPT].seqs[1].seq = EAT_START_SEQ;
+	seq_groups[PL_AT_PROMPT].seqs[1].length = strlen(EAT_START_SEQ);
+	seq_groups[PL_AT_PROMPT].seqs[1].func = seq_eat_start;
 
 	strcpy(seq_groups[PL_AT_PROMPT].seqs[2].name, "Term cmd wrapped");
 	seq_groups[PL_AT_PROMPT].seqs[2].seq = TERM_CMD_WRAPPED_SEQ;
@@ -297,25 +295,20 @@ static void init_bash_seqs(void) {
 	seq_groups[PL_AT_PROMPT].seqs[9].length = strlen(TERM_BELL_SEQ);
 	seq_groups[PL_AT_PROMPT].seqs[9].func = seq_term_bell;
 
-	strcpy(seq_groups[PL_AT_PROMPT].seqs[10].name, "Cursor up");
+	strcpy(seq_groups[PL_AT_PROMPT].seqs[10].name, "Term cursor up");
 	seq_groups[PL_AT_PROMPT].seqs[10].seq = TERM_CURSOR_UP_SEQ;
 	seq_groups[PL_AT_PROMPT].seqs[10].length = strlen(TERM_CURSOR_UP_SEQ);
 	seq_groups[PL_AT_PROMPT].seqs[10].func = seq_term_cursor_up;
 
-	strcpy(seq_groups[PL_AT_PROMPT].seqs[11].name, "Carriage return");
+	strcpy(seq_groups[PL_AT_PROMPT].seqs[11].name, "Term carriage return");
 	seq_groups[PL_AT_PROMPT].seqs[11].seq = TERM_CARRIAGE_RETURN_SEQ;
 	seq_groups[PL_AT_PROMPT].seqs[11].length = strlen(TERM_CARRIAGE_RETURN_SEQ);
 	seq_groups[PL_AT_PROMPT].seqs[11].func = seq_term_carriage_return;
 
-	strcpy(seq_groups[PL_AT_PROMPT].seqs[12].name, "Newline");
+	strcpy(seq_groups[PL_AT_PROMPT].seqs[12].name, "Term newline");
 	seq_groups[PL_AT_PROMPT].seqs[12].seq = TERM_NEWLINE_SEQ;
 	seq_groups[PL_AT_PROMPT].seqs[12].length = strlen(TERM_NEWLINE_SEQ);
 	seq_groups[PL_AT_PROMPT].seqs[12].func = seq_term_newline;
-
-	strcpy(seq_groups[PL_AT_PROMPT].seqs[13].name, "Eat start");
-	seq_groups[PL_AT_PROMPT].seqs[13].seq = EAT_START_SEQ;
-	seq_groups[PL_AT_PROMPT].seqs[13].length = strlen(EAT_START_SEQ);
-	seq_groups[PL_AT_PROMPT].seqs[13].func = seq_eat_start;
 
 	/* PL_EXECUTING */
 	strcpy(seq_groups[PL_EXECUTING].seqs[0].name, "PS1 separator");
@@ -323,15 +316,10 @@ static void init_bash_seqs(void) {
 	seq_groups[PL_EXECUTING].seqs[0].length = strlen(PS1_SEPARATOR_SEQ);
 	seq_groups[PL_EXECUTING].seqs[0].func = seq_ps1_separator;
 
-	strcpy(seq_groups[PL_EXECUTING].seqs[1].name, "PS2 separator");
-	seq_groups[PL_EXECUTING].seqs[1].seq = PS2_SEPARATOR_SEQ;
-	seq_groups[PL_EXECUTING].seqs[1].length = strlen(PS2_SEPARATOR_SEQ);
-	seq_groups[PL_EXECUTING].seqs[1].func = seq_ps2_separator;
-
-	strcpy(seq_groups[PL_EXECUTING].seqs[2].name, "Eat start");
-	seq_groups[PL_EXECUTING].seqs[2].seq = EAT_START_SEQ;
-	seq_groups[PL_EXECUTING].seqs[2].length = strlen(EAT_START_SEQ);
-	seq_groups[PL_EXECUTING].seqs[2].func = seq_eat_start;
+	strcpy(seq_groups[PL_EXECUTING].seqs[1].name, "Eat start");
+	seq_groups[PL_EXECUTING].seqs[1].seq = EAT_START_SEQ;
+	seq_groups[PL_EXECUTING].seqs[1].length = strlen(EAT_START_SEQ);
+	seq_groups[PL_EXECUTING].seqs[1].func = seq_eat_start;
 
 	/* PL_EATING */
 	strcpy(seq_groups[PL_EATING].seqs[0].name, "Eat end");
@@ -698,14 +686,6 @@ static MatchEffect seq_eat_end(void) {
 
 	seqbuff_dequeue(u.seqbuff.pos, false);
 	return ME_PWD_CHANGED;
-}
-
-
-/* For now matching the PS2 separator means nothing; viewglob will
-   not process multiline commands. */
-static MatchEffect seq_ps2_separator(void) {
-	seqbuff_dequeue(u.seqbuff.pos, false);
-	return ME_CMD_EXECUTED;
 }
 
 

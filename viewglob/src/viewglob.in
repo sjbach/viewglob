@@ -119,6 +119,8 @@ vg_test_show_max() {
 
 if [[ -z "$DISPLAY" ]]
 	then vg_error "Must be run from a graphical environment" 2
+elif [[ "$VG_VIEWGLOB_ACTIVE" = yep ]]
+	then vg_error "This shell is already being monitored" 2
 fi
 
 VG_CONFIG_FILE="$HOME/.viewglobrc"

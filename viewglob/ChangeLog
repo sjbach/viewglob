@@ -1,3 +1,9 @@
+2004-09-04 19:37  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* init-viewglob.bashrc, init-viewglob.zshrc, sequences.c, viewglob.in:
+	- Removed PS2 sequence functionality (wasn't used anyway).
+	- Executing viewglob while it's already running now disallowed.
+
 2004-09-04 17:10  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* cmdline.c, cmdline.h, seer.c, sequences.c, sequences.h:

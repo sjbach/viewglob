@@ -18,9 +18,10 @@ else
 		export PROMPT="%{"$'\e[44;1;33m'"%}*%{"$'\e[0m'"%}${PROMPT}"
 	fi
 
-	# Adding semaphores to the ends of these variables.
+	# Adding semaphores.
 	export PROMPT="${PROMPT}%{"$'\e[0;30m'"%}%{"$'\e[0m'"%}%{"$'\e[1;37m'"%}%{"$'\e[0m'"%}"
 
+	# RPROMPT has semaphores on both ends.
 	RPROMPT="%{"$'\e[0;34m'"%}%{"$'\e[0m'"%}%{"$'\e[0;31m'"%}%{"$'\e[0m'"%}${RPROMPT}"
 	export RPROMPT="${RPROMPT}%{"$'\e[0;34m'"%}%{"$'\e[0m'"%}%{"$'\e[0;31m'"%}%{"$'\e[0m'"%}"
 
@@ -48,9 +49,13 @@ else
 		}
 	fi
 
+	# Used to make sure the user doesn't run viewglob on top of a viewglob
+	# shell.  The naming is purposely ugly to ensure there's no clobbering.
+	export VG_VIEWGLOB_ACTIVE=yep
 fi
 
 # Don't want to clutter the environment.
 unset VG_ASTERISK
 unset VG_SANDBOX
 unset VG_TEMP_FILE
+
