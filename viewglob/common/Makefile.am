@@ -1,4 +1,4 @@
 
-noinst_HEADERS = hardened-io.h ptytty.h common.h param-io.h io-all.h \
-                 shell.h
+
+noinst_HEADERS = common.h hardened-io.h param-io.h shell.h ptytty.h children.h
 

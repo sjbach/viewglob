@@ -29,7 +29,6 @@
 #include <signal.h>
 #include <fcntl.h>
 #include <string.h>
-#include <glib.h>
 
 #include <sys/wait.h>
 #ifndef WEXITSTATUS
@@ -358,10 +357,13 @@ gboolean child_fork(struct child* c) {
 						g_strerror(errno));
 				goto child_fail;
 			}
+			//(void) close(STDERR_FILENO);
 			(void) close(pfdout[0]); // FIXME check errors
 			(void) close(pfdout[1]);
 			(void) close(pfdin[0]);
 			(void) close(pfdin[1]);
+
+			g_printerr("(%s)(%s)\n", getenv("ZDOTDIR"), getenv("VG_DIR"));
 
 			execvp(c->exec_name, c->args.argv);
 

@@ -605,7 +605,7 @@ static void process_sandbox(struct user_state* u, struct vgd_stuff* vgd) {
 
 //	FILE* temp;
 //	temp = fopen("/tmp/sandbox.txt", "a");
-//	fwrite(cnct->buf, 1, cnct->filled, temp);
+//	fwrite(buf, 1, nread, temp);
 //	fclose(temp);
 
 	if (vgd->vgexpand_called) {
@@ -976,9 +976,13 @@ static gboolean fork_shell(struct child* child, enum shell_type type,
 				return FALSE;
 			if (sandbox) {
 				/* Disable the line editor.  This can be overridden, so we
-				   also disable it in the rc file. */
+				   also disable it in the rc file.  Disabling this twice
+				   sometimes causes a pointless error message.  Annoying. */
 				args_add(&child->args, "+Z");
 			}
+			/* Force interactive mode, otherwise zsh doesn't read its
+			   initialization files in the sandbox shell. */
+			args_add(&child->args, "-i");
 			break;
 
 		default:

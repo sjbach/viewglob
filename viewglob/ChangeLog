@@ -1,3 +1,10 @@
+2005-03-28 20:55  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* bootstrap, common/Makefile.am vgseer/Makefile.am: changes
+	* init-viewglob.zshrc: tried to prevent warning message, no avail
+	* vgseer.c: force interactive mode for zsh
+	* children.c, children.h: moved to common
+
 2005-03-28 17:55  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* sanitize.h, sanitize.c: moved back to vgseer

@@ -32,11 +32,11 @@ if [ "$VG_SANDBOX" = yep ]; then
 
 	# We have to disable this stuff because...
 	# History expansion is a no-go.
-	# The NOMATCH error message prevents glob-expand from running.
+	# The NOMATCH error message prevents vgexpand from running.
 	# Global aliases could be dangerous to the filesystem, and they can't be
 	#   disabled without disabling all aliases (AFAIK).
 	# No spell check!
-	# BAD_PATTERN can prevent glob-expand from running.
+	# BAD_PATTERN can prevent vgexpand from running.
 	# The sandbox should NEVER modify the file system, but turn off
 	#   clobbering and star_silent just in case.
 	# Don't save history in the sandbox.
@@ -51,7 +51,7 @@ if [ "$VG_SANDBOX" = yep ]; then
 		NO_CLOBBER        \
 		NO_RM_STAR_SILENT \
 		NO_RCS            \
-		NO_ZLE
+		NO_ZLE >/dev/null 2>&1
 
 	# And we don't want these functions in the sandbox.
 	unfunction chpwd periodic precmd preexec        2>/dev/null
@@ -63,7 +63,7 @@ if [ "$VG_SANDBOX" = yep ]; then
 	# No prompt (less junk to read)
 	unset PS1
 
-	# Only viewglob programs (glob-expand) in the path.
+	# Only viewglob programs (vgexpand) in the path.
 	PATH="$VG_DIR"
 
 else
