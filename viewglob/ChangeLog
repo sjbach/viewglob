@@ -1,3 +1,7 @@
+2004-08-22 23:10  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* dlisting.c: put some space to the left of the directory heading labels.
+
 2004-08-22 22:45  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* gviewglob/Makefile.am, dlisting.c, file_box.c, file_box.h, gviewglob.c,

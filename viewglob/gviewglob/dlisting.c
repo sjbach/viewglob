@@ -81,6 +81,7 @@ DListing* dlisting_new(const GString* name, gint rank, const GString* selected_c
 	GtkWidget* dir_heading_event_box;
 	GtkWidget* dir_heading_vbox;
 	GtkWidget* dir_heading_separator;
+	GtkWidget* left_spacer;
 	GtkWidget* dir_label;
 	GtkWidget* file_num_label;
 
@@ -139,13 +140,21 @@ DListing* dlisting_new(const GString* name, gint rank, const GString* selected_c
 	g_free(temp2);
 	g_free(temp3);
 	gtk_misc_set_alignment(GTK_MISC(dir_label), 0, 0);
-	gtk_box_pack_start(GTK_BOX(dir_heading_vbox), dir_label, FALSE, FALSE, 0);
+	left_spacer = gtk_alignment_new(0, 0, 0, 0);
+	gtk_alignment_set_padding(GTK_ALIGNMENT(left_spacer), 0, 0, 2, 0);
+	gtk_container_add(GTK_CONTAINER(left_spacer), dir_label);
+	gtk_box_pack_start(GTK_BOX(dir_heading_vbox), left_spacer, FALSE, FALSE, 0);
+	gtk_widget_show(left_spacer);
 	gtk_widget_show(dir_label);
 
 	/* Create file selection number label and align it to the left. */
 	file_num_label = gtk_label_new(NULL);
 	gtk_misc_set_alignment(GTK_MISC(file_num_label), 0, 0);
-	gtk_box_pack_start(GTK_BOX(dir_heading_vbox), file_num_label, FALSE, FALSE, 0);
+	left_spacer = gtk_alignment_new(0, 0, 0, 0);
+	gtk_alignment_set_padding(GTK_ALIGNMENT(left_spacer), 0, 0, 2, 0);
+	gtk_container_add(GTK_CONTAINER(left_spacer), file_num_label);
+	gtk_box_pack_start(GTK_BOX(dir_heading_vbox), left_spacer, FALSE, FALSE, 0);
+	gtk_widget_show(left_spacer);
 	gtk_widget_show(file_num_label);
 	new_dl->count_label = file_num_label;
 
