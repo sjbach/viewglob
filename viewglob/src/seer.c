@@ -447,6 +447,7 @@ static bool user_activity(void) {
 	if (!termb.buf && !shellb.buf) {
 		termb.buf = XMALLOC(char, termb.size);
 		shellb.buf = XMALLOC(char, shellb.size);
+		displayb.buf = XMALLOC(char, displayb.size);
 	}
 
 	/* Check to see if the user shell has been closed.  This is necessary
@@ -489,9 +490,6 @@ static bool user_activity(void) {
 	/* If data has been written by the display... */
 	if (display_running(&disp)) {
 		if (FD_ISSET(disp.feedback_fifo_fd, &fdset_read)) {
-			viewglob_warning("Data written!");
-			//hardened_read(disp.feedback_fifo_fd, displayb.buf, displayb.size, &displayb.filled);
-
 			if (!hardened_read(disp.feedback_fifo_fd, displayb.buf, displayb.size, &displayb.filled)) {
 				if (errno == EIO)
 					goto done;
@@ -502,9 +500,9 @@ static bool user_activity(void) {
 				}
 			}
 			else if (displayb.filled == 0) {
+				/* The display was closed ("toggled"). */
 				DEBUG((df, "~~0~~"));
-				action_queue(A_EXIT);
-				viewglob_warning("No filled!");
+				action_queue(A_TOGGLE);
 				goto done;
 			}
 		}

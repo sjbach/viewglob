@@ -49,9 +49,8 @@ static void  process_glob_data(const gchar* buff, gsize bytes, Exhibit* e);
 static FileSelection  map_selection_state(const GString* string);
 static FileType       map_file_type(const GString* string);
 
-static gboolean  win_delete_event(GtkWidget* widget, GdkEvent* event, GIOChannel* feedback_channel);
-//static gboolean  win_delete_event(GtkWidget*, GdkEvent*, gpointer);
-static gboolean  configure_event(GtkWidget* window, GdkEventConfigure* event, Exhibit* e);
+static gboolean  window_delete_event(GtkWidget* widget, GdkEvent* event, gpointer data);
+static gboolean  window_configure_event(GtkWidget* window, GdkEventConfigure* event, Exhibit* e);
 static gboolean  window_state_event(GtkWidget *window, GdkEvent *event, Exhibit* e);
 
 /* Globals. */
@@ -148,41 +147,7 @@ static GString* read_string(const gchar* buff, gsize* start, gsize n, gchar deli
 }
 
 
-
-static gboolean win_delete_event(GtkWidget* widget, GdkEvent* event, GIOChannel* feedback_channel) {
-	gsize bytes_written;
-	GError* error = NULL;
-
-	gchar* buf = "status:exited";
-
-
-	g_printerr("called");
-	//switch ( g_io_channel_write_chars(feedback_channel, "status:exited", -1, &bytes_written, &error) ) {
-	switch ( g_io_channel_write_chars(feedback_channel, buf, strlen(buf), &bytes_written, &error) ) {
-
-			case (G_IO_STATUS_ERROR):
-				g_printerr("gviewglob: %s\n", error->message);
-				break;
-
-			case (G_IO_STATUS_NORMAL):
-				g_printerr("normal");
-				break;
-
-			case (G_IO_STATUS_EOF):
-				DEBUG((df, "win_delete_event shutdown\n"));
-				break;
-
-			case (G_IO_STATUS_AGAIN):
-				g_printerr("again");
-				break;
-
-			default:
-				g_warning("Unexpected result from g_io_channel_write_chars.");
-				break;
-		}
-
-	//g_printerr("called2");
-	DEBUG((df, "((%d))", bytes_written));
+static gboolean window_delete_event(GtkWidget* widget, GdkEvent* event, gpointer data) {
 	gtk_main_quit();
 	return FALSE;
 }
@@ -664,7 +629,7 @@ static GdkPixbuf* make_pixbuf_scaled(const guint8 icon_inline[], gint scale_size
 }
 
 
-static gboolean configure_event(GtkWidget* window, GdkEventConfigure* event, Exhibit* e) {
+static gboolean window_configure_event(GtkWidget* window, GdkEventConfigure* event, Exhibit* e) {
 	GSList* dl_iter;
 	DListing* dl;
 
@@ -692,8 +657,6 @@ static gboolean window_state_event(GtkWidget *window, GdkEvent *event, Exhibit* 
 		e->iconified = TRUE;
 	else
 		e->iconified = FALSE;
-
-	//g_print("<%d>", e->iconified);
 
 	return FALSE;
 }
@@ -823,7 +786,6 @@ int main(int argc, char *argv[]) {
 	gtk_container_set_border_width (GTK_CONTAINER(e.window), 5);
 	gtk_window_set_title(GTK_WINDOW(e.window), (gchar *) "gviewglob");
 	gtk_window_set_default_size(GTK_WINDOW(e.window), 340, 420);
-	g_signal_connect(G_OBJECT (e.window), "delete_event", G_CALLBACK(win_delete_event), feedback_channel);
 
 	/* VBox for the scrolled window and the command-line widget. */
 	vbox = gtk_vbox_new(FALSE, 2);
@@ -882,10 +844,9 @@ int main(int argc, char *argv[]) {
 	g_signal_connect(G_OBJECT(window), "configure-event", G_CALLBACK(configure_event2), label);
 	*/
 
-	/* Keep tabs on the size of this widget. */
-	/* g_signal_connect(G_OBJECT(e.listings_box), "size-allocate", G_CALLBACK(listing_resize_event), &e); */
-	g_signal_connect(G_OBJECT(e.window), "configure-event", G_CALLBACK(configure_event), &e);
+	g_signal_connect(G_OBJECT(e.window), "configure-event", G_CALLBACK(window_configure_event), &e);
 	g_signal_connect(G_OBJECT(e.window), "window-state-event", G_CALLBACK(window_state_event), &e);
+	g_signal_connect(G_OBJECT (e.window), "delete_event", G_CALLBACK(window_delete_event), NULL);
 
 	set_icons(&e);
 
@@ -924,9 +885,9 @@ int main(int argc, char *argv[]) {
 			return 2;
 		}
 		g_io_channel_set_encoding(feedback_channel, NULL, NULL);
-		g_io_channel_set_flags(feedback_channel, G_IO_FLAG_NONBLOCK, NULL);
+		/*g_io_channel_set_buffered(feedback_channel, FALSE);*/
+		/*g_io_channel_set_flags(feedback_channel, G_IO_FLAG_NONBLOCK, NULL);*/
 	}
-
 
 	/*gdk_window_set_debug_updates(TRUE);*/
 

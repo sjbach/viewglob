@@ -1,3 +1,8 @@
+2004-09-20 18:02  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* gviewglob.c, seer.c:
+	  If user closes the display, seer finds out and toggles it off.
+
 2004-09-20 15:58  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* src/Makefile.am, gviewglob/Makefile.am:
