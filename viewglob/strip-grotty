@@ -1,0 +1,10 @@
+#!/usr/bin/perl -n
+# Yanked from the giFTcurs package:
+#  http://www.nongnu.org/giftcurs/
+# Strip unwanted whitespace and stuff from the output of
+#  groff -Tlatin1 -P-cub -ms file.ms
+undef $/;			# Read the whole file at once
+s/^\s+-\d+-\s+$//mg;# Get rid of page breaks
+s/^\s+\n//g;		# Get rid of the whitespace at the top
+s/\s+$/\n/g;		# Get rid of the whitespace at the bottom
+print;
