@@ -3,6 +3,7 @@
 	* gviewglob.c, ptutil.c.diff, ptutil.c.viewglob, sequences.c, sequences.h:
 	  Integrating a patch from Kevin B. McCarty which fixes several build
 	  warnings.
+	* init-viewglob.bashrc, init-viewglob.zshrc: adding GPL notice.
 
 2004-09-04 19:37  Stephen Bach <sjbach@users.sourceforge.net>
 
