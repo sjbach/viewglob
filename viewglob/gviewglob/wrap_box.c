@@ -246,7 +246,6 @@ static void wrap_box_set_property (GObject *object, guint property_id, const GVa
 
 static void wrap_box_get_property (GObject *object, guint property_id, GValue *value, GParamSpec *pspec) {
 	WrapBox *wbox = WRAP_BOX (object);
-	GtkWidget *widget = GTK_WIDGET (object);
 
 	switch (property_id) {
 		case PROP_JUSTIFY:
@@ -580,51 +579,6 @@ static inline void get_child_requisition (WrapBox *wbox, GtkWidget *child, GtkRe
 }
 
 
-static gfloat get_layout_size (WrapBox *this, guint max_height, guint *height_inc) {
-	WrapBoxChild *child;
-	guint n_cols, left_over = 0, total_width = 0;
-	gboolean last_col_filled = TRUE;
-
-	*height_inc = this->max_child_height + 1;
-
-	n_cols = 0;
-	for (child = this->children; child; child = child->next) {
-		WrapBoxChild *col_child;
-		GtkRequisition child_requisition;
-		guint col_height, col_width, n = 1;
-
-		if (!GTK_WIDGET_VISIBLE (child->widget))
-			continue;
-
-		get_child_requisition (this, child->widget, &child_requisition);
-		if (!last_col_filled)
-			*height_inc = MIN (*height_inc, child_requisition.height - left_over);
-		col_height = child_requisition.height;
-		col_width = child_requisition.width;
-		for (col_child = child->next; col_child && n < this->child_limit; col_child = col_child->next) {
-			if (GTK_WIDGET_VISIBLE (col_child->widget)) {
-				get_child_requisition (this, col_child->widget, &child_requisition);
-				if (col_height + this->vspacing + child_requisition.height > max_height)
-					break;
-				col_height += this->vspacing + child_requisition.height;
-				col_width = MAX (col_width, child_requisition.width);
-				n++;
-			}
-			child = col_child;
-		}
-		last_col_filled = n >= this->child_limit;
-		left_over = last_col_filled ? 0 : max_height - (col_height + this->vspacing);
-		total_width += (n_cols ? this->hspacing : 0) + col_width;
-		n_cols++;
-	}
-
-	if (*height_inc > this->max_child_height)
-		*height_inc = 0;
-
-	return MAX (total_width, 1);
-}
-
-
 /* Get an upper bound on the number of possible columns. */
 static guint get_upper_bound_cols(WrapBox* this, guint optimal_width) {
 	WrapBoxChild* child;
@@ -677,14 +631,13 @@ void wrap_box_size_request_optimal(GtkWidget* widget, GtkRequisition* requisitio
 
 	guint col, cols;
 	guint16 n_visible_children;
-	guint hspacing;
 
 	cols = get_upper_bound_cols(this, optimal_width);
-
 	n_visible_children = get_n_visible_children(this);
 
 	/* Get "max" child height. */
-	if (child = this->children) {
+	child = this->children;
+	if (child) {
 		gtk_widget_size_request(child->widget, &child_req);
 		this->max_child_height = child_req.height;
 	}

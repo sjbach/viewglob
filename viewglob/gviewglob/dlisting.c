@@ -21,6 +21,7 @@
 #include "gviewglob.h"
 #include "wrap_box.h"
 #include "file_box.h"
+#include <string.h>    /* For strcmp. */
 
 #if DEBUG_ON
 extern FILE* df;

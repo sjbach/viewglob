@@ -32,6 +32,33 @@
 #include "file_box.h"
 #include "gviewglob.h"
 
+/* Prototypes. */
+static gboolean receive_data(GIOChannel* source, gchar* buff, gsize size, gsize* bytes_read);
+static GString* read_string(const gchar* buff, gsize* start, gsize n, gchar delim, struct holdover* ho, gboolean* finished);
+
+static void        set_icons(Exhibit* e);
+static GdkPixbuf*  make_pixbuf_scaled(const guint8 icon_inline[], gint scale_height);
+
+static gboolean  parse_args(int argc, char** argv);
+static void      report_version(void);
+
+static void process_cmd_data(const gchar* buff, gsize bytes, Exhibit* e);
+static void process_glob_data(const gchar* buff, gsize bytes, Exhibit* e);
+
+static void exhibit_unmark_all(Exhibit* e);
+static void exhibit_cull(Exhibit* e);
+static void exhibit_rearrange_and_show(Exhibit* e);
+
+static FileSelection  map_selection_state(const GString* string);
+static FileType       map_file_type(const GString* string);
+
+static gint cmp_dlisting_same_name(gconstpointer a, gconstpointer b);
+static gint cmp_dlisting_same_rank(gconstpointer a, gconstpointer b);
+
+static void      listing_resize_event(GtkWidget* widget, GtkAllocation* allocation, Exhibit* e);
+static gboolean  win_delete_event(GtkWidget*, GdkEvent*, gpointer);
+
+
 struct viewable_preferences v;
 
 #if DEBUG_ON
@@ -225,19 +252,6 @@ static gboolean receive_data(GIOChannel* source, gchar* buff, gsize size, gsize*
 }
 
 
-static void dlisting_debug_print_marked(const GSList* dl_slist) {
-	DListing* dl;
-	DEBUG((df, "marked:\n"));
-	while (dl_slist) {
-		dl = dl_slist->data;
-		if ( dl->marked == TRUE )
-			DEBUG((df, " - %s\n", dl->name->str));
-		dl_slist = g_slist_next(dl_slist);
-	}
-	DEBUG((df, "---\n"));
-}
-
-
 /* Finite state machine to interpret cmd data. */
 static void process_cmd_data(const gchar* buff, gsize bytes, Exhibit* e) {
 	static enum read_state rs = RS_DONE;  /* These variables are all static because they may need */
@@ -277,6 +291,10 @@ static void process_cmd_data(const gchar* buff, gsize bytes, Exhibit* e) {
 					g_string_free(string, TRUE);
 				}
 				break;
+
+			default:
+				g_error("Unexpected read state in process_cmd_data.");
+				break;
 		}
 	}
 
@@ -302,7 +320,6 @@ static void process_glob_data(const gchar* buff, gsize bytes, Exhibit* e) {
 
 	static gint dir_rank = 0;
 	static DListing* dl;
-	FItem* fi;
 
 	GString* string = NULL;
 	GSList* search_result;
@@ -436,6 +453,10 @@ static void process_glob_data(const gchar* buff, gsize bytes, Exhibit* e) {
 					rs = RS_IN_LIMBO;
 				}
 				break;
+
+			default:
+				g_error("Unexpected read state in process_glob_data.");
+				break;
 		}
 	}
 
@@ -461,7 +482,7 @@ static void exhibit_rearrange_and_show(Exhibit* e) {
 	GSList* search_result;
 
 	/* DEBUG((df, "DListings in order of rank:\n")); */
-	while (search_result = g_slist_find_custom(e->dl_slist, &next_rank, cmp_dlisting_same_rank)) {
+	while ( (search_result = g_slist_find_custom(e->dl_slist, &next_rank, cmp_dlisting_same_rank)) ) {
 		dl = search_result->data;
 		/* DEBUG((df, " - %s\n", dl->name->str)); */
 

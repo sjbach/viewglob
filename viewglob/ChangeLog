@@ -1,3 +1,9 @@
+2004-08-22 22:45  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* gviewglob/Makefile.am, dlisting.c, file_box.c, file_box.h, gviewglob.c,
+	  gviewglob.h, wrap_box.c, wrap_box.h:
+	  Fixing more build warnings.
+
 2004-08-22 21:30  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* gviewglob.c, gviewglob.h: scale file icons to text size.

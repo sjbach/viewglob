@@ -69,7 +69,6 @@ enum _FileDisplayCategory {
 	FDC_INDETERMINATE,
 	FDC_REVEAL,        /* Display regularly. */
 	FDC_MASK,          /* Display only if selected (peek). */
-	//FDC_PEEK,          /* Normally masked, but temporarily displayed. */
 };
 
 /* --- FileBox --- */

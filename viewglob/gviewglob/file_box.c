@@ -19,6 +19,7 @@
 
 #include "common.h"
 #include "file_box.h"
+#include "wrap_box.h"
 #include <gtk/gtk.h>
 #include <string.h>      /* For strcmp */
 
@@ -38,11 +39,10 @@ enum {
 /* --- prototypes --- */
 static void  file_box_class_init(FileBoxClass* klass);
 static void  file_box_init(FileBox* fbox);
-static void  file_box_set_property(GObject* object, guint property_id, const GValue* value, GParamSpec* pspec);
-static void  file_box_get_property(GObject* object, guint property_id, GValue* value, GParamSpec* pspec);
+/*static void  file_box_set_property(GObject* object, guint property_id, const GValue* value, GParamSpec* pspec);*/
+/*static void  file_box_get_property(GObject* object, guint property_id, GValue* value, GParamSpec* pspec);*/
 
 static void  file_box_size_request(GtkWidget* widget, GtkRequisition* requisition);
-static void  file_box_size_allocate(GtkWidget* widget, GtkAllocation* allocation);
 
 static guint  file_box_get_display_pos(FileBox* fbox, FItem* fitem);
 
@@ -291,13 +291,13 @@ void file_box_set_icon(FileType type, GdkPixbuf* icon) {
 
 
 gboolean file_box_get_show_hidden_files(FileBox* fbox) {
-	g_return_if_fail(IS_FILE_BOX(fbox));
+	g_return_val_if_fail(IS_FILE_BOX(fbox), FALSE);
 	return fbox->show_hidden_files;
 }
 
 
 guint file_box_get_file_display_limit(FileBox* fbox) {
-	g_return_if_fail(IS_FILE_BOX(fbox));
+	g_return_val_if_fail(IS_FILE_BOX(fbox), 0);
 	return fbox->file_display_limit;
 }
 
@@ -374,6 +374,10 @@ static void fitem_display(FItem* fi, FileBox* fbox) {
 				fi->widget = NULL;
 			}
 			break;
+
+		default:
+			g_error("Unexpected display category.");
+			break;
 	}
 }
 
@@ -446,7 +450,7 @@ void file_box_flush(FileBox* fbox) {
 static void file_box_size_request(GtkWidget* widget, GtkRequisition* requisition) {
 	FileBox* this = FILE_BOX(widget);
 
-	wrap_box_size_request_optimal(WRAP_BOX(widget), requisition, this->optimal_width);
+	wrap_box_size_request_optimal(widget, requisition, this->optimal_width);
 }
 
 

@@ -78,33 +78,6 @@ enum read_state {
 	RS_FILE_NAME,
 };
 
-
-static gboolean receive_data(GIOChannel* source, gchar* buff, gsize size, gsize* bytes_read);
-static GString* read_string(const gchar* buff, gsize* start, gsize n, gchar delim, struct holdover* ho, gboolean* finished);
-
-static void        set_icons(Exhibit* e);
-static GdkPixbuf*  make_pixbuf_scaled(const guint8 icon_inline[], gint scale_height);
-
-static gboolean  parse_args(int argc, char** argv);
-static void      report_version(void);
-
-static void process_cmd_data(const gchar* buff, gsize bytes, Exhibit* e);
-static void process_glob_data(const gchar* buff, gsize bytes, Exhibit* e);
-
-static void exhibit_unmark_all(Exhibit* e);
-static void exhibit_cull(Exhibit* e);
-static void exhibit_rearrange_and_show(Exhibit* e);
-
-static FileSelection  map_selection_state(const GString* string);
-static FileType       map_file_type(const GString* string);
-
-static gint cmp_dlisting_same_name(gconstpointer a, gconstpointer b);
-static gint cmp_dlisting_same_rank(gconstpointer a, gconstpointer b);
-
-static void listing_resize_event(GtkWidget* widget, GtkAllocation* allocation, Exhibit* e);
-
-static gboolean win_delete_event(GtkWidget*, GdkEvent*, gpointer);
-
 G_END_DECLS
 
 #endif /* !GVIEWGLOB_H */
