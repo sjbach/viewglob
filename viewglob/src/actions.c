@@ -33,6 +33,11 @@ static void    al_push(Action a);
 static Action  al_pop(void);
 
 
+#if DEBUG_ON
+extern FILE* df;
+#endif
+
+
 static struct action_list* al = NULL;
 
 
@@ -57,7 +62,6 @@ Action action_queue(Action o) {
 	switch (o) {
 
 		case (A_SEND_CMD):
-			DEBUG((df, "send_cmd_here"));
 			send_lost = false;
 			send_cmd = true;
 			break;

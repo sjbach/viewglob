@@ -23,6 +23,7 @@
 #include "viewglob-error.h"
 #include "seer.h"
 #include "actions.h"
+#include "buffer.h"
 #include "sequences.h"
 
 #include <string.h>
@@ -37,12 +38,13 @@ struct _Sequence {
 	int length;
 	int pos;
 	bool enabled;               /* Determines whether a match should be attempted. */
-	MatchEffect (*func)(void);  /* Function to run after successful match. */
+	MatchEffect (*func)(Buffer* b);  /* Function to run after successful match. */
 };
 
 /* Each process level (at prompt, executing, and eating) has a set of
    sequences that it checks for.  This struct is for these sets. */
-struct sequence_group {
+typedef struct _SeqGroup SeqGroup;
+struct _SeqGroup {
 	int n;                 /* Number of sequences. */
 	Sequence* seqs;
 };
@@ -55,30 +57,29 @@ static char*  parse_printables(const char* string, const char* sequence);
 static void init_bash_seqs(void);
 static void init_zsh_seqs(void);
 static MatchStatus check_seq(char c, Sequence* sq);
-static void analyze_effect(MatchEffect effect);
+static void analyze_effect(MatchEffect effect, Buffer* b);
 
 /* Pattern completion actions. */
-static MatchEffect seq_ps1_separator(void);
-static MatchEffect seq_rprompt_separator_start(void);
-static MatchEffect seq_rprompt_separator_end(void);
-static MatchEffect seq_zsh_completion_done(void);
-static MatchEffect seq_eat_start(void);
-static MatchEffect seq_eat_end(void);
-static MatchEffect seq_term_cmd_wrapped(void);
-static MatchEffect seq_term_backspace(void);
-static MatchEffect seq_term_cursor_forward(void);
-static MatchEffect seq_term_cursor_backward(void);
-static MatchEffect seq_term_cursor_up(void);
-static MatchEffect seq_term_erase_in_line(void);
-static MatchEffect seq_term_delete_chars(void);
-static MatchEffect seq_term_insert_blanks(void);
-static MatchEffect seq_term_bell(void);
-static MatchEffect seq_term_carriage_return(void);
-static MatchEffect seq_term_newline(void);
+static MatchEffect seq_ps1_separator(Buffer* b);
+static MatchEffect seq_rprompt_separator_start(Buffer* b);
+static MatchEffect seq_rprompt_separator_end(Buffer* b);
+static MatchEffect seq_zsh_completion_done(Buffer* b);
+static MatchEffect seq_new_pwd(Buffer* b);
+static MatchEffect seq_term_cmd_wrapped(Buffer* b);
+static MatchEffect seq_term_backspace(Buffer* b);
+static MatchEffect seq_term_cursor_forward(Buffer* b);
+static MatchEffect seq_term_cursor_backward(Buffer* b);
+static MatchEffect seq_term_cursor_up(Buffer* b);
+static MatchEffect seq_term_erase_in_line(Buffer* b);
+static MatchEffect seq_term_delete_chars(Buffer* b);
+static MatchEffect seq_term_insert_blanks(Buffer* b);
+static MatchEffect seq_term_bell(Buffer* b);
+static MatchEffect seq_term_carriage_return(Buffer* b);
+static MatchEffect seq_term_newline(Buffer* b);
 
 /* In sequences: 
      - The ENQ control character (005) stands for any sequence of digits (or none).
-     - The ACK control character (006) stands for any sequence ofprintable characters (or none).
+     - The ACK control character (006) stands for any sequence of printable characters (or none).
      - The EOT control character (004) stands for any non-linefeed, non-carriage return character. */
 #define DIGIT_C '\005'
 #define PRINTABLE_C '\006'
@@ -92,8 +93,7 @@ static MatchEffect seq_term_newline(void);
 static char* const PS1_SEPARATOR_SEQ = "\033[0;30m\033[0m\033[1;37m\033[0m";
 static char* const RPROMPT_SEPARATOR_START_SEQ = "\033[0;34m\033[0m\033[0;31m\033[0m";
 static char* const RPROMPT_SEPARATOR_END_SEQ = "\033[0;34m\033[0m\033[0;31m\033[0m" "\033[" DIGIT_S "D";
-static char* const EAT_START_SEQ  = "\033P";
-static char* const EAT_END_SEQ = PRINTABLE_S "\033\\";
+static char* const NEW_PWD_SEQ = "\033P" PRINTABLE_S "\033\\";
 
 /* I've observed this always comes at the end of a list of tab completions in zsh. */
 static char* const ZSH_COMPLETION_DONE_SEQ = "\033[0m\033[27m\033[24m\015\033[" DIGIT_S "C";
@@ -120,7 +120,7 @@ extern FILE* df;
 
 extern struct user_shell u;
 
-static struct sequence_group* seq_groups;
+static SeqGroup* seq_groups;
 static enum shell_type shell;
 
 
@@ -198,7 +198,7 @@ int find_next_cret(int pos) {
    in different groups instead of referenced, which should be fixed. */
 void init_seqs(enum shell_type shell) {
 
-	seq_groups = XMALLOC(struct sequence_group, NUM_PROCESS_LEVELS);
+	seq_groups = XMALLOC(SeqGroup, NUM_PROCESS_LEVELS);
 
 	if (shell == ST_BASH)
 		init_bash_seqs();
@@ -225,9 +225,6 @@ static void init_bash_seqs(void) {
 	seq_groups[PL_EXECUTING].n = 2;
 	seq_groups[PL_EXECUTING].seqs = XMALLOC(Sequence, 2);
 
-	seq_groups[PL_EATING].n = 1;
-	seq_groups[PL_EATING].seqs = XMALLOC(Sequence, 1);
-
 	int i;
 	for (i = 0; i < seq_groups[PL_AT_PROMPT].n; i++) {
 		seq_groups[PL_AT_PROMPT].seqs[i].pos = 0;
@@ -237,10 +234,6 @@ static void init_bash_seqs(void) {
 		seq_groups[PL_EXECUTING].seqs[i].pos = 0;
 		seq_groups[PL_EXECUTING].seqs[i].enabled = false;
 	}
-	for (i = 0; i < seq_groups[PL_EATING].n; i++) {
-		seq_groups[PL_EATING].seqs[i].pos = 0;
-		seq_groups[PL_EATING].seqs[i].enabled = false;
-	}
 
 	/* PL_AT_PROMPT */
 	strcpy(seq_groups[PL_AT_PROMPT].seqs[0].name, "PS1 separator");
@@ -248,10 +241,10 @@ static void init_bash_seqs(void) {
 	seq_groups[PL_AT_PROMPT].seqs[0].length = strlen(PS1_SEPARATOR_SEQ);
 	seq_groups[PL_AT_PROMPT].seqs[0].func = seq_ps1_separator;
 
-	strcpy(seq_groups[PL_AT_PROMPT].seqs[1].name, "Eat start");
-	seq_groups[PL_AT_PROMPT].seqs[1].seq = EAT_START_SEQ;
-	seq_groups[PL_AT_PROMPT].seqs[1].length = strlen(EAT_START_SEQ);
-	seq_groups[PL_AT_PROMPT].seqs[1].func = seq_eat_start;
+	strcpy(seq_groups[PL_AT_PROMPT].seqs[1].name, "New pwd");
+	seq_groups[PL_AT_PROMPT].seqs[1].seq = NEW_PWD_SEQ;
+	seq_groups[PL_AT_PROMPT].seqs[1].length = strlen(NEW_PWD_SEQ);
+	seq_groups[PL_AT_PROMPT].seqs[1].func = seq_new_pwd;
 
 	strcpy(seq_groups[PL_AT_PROMPT].seqs[2].name, "Term cmd wrapped");
 	seq_groups[PL_AT_PROMPT].seqs[2].seq = TERM_CMD_WRAPPED_SEQ;
@@ -314,16 +307,10 @@ static void init_bash_seqs(void) {
 	seq_groups[PL_EXECUTING].seqs[0].length = strlen(PS1_SEPARATOR_SEQ);
 	seq_groups[PL_EXECUTING].seqs[0].func = seq_ps1_separator;
 
-	strcpy(seq_groups[PL_EXECUTING].seqs[1].name, "Eat start");
-	seq_groups[PL_EXECUTING].seqs[1].seq = EAT_START_SEQ;
-	seq_groups[PL_EXECUTING].seqs[1].length = strlen(EAT_START_SEQ);
-	seq_groups[PL_EXECUTING].seqs[1].func = seq_eat_start;
-
-	/* PL_EATING */
-	strcpy(seq_groups[PL_EATING].seqs[0].name, "Eat end");
-	seq_groups[PL_EATING].seqs[0].seq = EAT_END_SEQ;
-	seq_groups[PL_EATING].seqs[0].length = strlen(EAT_END_SEQ);
-	seq_groups[PL_EATING].seqs[0].func = seq_eat_end;
+	strcpy(seq_groups[PL_EXECUTING].seqs[1].name, "New pwd");
+	seq_groups[PL_EXECUTING].seqs[1].seq = NEW_PWD_SEQ;
+	seq_groups[PL_EXECUTING].seqs[1].length = strlen(NEW_PWD_SEQ);
+	seq_groups[PL_EXECUTING].seqs[1].func = seq_new_pwd;
 }
 
 
@@ -337,9 +324,6 @@ static void init_zsh_seqs(void) {
 	seq_groups[PL_EXECUTING].n = 4;
 	seq_groups[PL_EXECUTING].seqs = XMALLOC(Sequence, 4);
 
-	seq_groups[PL_EATING].n = 1;
-	seq_groups[PL_EATING].seqs = XMALLOC(Sequence, 1);
-
 	seq_groups[PL_AT_RPROMPT].n = 1;
 	seq_groups[PL_AT_RPROMPT].seqs = XMALLOC(Sequence, 1);
 
@@ -351,10 +335,6 @@ static void init_zsh_seqs(void) {
 	for (i = 0; i < seq_groups[PL_EXECUTING].n; i++) {
 		seq_groups[PL_EXECUTING].seqs[i].pos = 0;
 		seq_groups[PL_EXECUTING].seqs[i].enabled = false;
-	}
-	for (i = 0; i < seq_groups[PL_EATING].n; i++) {
-		seq_groups[PL_EATING].seqs[i].pos = 0;
-		seq_groups[PL_EATING].seqs[i].enabled = false;
 	}
 	for (i = 0; i < seq_groups[PL_AT_RPROMPT].n; i++) {
 		seq_groups[PL_AT_RPROMPT].seqs[i].pos = 0;
@@ -427,10 +407,10 @@ static void init_zsh_seqs(void) {
 	seq_groups[PL_AT_PROMPT].seqs[12].length = strlen(TERM_NEWLINE_SEQ);
 	seq_groups[PL_AT_PROMPT].seqs[12].func = seq_term_newline;
 
-	strcpy(seq_groups[PL_AT_PROMPT].seqs[13].name, "Eat start");
-	seq_groups[PL_AT_PROMPT].seqs[13].seq = EAT_START_SEQ;
-	seq_groups[PL_AT_PROMPT].seqs[13].length = strlen(EAT_START_SEQ);
-	seq_groups[PL_AT_PROMPT].seqs[13].func = seq_eat_start;
+	strcpy(seq_groups[PL_AT_PROMPT].seqs[13].name, "New pwd");
+	seq_groups[PL_AT_PROMPT].seqs[13].seq = NEW_PWD_SEQ;
+	seq_groups[PL_AT_PROMPT].seqs[13].length = strlen(NEW_PWD_SEQ);
+	seq_groups[PL_AT_PROMPT].seqs[13].func = seq_new_pwd;
 
 	/* PL_EXECUTING */
 	strcpy(seq_groups[PL_EXECUTING].seqs[0].name, "PS1 separator");
@@ -443,21 +423,15 @@ static void init_zsh_seqs(void) {
 	seq_groups[PL_EXECUTING].seqs[1].length = strlen(RPROMPT_SEPARATOR_END_SEQ);
 	seq_groups[PL_EXECUTING].seqs[1].func = seq_rprompt_separator_end;
 
-	strcpy(seq_groups[PL_EXECUTING].seqs[2].name, "Eat start");
-	seq_groups[PL_EXECUTING].seqs[2].seq = EAT_START_SEQ;
-	seq_groups[PL_EXECUTING].seqs[2].length = strlen(EAT_START_SEQ);
-	seq_groups[PL_EXECUTING].seqs[2].func = seq_eat_start;
+	strcpy(seq_groups[PL_EXECUTING].seqs[2].name, "New pwd");
+	seq_groups[PL_EXECUTING].seqs[2].seq = NEW_PWD_SEQ;
+	seq_groups[PL_EXECUTING].seqs[2].length = strlen(NEW_PWD_SEQ);
+	seq_groups[PL_EXECUTING].seqs[2].func = seq_new_pwd;
 
 	strcpy(seq_groups[PL_EXECUTING].seqs[3].name, "Zsh completion done");
 	seq_groups[PL_EXECUTING].seqs[3].seq = ZSH_COMPLETION_DONE_SEQ;
 	seq_groups[PL_EXECUTING].seqs[3].length = strlen(ZSH_COMPLETION_DONE_SEQ);
 	seq_groups[PL_EXECUTING].seqs[3].func = seq_zsh_completion_done;
-
-	/* PL_EATING */
-	strcpy(seq_groups[PL_EATING].seqs[0].name, "Eat end");
-	seq_groups[PL_EATING].seqs[0].seq = EAT_END_SEQ;
-	seq_groups[PL_EATING].seqs[0].length = strlen(EAT_END_SEQ);
-	seq_groups[PL_EATING].seqs[0].func = seq_eat_end;
 
 	/* PL_AT_RPROMPT */
 	strcpy(seq_groups[PL_AT_RPROMPT].seqs[0].name, "RPROMPT separator end");
@@ -482,22 +456,30 @@ void enable_all_seqs(enum process_level pl) {
 
 
 
-MatchStatus check_seqs(enum process_level pl, char c) {
+void check_seqs(Buffer* b) {
 	int i;
-	MatchStatus status = MS_NO_MATCH;
 	MatchEffect effect;
 
-	for (i = 0; i < seq_groups[pl].n; i++) {
-		status |= check_seq(c, seq_groups[pl].seqs + i);
-		if (status & MS_MATCH) {
-			DEBUG((df, "Matched seq \"%s\" (%d)\n", seq_groups[pl].seqs[i].name, i));
-			effect = (*(seq_groups[pl].seqs[i].func))();		/* Execute the pattern match function. */
-			analyze_effect(effect);
+	char c = b->buf[b->pos + (b->n - 1)];
+	SeqGroup seq_group = seq_groups[b->pl];
+
+	b->status = MS_NO_MATCH;
+	for (i = 0; i < seq_group.n; i++) {
+
+		Sequence* seq = seq_group.seqs + i;
+
+		b->status |= check_seq(c, seq);
+		if (b->status & MS_MATCH) {
+
+			DEBUG((df, "Matched seq \"%s\" (%d)\n", seq->name, i));
+
+			/* Execute the pattern match function and analyze. */
+			effect = (*(seq->func))(b);
+			analyze_effect(effect, b);
+
 			break;
 		}
 	}
-
-	return status;
 }
 
 
@@ -576,7 +558,7 @@ static MatchStatus check_seq(char c, Sequence* sq) {
 
 /* React (or not) on the instance of a sequence match. */
 /* FIXME probably should return a bool for graceful crash. */
-static void analyze_effect(MatchEffect effect) {
+static void analyze_effect(MatchEffect effect, Buffer* b) {
 
 	switch (effect) {
 
@@ -585,7 +567,7 @@ static void analyze_effect(MatchEffect effect) {
 			/* Clear the command line to indicate we're out of sync,
 			   and wait for the next PS1. */
 			cmd_clear();
-			u.pl = PL_EXECUTING;
+			b->pl = PL_EXECUTING;
 			break;
 
 		case ME_NO_EFFECT:
@@ -594,7 +576,7 @@ static void analyze_effect(MatchEffect effect) {
 
 		case ME_CMD_EXECUTED:
 			DEBUG((df, "**CMD_EXECUTED**\n"));
-			u.pl = PL_EXECUTING;
+			b->pl = PL_EXECUTING;
 			break;
 
 		case ME_CMD_STARTED:
@@ -603,14 +585,14 @@ static void analyze_effect(MatchEffect effect) {
 				u.cmd.rebuilding = false;
 			else
 				cmd_clear();
-			u.pl = PL_AT_PROMPT;
+			b->pl = PL_AT_PROMPT;
 			action_queue(A_SEND_CMD);
 			break;
 
 		case ME_CMD_REBUILD:
 			DEBUG((df, "**CMD_REBUILD**\n"));
 			u.cmd.rebuilding = true;
-			u.pl = PL_EXECUTING;
+			b->pl = PL_EXECUTING;
 			break;
 
 		case ME_PWD_CHANGED:
@@ -619,15 +601,10 @@ static void analyze_effect(MatchEffect effect) {
 			action_queue(A_SEND_PWD);
 			break;
 
-		case ME_EAT_STARTED:
-			DEBUG((df, "**EAT_STARTED**\n"));
-			u.pl = PL_EATING;
-			break;
-
 		case ME_RPROMPT_STARTED:
 			DEBUG((df, "**RPROMPT_STARTED**\n"));
 			u.cmd.rebuilding = true;
-			u.pl = PL_AT_RPROMPT;
+			b->pl = PL_AT_RPROMPT;
 			break;
 
 		default:
@@ -647,52 +624,46 @@ void clear_seqs(enum process_level pl) {
 
 
 
-static MatchEffect seq_ps1_separator(void) {
-	seqbuff_dequeue(u.seqbuff.pos, false);
+static MatchEffect seq_ps1_separator(Buffer* b) {
+	pass_segment(b);
 	return ME_CMD_STARTED;
 }
 
 
-static MatchEffect seq_rprompt_separator_start(void) {
-	seqbuff_dequeue(u.seqbuff.pos, false);
+static MatchEffect seq_rprompt_separator_start(Buffer* b) {
+	pass_segment(b);
 	return ME_RPROMPT_STARTED;
 }
 
 
-static MatchEffect seq_rprompt_separator_end(void) {
-	seqbuff_dequeue(u.seqbuff.pos, false);
+static MatchEffect seq_rprompt_separator_end(Buffer* b) {
+	pass_segment(b);
 	return ME_CMD_STARTED;
 }
 
 
-static MatchEffect seq_eat_start(void) {
-	seqbuff_dequeue(u.seqbuff.pos, false);
-	return ME_EAT_STARTED;
-}
-
-
-static MatchEffect seq_eat_end(void) {
+static MatchEffect seq_new_pwd(Buffer* b) {
 	if (u.pwd != NULL)
 		XFREE(u.pwd);
 
-	/* Get the new current directory. */
-	u.pwd = parse_printables(u.seqbuff.string, EAT_END_SEQ);
-
-	seqbuff_dequeue(u.seqbuff.pos, false);
+	u.pwd = parse_printables(b->buf + b->pos, NEW_PWD_SEQ);
+	DEBUG((df, "new pwd: %s\n", u.pwd));
+	eat_segment(b);
 	return ME_PWD_CHANGED;
+
 }
 
 
-static MatchEffect seq_zsh_completion_done(void) {
+static MatchEffect seq_zsh_completion_done(Buffer* b) {
 	u.cmd.rebuilding = true;
-	seqbuff_dequeue(u.seqbuff.pos, false);
+	pass_segment(b);
 	return ME_NO_EFFECT;
 }
 
 
 /* Add a carriage return to the present location in the command line,
    or if we're expecting a newline, command executed. */
-static MatchEffect seq_term_cmd_wrapped(void) {
+static MatchEffect seq_term_cmd_wrapped(Buffer* b) {
 	MatchEffect effect;
 
 	if (u.expect_newline)
@@ -702,14 +673,15 @@ static MatchEffect seq_term_cmd_wrapped(void) {
 	else
 		effect = ME_NO_EFFECT;
 
-	/* Don't want to dequeue the NOT_LF char. */
-	seqbuff_dequeue(2, false);
+	/* Don't want to pass over the NOT_LF char. */
+	b->n--;
+	pass_segment(b);
 	return effect;
 }
 
 
 /* Back up one character. */
-static MatchEffect seq_term_backspace(void) {
+static MatchEffect seq_term_backspace(Buffer* b) {
 	MatchEffect effect;
 
 	if (u.cmd.pos > 0) {
@@ -719,17 +691,17 @@ static MatchEffect seq_term_backspace(void) {
 	else
 		effect = ME_ERROR;
 
-	seqbuff_dequeue(u.seqbuff.pos, false);
+	pass_segment(b);
 	return effect;
 }
 
 
 /* Move cursor forward from present location n times. */
-static MatchEffect seq_term_cursor_forward(void) {
+static MatchEffect seq_term_cursor_forward(Buffer* b) {
 	MatchEffect effect = ME_NO_EFFECT;
 	int n;
 	
-	n = parse_digits(u.seqbuff.string);
+	n = parse_digits(b->buf + b->pos);
 	if (n == 0) {
 		/* Default is 1. */
 		n = 1;
@@ -751,17 +723,17 @@ static MatchEffect seq_term_cursor_forward(void) {
 		else /* ST_BASH */
 			effect = ME_CMD_EXECUTED;
 	}
-	seqbuff_dequeue(u.seqbuff.pos, false);
+	pass_segment(b);
 	return effect;
 }
 
 
 /* Move cursor backward from present location n times. */
-static MatchEffect seq_term_cursor_backward(void) {
+static MatchEffect seq_term_cursor_backward(Buffer* b) {
 	MatchEffect effect = ME_NO_EFFECT;
 	int n;
 	
-	n = parse_digits(u.seqbuff.string);
+	n = parse_digits(b->buf + b->pos);
 	if (n == 0) {
 		/* Default is 1. */
 		n = 1;
@@ -771,17 +743,17 @@ static MatchEffect seq_term_cursor_backward(void) {
 	else
 		effect = ME_ERROR;
 
-	seqbuff_dequeue(u.seqbuff.pos, false);
+	pass_segment(b);
 	return effect;
 }
 
 
 /* Delete n chars from the command line. */
-static MatchEffect seq_term_delete_chars(void) {
+static MatchEffect seq_term_delete_chars(Buffer* b) {
 	MatchEffect effect = ME_NO_EFFECT;
 	int n;
 	
-	n = parse_digits(u.seqbuff.string);
+	n = parse_digits(b->buf + b->pos);
 	if (n == 0) {
 		/* Default is 1. */
 		n = 1;
@@ -789,16 +761,16 @@ static MatchEffect seq_term_delete_chars(void) {
 	if (!cmd_del_chars(n))
 		effect = ME_ERROR;
 
-	seqbuff_dequeue(u.seqbuff.pos, false);
+	pass_segment(b);
 	return effect;
 }
 
 /* Insert n blanks at the current location on command line. */
-static MatchEffect seq_term_insert_blanks(void) {
+static MatchEffect seq_term_insert_blanks(Buffer* b) {
 	MatchEffect effect = ME_NO_EFFECT;
 	int n;
 
-	n = parse_digits(u.seqbuff.string);
+	n = parse_digits(b->buf + b->pos);
 	if (n == 0) {
 		/* Default is 1. */
 		n = 1;
@@ -806,7 +778,7 @@ static MatchEffect seq_term_insert_blanks(void) {
 	if (!cmd_insert_chars(' ', n))
 		effect = ME_ERROR;
 
-	seqbuff_dequeue(u.seqbuff.pos, false);
+	pass_segment(b);
 	return effect;
 }
 
@@ -815,36 +787,36 @@ static MatchEffect seq_term_insert_blanks(void) {
 	0 = Clear to right
 	1 = Clear to left
 	2 = Clear all */
-static MatchEffect seq_term_erase_in_line(void) {
+static MatchEffect seq_term_erase_in_line(Buffer* b) {
 	MatchEffect effect = ME_NO_EFFECT;
 	int n;
 	
 	/* Default is 0. */
-	n = parse_digits(u.seqbuff.string);
+	n = parse_digits(b->buf + b->pos);
 
 	if (!cmd_wipe_in_line(n))
 		effect = ME_ERROR;
 
-	seqbuff_dequeue(u.seqbuff.pos, false);
+	pass_segment(b);
 	return effect;
 }
 
 
 /* Just ignore the damn bell. */
-static MatchEffect seq_term_bell(void) {
-	seqbuff_dequeue(u.seqbuff.pos, false);
+static MatchEffect seq_term_bell(Buffer* b) {
+	pass_segment(b);
 	return ME_NO_EFFECT;
 }
 
 
 /* Move cursor up from present location n times. */
-static MatchEffect seq_term_cursor_up(void) {
+static MatchEffect seq_term_cursor_up(Buffer* b) {
 	MatchEffect effect = ME_NO_EFFECT;
 	int i, n;
 	int last_cret, next_cret, offset;
 	int pos;
 
-	n = parse_digits(u.seqbuff.string);
+	n = parse_digits(b->buf + b->pos);
 	if (n == 0) {
 		/* Default is 1. */
 		n = 1;
@@ -902,20 +874,20 @@ static MatchEffect seq_term_cursor_up(void) {
 	u.cmd.pos = 0;
 
 	done:
-	seqbuff_dequeue(u.seqbuff.pos, false);
+	pass_segment(b);
 	return effect;
 }
 
 
 /* Return cursor to beginning of this line, or if expecting
    newline, command executed. */
-static MatchEffect seq_term_carriage_return(void) {
+static MatchEffect seq_term_carriage_return(Buffer* b) {
 	MatchEffect effect;
 	int p;
 
 	if (u.expect_newline) {
 		effect = ME_CMD_EXECUTED;
-		seqbuff_dequeue(u.seqbuff.pos, false);
+		pass_segment(b);
 	}
 	else {
 		p = find_prev_cret(u.cmd.pos);
@@ -930,7 +902,8 @@ static MatchEffect seq_term_carriage_return(void) {
 		}
 
 		/* We don't want to pop off the character following the ^M. */
-		seqbuff_dequeue(1, false);
+		b->n--;
+		pass_segment(b);
 	}
 
 	return effect;
@@ -942,7 +915,7 @@ static MatchEffect seq_term_carriage_return(void) {
    If so, then a newline that takes us out of the command line
    is interpreted as a command execution.  If not, then it is
    a command line wrap. */
-static MatchEffect seq_term_newline(void) {
+static MatchEffect seq_term_newline(Buffer* b) {
 	int p;
 	MatchEffect effect;
 
@@ -967,7 +940,7 @@ static MatchEffect seq_term_newline(void) {
 		u.cmd.pos = p + 1;
 		effect = ME_NO_EFFECT;
 	}
-	seqbuff_dequeue(u.seqbuff.pos, false);
+	pass_segment(b);
 	return effect;
 }
 

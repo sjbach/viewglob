@@ -1,3 +1,10 @@
+2004-09-07 17:45  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* buffer.c, buffer.h, circular.h: added
+	* src/Makefile.am, actions.c, actions.h, cmdline.c, cmdline.h, seer.c,
+	  seer.h, sequences.c, sequences.h:
+	  Large code reorganization -- it's much cleaner and makes more sense now.
+
 2004-09-05 20:43  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* gviewglob.c, gviewglob.h, src/Makefile.am, cmdline.c, sanitize.c, seer.c,

@@ -26,6 +26,7 @@
 #include "hardened_io.h"
 #include "sanitize.h"
 #include "actions.h"
+#include "buffer.h"
 #include "seer.h"
 
 #include <signal.h>
@@ -47,13 +48,12 @@
 FILE* df;
 #endif
 
+
 /* Prototypes */
 static bool main_loop(struct display* d);
 static bool user_activity(void);
-static bool scan_for_newline(const char* buff, size_t n);
-static bool process_input(char* buff, size_t* n);
-static bool match_loop(enum process_level pl);
-static bool eat(char* buff, size_t* n, size_t* start);
+static bool scan_for_newline(const Buffer* b);
+static bool process_input(Buffer* b);
 
 static void send_sane_cmd(struct display* d);
 static void send_lost(struct display* d);
@@ -91,7 +91,6 @@ int main(int argc, char* argv[]) {
 	/* Initialize the shell and display structs. */
 	u.s.pid = x.s.pid = disp.pid = -1;
 	u.s.fd = x.s.fd = disp.glob_fifo_fd = -1;
-	u.pl = PL_EXECUTING;
 	disp.glob_fifo_name = x.glob_cmd = NULL;
 
 	/* And the argument arrays. */
@@ -366,22 +365,22 @@ static bool main_loop(struct display* disp) {
 		while (true) {
 			d = action_queue(A_POP);
 			if (d == A_EXIT) {
-				DEBUG((df, "::d_exit::"));
+				DEBUG((df, "::d_exit::\n"));
 				in_loop = false;
 				break;
 			}
 			else if (d == A_DONE) {
-				DEBUG((df, "::d_done::"));
+				DEBUG((df, "::d_done::\n"));
 				break;
 			}
 			else if (d == A_SEND_CMD) {
-				DEBUG((df, "::send cmd::"));
+				DEBUG((df, "::send cmd::\n"));
 				if (viewglob_enabled)
 					send_sane_cmd(disp);
 			}
 			else if (d == A_SEND_PWD) {
 				/* Do nothing. */
-				DEBUG((df, "::send pwd::"));
+				DEBUG((df, "::send pwd::\n"));
 			}
 			else if (d == A_SEND_LOST) {
 				/* blah */
@@ -405,11 +404,18 @@ static bool main_loop(struct display* disp) {
    terminal receives input, it's passed along pretty much untouched.  If
    the shell receives input, it's examined thoroughly with process_input. */
 static bool user_activity(void) {
-	static char buff[BUFSIZ];
-	ssize_t nread;
-	fd_set fdset_read;
 
+	static Buffer termb =  { NULL, BUFSIZ, 0, 0, 0, PL_TERMINAL,  MS_NO_MATCH, NULL };
+	static Buffer shellb = { NULL, BUFSIZ, 0, 0, 0, PL_EXECUTING, MS_NO_MATCH, NULL };
+
+	fd_set fdset_read;
 	bool ok = true;
+
+	/* This only happens once. */
+	if (!termb.buf && !shellb.buf) {
+		termb.buf = XMALLOC(char, termb.size);
+		shellb.buf = XMALLOC(char, shellb.size);
+	}
 
 	/* Check to see if the user shell has been closed.  This is necessary
 	   because for some reason if the shell opens an external program such
@@ -443,7 +449,7 @@ static bool user_activity(void) {
 	if (FD_ISSET(STDIN_FILENO, &fdset_read)) {
 
 		/* Read in from terminal. */
-		if (!hardened_read(STDIN_FILENO, buff, sizeof buff, &nread)) {
+		if (!hardened_read(STDIN_FILENO, termb.buf, termb.size, &termb.filled)) {
 			if (errno == EIO)
 				goto done;
 			else {
@@ -452,11 +458,19 @@ static bool user_activity(void) {
 				goto done;
 			}
 		}
-		else if (nread == 0) {
+		else if (termb.filled == 0) {
 			DEBUG((df, "~~1~~"));
 			action_queue(A_EXIT);
 			goto done;
 		}
+
+		#if DEBUG_ON
+			size_t x;
+			DEBUG((df, "read %d bytes from the terminal:\n===============\n", termb.filled));
+			for (x = 0; x < termb.filled; x++)
+				DEBUG((df, "%c", termb.buf[x]));
+			DEBUG((df, "\n===============\n"));
+		#endif
 
 		/* Look for a newline.  If one is found, then a match of a newline/carriage
 		   return in the shell's output (which extends past the end of the command-
@@ -467,15 +481,15 @@ static bool user_activity(void) {
 		   but less well when text is pasted in (i.e. multichar length buffers).
 		   Ideas for improvement are welcome. */
 		if (viewglob_enabled)
-			u.expect_newline = scan_for_newline(buff, nread);
+			u.expect_newline = scan_for_newline(&termb);
 
 		/* Write it out. */
-		if (!hardened_write(u.s.fd, buff, nread)) {
+		if (!hardened_write(u.s.fd, termb.buf, termb.filled)) {
 			viewglob_error("Problem writing to shell");
 			ok = false;
 			goto done;
 		}
-		if (u.term_transcript_fd != -1 && !hardened_write(u.term_transcript_fd, buff, nread))
+		if (u.term_transcript_fd != -1 && !hardened_write(u.term_transcript_fd, termb.buf, termb.filled))
 			viewglob_warning("Could not write term transcript");
 
 	}
@@ -484,7 +498,7 @@ static bool user_activity(void) {
 	if (FD_ISSET(u.s.fd, &fdset_read)) {
 
 		/* Read in from the shell. */
-		if (!hardened_read(u.s.fd, buff, sizeof buff, &nread)) {
+		if (!hardened_read(u.s.fd, shellb.buf, shellb.size, &shellb.filled)) {
 			if (errno == EIO) {
 				DEBUG((df, "~~2~~"));
 				action_queue(A_EXIT);
@@ -496,25 +510,33 @@ static bool user_activity(void) {
 				goto done;
 			}
 		}
-		else if (nread == 0) {
+		else if (shellb.filled == 0) {
 			DEBUG((df, "~~3~~"));
 			action_queue(A_EXIT);
 			goto done;
 		}
 
+		#if DEBUG_ON
+			size_t x;
+			DEBUG((df, "read %d bytes from the shell:\n===============\n", shellb.filled));
+			for (x = 0; x < shellb.filled; x++)
+				DEBUG((df, "%c", shellb.buf[x]));
+			DEBUG((df, "\n===============\n"));
+		#endif
+
 		/* Process the buffer. */
 		if (viewglob_enabled) {
-			ok = process_input(buff, &nread);
+			ok = process_input(&shellb);
 			if (!ok) goto done;
 		}
 
 		/* Write out the full buffer. */
-		if (nread && !hardened_write(STDOUT_FILENO, buff, nread)) {
+		if (shellb.filled && !hardened_write(STDOUT_FILENO, shellb.buf, shellb.filled)) {
 			viewglob_error("Problem writing to stdout");
 			ok = false;
 			goto done;
 		}
-		if (u.shell_transcript_fd != -1 && !hardened_write(u.shell_transcript_fd, buff, nread))
+		if (u.shell_transcript_fd != -1 && !hardened_write(u.shell_transcript_fd, shellb.buf, shellb.filled))
 			viewglob_warning("Could not write shell transcript");
 	}
 
@@ -524,11 +546,12 @@ static bool user_activity(void) {
 
 
 /* Look for characters which can break a line. */
-static bool scan_for_newline(const char* buff, size_t n) {
+//static bool scan_for_newline(const char* buff, size_t n) {
+static bool scan_for_newline(const Buffer* b) {
 	size_t i;
 
-	for (i = 0; i < n; i++) {
-		switch ( *(buff + i) ) {
+	for (i = 0; i < b->filled; i++) {
+		switch ( *(b->buf + i) ) {
 			case '\n':     /* Newline. */
 			case '\t':     /* Horizontal tab (for tab completion with multiple potential hits). */
 			case '\003':   /* End of text -- Ctrl-C. */
@@ -536,8 +559,8 @@ static bool scan_for_newline(const char* buff, size_t n) {
 			case '\015':   /* Carriage return -- this is the Enter key. */
 			case '\017':   /* Shift in -- Ctrl-O (operate-and-get-next in bash readline). */
 				return true;
-			case '!':
-				action_queue(A_SEND_LOST);
+//			case '!':
+//				action_queue(A_SEND_LOST);
 				break;
 			default:
 				break;
@@ -548,169 +571,69 @@ static bool scan_for_newline(const char* buff, size_t n) {
 }
 
 
-/* Look for and remove Ctrl-G commands. */
-static void filter_navigation(char* buff, size_t* n) {
-	static bool ctrlg_seen = false;
-	size_t i;
-	char command;
+static bool process_input(Buffer* b) {
 
-	for (i = 0; i < *n; i++) {
-		if (ctrlg_seen) {
-			ctrlg_seen = false;
-			command = *(buff + i);
-			memmove(buff + i, buff + i + 1, n - i);
-			*n--;
-
-			switch (command) {
-
-				case 'j':
-
-				case 'k':
-				case 'f':
-				case 'b':
-					break;
-
-		}
-		else if (*(buff + i) == '\007') {
-			ctrlg_seen = true;
-			memmove(buff + i, buff + i + 1, n - i);
-			*n--;
-		}
+	if (b->holdover)
+		prepend_holdover(b);
+	else {
+		b->pos = 0;
+		b->n = 1;
 	}
-}
 
+	while (b->pos + (b->n - 1) < b->filled) {
 
-/* Process the buffer read in from the shell, character by character. */
-static bool process_input(char* buff, size_t* n) {
+		DEBUG((df, "Pos at \'%c\' (%d of %d)\n", b->buf[b->pos], b->pos, b->filled - 1));
 
-	bool is_done;
-	size_t i;
+		cmd_del_trailing_crets();
 
-	for (i = 0; i < *n; i++) {
+		if (! IN_PROGRESS(b->status))
+			enable_all_seqs(b->pl);
 
-		if (u.pl == PL_EATING) {
-			/* We're reading something we don't want put to the terminal. */
-			if (! eat(buff, n, &i) )
-				return false;
-			continue;
+		#if DEBUG_ON
+			size_t i;
+			DEBUG((df, "process level: %d checking: --%c %d--\n(", b->pl, b->buf[b->pos + (b->n - 1)], b->pos + (b->n - 1)));
+			for (i = 0; i < b->n; i++)
+				DEBUG((df, "%c", b->buf[b->pos + i]));
+			DEBUG((df, ") |%d|\n", b->n));
+		#endif
+
+		check_seqs(b);
+
+		if (b->status & MS_MATCH) {
+			DEBUG((df, "*MS_MATCH*\n"));
+			clear_seqs(b->pl);
+		}
+		else if (b->status & MS_IN_PROGRESS) {
+			DEBUG((df, "*MS_IN_PROGRESS*\n"));
+			b->n++;
+		}
+		else if (b->status & MS_NO_MATCH) {
+			DEBUG((df, "*MS_NO_MATCH*\n"));
+			if (b->pl == PL_AT_PROMPT) {
+				cmd_overwrite_char(b->buf[b->pos], true);
+				action_queue(A_SEND_CMD);
+			}
+			b->pos++;
+			b->n = 1;
 		}
 
-		/* Add this character to the queue. */
-		if (!seqbuff_enqueue(buff[i]))
-			return false;
-
-		DEBUG((df, "[%c] {{%s}}\n", buff[i], u.seqbuff.string));
-
-		is_done = false;
-		while (!is_done) {
-
-			/* Remove trailing ^Ms. */
-			cmd_del_trailing_crets();
-
-			is_done = match_loop(u.pl);
-
-			DEBUG((df, "<<<%s>>> {%d = %c}\n", u.cmd.command, u.cmd.pos, *(u.cmd.command + u.cmd.pos)));
-			DEBUG((df, "length: %d\tpos: %d\tstrlen: %d\n\n", u.cmd.length, u.cmd.pos, strlen(u.cmd.command)));
-		}
+		DEBUG((df, "<<<%s>>> {%d = %c}\n", u.cmd.command, u.cmd.pos, *(u.cmd.command + u.cmd.pos)));
+		DEBUG((df, "length: %d\tpos: %d\tstrlen: %d\n\n", u.cmd.length, u.cmd.pos, strlen(u.cmd.command)));
 	}
+
+	if (IN_PROGRESS(b->status)) {
+		/* We'll have to store the sequence thus far as holdover. */
+		DEBUG((df, "n = %d, pos = %d, filled = %d\n", b->n, b->pos, b->filled));
+		create_holdover(b);
+	}
+
 	return true;
-}
-
-
-/* This is a modified version of match_loop below.  I really should wrap them into the same function (TODO)
-   - Is there a possibility that part of END_EAT_SEQ will be cut off if it comes at the end of buff? */
-static bool eat(char* buff, size_t* n, size_t* start) {
-	static MatchStatus status = MS_NO_MATCH;
-	size_t i;
-
-	for (i = *start; i < *n; i++) {
-
-		if (!seqbuff_enqueue(buff[i]))
-			return false;
-
-		if (status != MS_IN_PROGRESS)
-			enable_all_seqs(PL_EATING);
-
-		DEBUG((df, "eating: %c? <<%s>>\n", buff[i], u.seqbuff.string));
-		status = check_seqs(PL_EATING, buff[i]);
-
-		if (status & MS_MATCH) {
-			/* Matched -- eat away the bad stuff. */
-			clear_seqs(PL_EATING);
-			memmove(buff + *start, buff + (i - 1), *n - (i - 1));
-			*n -= (i - 1) - *start;
-			*start = i;
-			u.pl = PL_EXECUTING;
-
-			return true;
-		}
-
-	}
-
-	DEBUG((df, "no match yet.\n"));
-	/* We didn't reach the end.  Truncate the data and wait for next iteration. */
-	*n -= *n - *start;
-	*start = *n;
-	return true;
-}
-
-
-/* Attempt to match each sequence against u.seqbuff. */
-static bool match_loop(enum process_level pl) {
-	static MatchStatus status = MS_NO_MATCH;    /* Remember status of the last match_loop run. */
-	bool is_done = false;
-
-	while (true) {
-
-		if (u.seqbuff.length > 0) {
-			if (status != MS_IN_PROGRESS) {
-				/* We're not waiting on a specific match, so let's check all sequences. */
-				enable_all_seqs(pl);
-			}
-
-			DEBUG((df, "process level: %d checking: --%c %d--", pl, u.seqbuff.string[u.seqbuff.pos - 1], u.seqbuff.pos));
-			DEBUG((df, " (%s) |%d|\n", u.seqbuff.string, u.seqbuff.length));
-
-			status = check_seqs(pl, u.seqbuff.string[u.seqbuff.pos - 1]);
-		}
-		else {
-			DEBUG((df, "...done trying to match\n"));
-			is_done = true;
-			break;
-		}
-
-		if (status == MS_NO_MATCH) {
-			/* Pop off the oldest character, adding it to u.cmd if the user is at the
-			   command line, and start over. */
-			seqbuff_advance(u.pl == PL_AT_PROMPT);
-		}
-		else if (status == MS_IN_PROGRESS) {
-			if (u.seqbuff.pos == u.seqbuff.length) {
-				/* There are potential matches, but no more characters to check against. */
-				is_done = true;
-				break;
-			}
-			else {
-				/* So far so good, and there is more to look at. */
-				u.seqbuff.pos++;
-			}
-		}
-		else if (status & MS_MATCH) {
-			/* Pop off the matched sequence, and start over with any remaining characters.
-			   Do not copy the matched sequence to u.cmd. */
-			clear_seqs(pl);
-			break;
-		}
-	}
-
-	return is_done;
 }
 
 
 /* This function writes out stuff that looks like this:
    cmd:<sane_command>
-   cd "<u.pwd>" && <glob-command> <sane_cmd> >> <glob fifo> ; cd /
-*/
+   cd "<u.pwd>" && <glob-command> <sane_cmd> >> <glob fifo> ; cd / */
 static void send_sane_cmd(struct display* d) {
 
 	char* sane_cmd;

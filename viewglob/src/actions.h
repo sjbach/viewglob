@@ -24,6 +24,8 @@
 #  include "config.h"
 #endif
 
+BEGIN_C_DECLS
+
 typedef enum _Action Action;
 enum _Action {
 	A_NOP,         /* Do nothing. */
@@ -41,5 +43,7 @@ enum _Action {
 
 /* Prototypes */
 Action action_queue(Action o);
+
+END_C_DECLS
 
 #endif /* !ACTIONS_H */

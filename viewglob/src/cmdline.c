@@ -37,11 +37,6 @@ extern struct user_shell u;
 /* Initialize working command line and sequence buffer. */
 bool cmd_init(void) {
 
-	/* Initialize u.seqbuff */
-	u.seqbuff.length = 0;
-	u.seqbuff.pos = 0;
-	memset(u.seqbuff.string, '\0', SEMBUFF_STRING_SIZE);
-
 	/* Initialize u.cmd */
 	u.cmd.length = 0;
 	u.cmd.pos = 0;
@@ -73,86 +68,6 @@ bool cmd_clear(void) {
 	return true;
 }
 
-bool seqbuff_clear(void) {
-	return seqbuff_dequeue(u.seqbuff.length, false);
-}
-
-
-bool seqbuff_enqueue(char c) {
-	u.seqbuff.string[u.seqbuff.length] = c;
-	u.seqbuff.length++;
-	u.seqbuff.pos++;
-	if (u.seqbuff.length >= SEMBUFF_STRING_SIZE) {
-		viewglob_error("End of u.seqbuff reached");
-		return false;
-	}
-	return true;
-}
-
-
-/* Removes n chars from the beginning of seqbuff.
-   If add_to_cmd is true, the removed chars are added to u.cmd
-   at u.cmd.pos (overwriting, not inserting). */
-bool seqbuff_dequeue(int n, bool add_to_cmd) {
-	int i;
-
-	if (n > u.seqbuff.length)
-		return false;
-
-	if (add_to_cmd) {
-		action_queue(A_SEND_CMD);
-		for (i = 0; i < n; i++)
-			if (!cmd_overwrite_char(u.seqbuff.string[i], true)) {
-				viewglob_error("Could not overwrite char in u.cmd");
-				return false;
-			}
-	}
-
-	/* Overwrite the first n characters, and clear the duplicated characters
-	   at the end. */
-	memmove(u.seqbuff.string, u.seqbuff.string + n, u.seqbuff.length - n);
-	memset(u.seqbuff.string + u.seqbuff.length - n, '\0', n);
-	u.seqbuff.length -= n;
-	u.seqbuff.pos -= n;
-	if (u.seqbuff.pos < 0) {
-		viewglob_warning("seqbuff.pos < 0");
-		u.seqbuff.pos = 0;
-		return false;
-	}
-	return true;
-}
-
-
-/* Pop off the oldest character and bring pos back to the front of the buffer. */
-bool seqbuff_advance(bool add_to_cmd) {
-
-	if (u.seqbuff.length <= 0) {
-		viewglob_warning("seqbuff.length <= 0 in seqbuff_advance");
-		return false;
-	}
-
-	if (add_to_cmd) {
-		action_queue(A_SEND_CMD);
-		if (!cmd_overwrite_char(u.seqbuff.string[0], true)) {
-			viewglob_error("Could not overwrite char in u.cmd (seqbuff_advance)");
-			return false;
-		}
-	}
-
-	/* Remove the first character (from the beginning). */
-	memmove(u.seqbuff.string, u.seqbuff.string + 1, u.seqbuff.length - 1);
-	*(u.seqbuff.string + u.seqbuff.length - 1) = '\0';
-	u.seqbuff.length--;
-
-	/* Move pos to the start of the buffer. */
-	if (u.seqbuff.length)
-		u.seqbuff.pos = 1;
-	else
-		u.seqbuff.pos = 0;
-
-	return true;
-}
-
 
 /* Overwrite the char in the working command line at pos in command;
    realloc if necessary. */
@@ -162,6 +77,8 @@ bool cmd_overwrite_char(char c, bool preserve_cret) {
 		/* Preserve ^Ms. */
 		u.cmd.pos++;
 	}
+
+	DEBUG((df, "overwriting \'%c\'\n", c));
 
 	*(u.cmd.command + u.cmd.pos) = c;
 	if (u.cmd.pos == u.cmd.length)

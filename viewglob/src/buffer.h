@@ -17,50 +17,23 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#ifndef SEQUENCES_H
-#define SEQUENCES_H
+#ifndef BUFFER_H
+#define BUFFER_H
 
 #if HAVE_CONFIG_H
 #  include "config.h"
 #endif
 
-#include "common.h"
 #include "circular.h"
-#include "buffer.h"
+#include "sequences.h"
 
 BEGIN_C_DECLS
 
-#define IN_PROGRESS(x) ( (!(x & MS_MATCH)) && (x & MS_IN_PROGRESS))
-
-/* Return values of match-success functions. */
-typedef enum _MatchEffect MatchEffect;
-enum _MatchEffect {
-	ME_ERROR,
-	ME_NO_EFFECT,
-	ME_CMD_EXECUTED,
-	ME_CMD_STARTED,
-	ME_CMD_REBUILD,
-	ME_PWD_CHANGED,
-	ME_RPROMPT_STARTED,
-};
-
-/* Used in initialization of sequences. */
-enum shell_type {
-	ST_BASH,
-	ST_ZSH,
-};
-
-
-/* Sequence functions. */
-void  init_seqs(enum shell_type shell);
-void  check_seqs(Buffer* b);
-void  enable_all_seqs(enum process_level pl);
-void  clear_seqs(enum process_level pl);
-
-/* These are common to cmdline and sequences, but gotta put them somewhere. */
-int find_prev_cret(int);
-int find_next_cret(int);
+void prepend_holdover(Buffer* b);
+void create_holdover(Buffer* b);
+void eat_segment(Buffer* b);
+void pass_segment(Buffer* b);
 
 END_C_DECLS
 
-#endif	/* !SEQUENCES_H */
+#endif /* !BUFFER_H */

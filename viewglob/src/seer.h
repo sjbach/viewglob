@@ -48,13 +48,11 @@ struct options {
 struct user_shell {
 	char* pwd;
 	struct cmdline cmd;
-	struct sequence_buff seqbuff;
 	struct pty_child s;
 
 	int shell_transcript_fd;
 	int term_transcript_fd;
 
-	enum process_level pl;
 	bool term_size_changed;
 	bool expect_newline;
 };
