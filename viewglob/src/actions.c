@@ -78,6 +78,7 @@ Action action_queue(Action o) {
 		case (A_SEND_DOWN):
 		case (A_SEND_PGUP):
 		case (A_SEND_PGDOWN):
+		case (A_TOGGLE):
 			al_push(o);
 			break;
 

@@ -71,6 +71,7 @@ static MatchEffect seq_nav_down(Buffer* b);
 static MatchEffect seq_nav_pgup(Buffer* b);
 static MatchEffect seq_nav_pgdown(Buffer* b);
 static MatchEffect seq_nav_ctrl_g(Buffer* b);
+static MatchEffect seq_nav_toggle(Buffer* b);
 /*static MatchEffect seq_nav_catch_all(Buffer* b);*/
 
 static MatchEffect seq_term_cmd_wrapped(Buffer* b);
@@ -131,6 +132,8 @@ static char* const NAV_C_KEYBOARD_PGUP_SEQ = "\007\033[5^";
 static char* const NAV_KEYBOARD_PGDOWN_SEQ = "\007\033[6~";
 static char* const NAV_C_KEYBOARD_PGDOWN_SEQ = "\007\033[6^";
 static char* const NAV_CTRL_G_SEQ = "\007\007";
+static char* const NAV_TOGGLE_SEQ = "\007 ";
+static char* const NAV_C_TOGGLE_SEQ = "\007\000";
 /*static char* const NAV_CATCH_ALL_SEQ = "\007" ANY_S "";*/
 
 /* I've observed this always comes at the end of a list of tab completions in zsh. */
@@ -252,8 +255,8 @@ void init_seqs(enum shell_type shell) {
 	else
 		viewglob_error("Unexpected shell type");
 
-	seq_groups[PL_TERMINAL].n = 25;
-	seq_groups[PL_TERMINAL].seqs = XMALLOC(Sequence, 25);
+	seq_groups[PL_TERMINAL].n = 27;
+	seq_groups[PL_TERMINAL].seqs = XMALLOC(Sequence, 27);
 	for (i = 0; i < seq_groups[PL_TERMINAL].n; i++) {
 		seq_groups[PL_TERMINAL].seqs[i].pos = 0;
 		seq_groups[PL_TERMINAL].seqs[i].enabled = false;
@@ -383,6 +386,17 @@ void init_seqs(enum shell_type shell) {
 	seq_groups[PL_TERMINAL].seqs[24].seq = NAV_C_KEYBOARD_PGDOWN_SEQ;
 	seq_groups[PL_TERMINAL].seqs[24].length = strlen(NAV_C_KEYBOARD_PGDOWN_SEQ);
 	seq_groups[PL_TERMINAL].seqs[24].func = seq_nav_pgdown;
+
+	strcpy(seq_groups[PL_TERMINAL].seqs[25].name, "Nav toggle");
+	seq_groups[PL_TERMINAL].seqs[25].seq = NAV_TOGGLE_SEQ;
+	seq_groups[PL_TERMINAL].seqs[25].length = strlen(NAV_TOGGLE_SEQ);
+	seq_groups[PL_TERMINAL].seqs[25].func = seq_nav_toggle;
+
+	/* Need to add 1 to the strlen here because we're matching on NUL. */
+	strcpy(seq_groups[PL_TERMINAL].seqs[26].name, "Nav C toggle");
+	seq_groups[PL_TERMINAL].seqs[26].seq = NAV_C_TOGGLE_SEQ;
+	seq_groups[PL_TERMINAL].seqs[26].length = strlen(NAV_C_TOGGLE_SEQ) + 1;
+	seq_groups[PL_TERMINAL].seqs[26].func = seq_nav_toggle;
 
 	/*
 	strcpy(seq_groups[PL_TERMINAL].seqs[13].name, "Nav catch all");
@@ -1182,6 +1196,14 @@ static MatchEffect seq_nav_ctrl_g(Buffer* b) {
 	b->n--;
 	b->pos++;
 	eat_segment(b);
+	return ME_NO_EFFECT;
+}
+
+
+static MatchEffect seq_nav_toggle(Buffer* b) {
+	DEBUG((df, "seq_nav_toggle!\n"));
+	eat_segment(b);
+	action_queue(A_TOGGLE);
 	return ME_NO_EFFECT;
 }
 

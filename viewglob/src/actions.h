@@ -36,6 +36,7 @@ enum _Action {
 	A_SEND_DOWN,   /* Tell display to move down one line. */
 	A_SEND_PGUP,   /* Tell display to move up one page. */
 	A_SEND_PGDOWN, /* Tell display to move down one page. */
+	A_TOGGLE,      /* Enable/disable the display. */
 	A_POP,         /* Pop off the top queued action. */
 	A_DONE,        /* Nothing more to pop. */
 	A_EXIT,        /* Shell closed -- finish execution. */

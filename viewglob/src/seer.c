@@ -93,6 +93,10 @@ int main(int argc, char* argv[]) {
 	u.s.fd = x.s.fd = disp.glob_fifo_fd = -1;
 	disp.glob_fifo_name = x.glob_cmd = NULL;
 
+#if DEBUG_ON
+	df = fopen("/tmp/out1.txt", "w");
+#endif
+
 	/* And the argument arrays. */
 	args_init(&(disp.a));
 	args_init(&(u.s.a));
@@ -165,15 +169,11 @@ int main(int argc, char* argv[]) {
 	close_warning(devnull_fd, "/dev/null");
 
 	/* Open the display. */
-	if ( ! display_fork(&disp) ) {
+	if ( (!display_init(&disp)) || (!display_fork(&disp)) ) {
 		viewglob_error("Could not create display");
 		ok = false;
 		goto done;
 	}
-
-#if DEBUG_ON
-	df = fopen("/tmp/out1.txt", "w");
-#endif
 
 	if ( ! handle_signals() ) {
 		viewglob_error("Could not set up signal handlers");
@@ -213,6 +213,7 @@ done:
 	close_warning(u.term_transcript_fd, opts.term_out_file);
 	close_warning(u.shell_transcript_fd, opts.shell_out_file);
 	ok &= display_terminate(&disp);
+	ok &= display_cleanup(&disp);
 	ok &= pty_child_terminate(&(x.s));
 	ok &= pty_child_terminate(&(u.s));
 	printf("[Exiting viewglob]\n");
@@ -371,7 +372,7 @@ static bool main_loop(struct display* disp) {
 
 				case A_SEND_CMD:
 					DEBUG((df, "::send cmd::\n"));
-					if (viewglob_enabled)
+					if (viewglob_enabled && display_running(disp))
 						send_sane_cmd(disp);
 					break;
 
@@ -380,13 +381,25 @@ static bool main_loop(struct display* disp) {
 					DEBUG((df, "::send pwd::\n"));
 					break;
 
+				case A_TOGGLE:
+					/* Fork or terminate the display. */
+					if (viewglob_enabled) {
+						if (display_running(disp))
+							display_terminate(disp);
+						else {
+							display_fork(disp);
+							action_queue(A_SEND_CMD);
+						}
+					}
+					break;
+
 				case A_SEND_LOST:
 				case A_SEND_UP:
 				case A_SEND_DOWN:
 				case A_SEND_PGUP:
 				case A_SEND_PGDOWN:
 					DEBUG((df, "::send order::\n"));
-					if (viewglob_enabled)
+					if (viewglob_enabled && display_running(disp))
 						send_order(disp, a);
 					break;
 
@@ -731,6 +744,7 @@ void sigterm_handler(int signum) {
 	close_warning(u.term_transcript_fd, opts.term_out_file);
 	close_warning(u.shell_transcript_fd, opts.shell_out_file);
 	(void) display_terminate(&disp);
+	(void) display_cleanup(&disp);
 	(void) pty_child_terminate(&(x.s));
 	(void) pty_child_terminate(&(u.s));
 	(void) tc_restore();

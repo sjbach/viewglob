@@ -1,3 +1,10 @@
+2004-09-19 18:58  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* actions.c, actions.h, children.c, children.h, seer.c, sequences.c:
+	  The display is now toggleable with Ctrl-G <space> (or Ctrl-G
+	  Ctrl-<space>).
+	  
+
 2004-09-19 17:40  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* sequences.c, cmdline.c:

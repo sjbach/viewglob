@@ -30,6 +30,10 @@
 #include <fcntl.h>
 #include <string.h>
 
+#if DEBUG_ON
+extern FILE* df;
+#endif
+
 static bool create_fifo(char* name);
 
 static bool create_fifo(char* name) {
@@ -87,8 +91,7 @@ void args_add(struct args* a, char* new_arg) {
 }
 
 
-/* Open the display and set it up. */
-bool display_fork(struct display* d) {
+bool display_init(struct display* d) {
 	pid_t pid;
 	char* pid_str;
 	bool ok = true;
@@ -129,13 +132,21 @@ bool display_fork(struct display* d) {
 	/* Delimit the args with NULL. */
 	args_add(&(d->a), NULL);
 
+	return ok;
+}
+
+
+
+/* Open the display and set it up. */
+bool display_fork(struct display* d) {
+	bool ok = true;
+
 	switch (d->pid = fork()) {
 		case -1:
 			viewglob_error("Could not fork display");
 			return false;
 
 		case 0:
-
 			/* Open the display. */
 			execvp(d->a.argv[0], d->a.argv);
 
@@ -162,25 +173,40 @@ bool display_fork(struct display* d) {
 }
 
 
+bool display_running(struct display* d) {
+	return d->pid != -1;
+}
+
+
 bool display_terminate(struct display* d) {
 	bool ok = true;
 
 	/* Close the fifos, if open. */
-	if ( (d->glob_fifo_fd != -1) && (close(d->glob_fifo_fd) == -1) ) {
-		viewglob_error("Could not close glob fifo");
-		ok = false;
+	if (d->glob_fifo_fd != -1) {
+		if (close(d->glob_fifo_fd) != -1)
+			d->glob_fifo_fd = -1;
+		else {
+			viewglob_error("Could not close glob fifo");
+			ok = false;
+		}
 	}
-	if ( (d->cmd_fifo_fd != -1) && (close(d->cmd_fifo_fd) == -1) ) {
-		viewglob_error("Could not close cmd fifo");
-		ok = false;
+	if (d->cmd_fifo_fd != -1) {
+		if (close(d->cmd_fifo_fd) != -1)
+			d->cmd_fifo_fd = -1;
+		else {
+			viewglob_error("Could not close cmd fifo");
+			ok = false;
+		}
 	}
 
 	/* Terminate the child's process. */
 	if (d->pid != -1) {
 		switch (kill(d->pid, SIGTERM)) {
 			case 0:
+				d->pid = -1;
 				break;
 			case ESRCH:
+				d->pid = -1;
 				viewglob_warning("Display already closed");
 				break;
 			default:
@@ -189,6 +215,13 @@ bool display_terminate(struct display* d) {
 				break;
 		}
 	}
+
+	return ok;
+}
+
+
+bool display_cleanup(struct display* d) {
+	bool ok = true;
 
 	/* Remove the fifos. */
 	if (d->glob_fifo_name) {

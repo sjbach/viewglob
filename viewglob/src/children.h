@@ -57,8 +57,11 @@ struct display {
 bool pty_child_fork(struct pty_child* c, int new_stdin_fd, int new_stdout_fd, int new_stderr_fd);
 bool pty_child_terminate(struct pty_child* c);
 
+bool display_init(struct display* d);
 bool display_fork(struct display* d);
+bool display_running(struct display* d);
 bool display_terminate(struct display* d);
+bool display_cleanup(struct display* d);
 
 void args_init(struct args* a);
 void args_add(struct args* a, char* new_arg);
