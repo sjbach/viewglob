@@ -66,7 +66,7 @@ static gint cmp_same_name(gconstpointer a, gconstpointer b);
 static gint cmp_ordering_ls(gconstpointer a, gconstpointer b);
 static gint cmp_ordering_win(gconstpointer a, gconstpointer b);
 
-static void initialize_icons(void);
+static void initialize_icons(gchar* test_string);
 static GdkPixbuf*  make_pixbuf_scaled(const guint8 icon_inline[], gint scale_height);
 
 
@@ -78,10 +78,6 @@ static GdkPixbuf* file_type_icons[FILE_TYPE_ICONS_COUNT] =
 	{ NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
 
 static GCompareFunc ordering_func = cmp_ordering_ls;
-
-static gchar* fitem_font_tags_open = NULL;
-static gchar* fitem_font_tags_close = NULL;
-
 
 /* --- functions --- */
 GType file_box_get_type(void) {
@@ -146,7 +142,6 @@ static void file_box_class_init(FileBoxClass* class) {
 			300,
 			G_PARAM_READWRITE));
 			*/
-	parse_ls_colors();
 }
 
 
@@ -342,66 +337,50 @@ void file_box_set_icon(FileType type, GdkPixbuf* icon) {
 	file_type_icons[type] = icon;
 }
 
-/* Set the size of FItem font (and the size of the file type icons). */
+/* Set the size of the FItem font (and the size of the file type icons). */
 void file_box_set_sizing(gint modifier) {
-
-	gint size;
-	gchar* temp;
-
-	gint i;
 
 	g_return_if_fail(modifier <= 10);   /* Constrain between -10 and 10. */
 	g_return_if_fail(modifier >= -10);
 
-	g_free(fitem_font_tags_open);
-	g_free(fitem_font_tags_close);
+	gint i;
+	GString* test_string = g_string_new("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ123456789");
 
-	fitem_font_tags_open = g_strdup("");
-	fitem_font_tags_close = g_strdup("");
+	gint font_size_modifier = BASE_FONT_SIZE + modifier;
 
-	size = BASE_FONT_SIZE + modifier;
-
-	/* Create the tag strings. */
-	if (size > 0) {
-		for (i = 0; i < size; i++) {
-			temp = fitem_font_tags_open;
-			fitem_font_tags_open = g_strconcat(fitem_font_tags_open, "<big>", NULL);
-			g_free(temp);
-
-			temp = fitem_font_tags_close;
-			fitem_font_tags_close = g_strconcat(fitem_font_tags_close, "</big>", NULL);
-			g_free(temp);
+	/* Create a test string. */
+	if (font_size_modifier > 0) {
+		for (i = 0; i < font_size_modifier; i++) {
+			g_string_prepend(test_string, "<big>");
+			g_string_append(test_string, "</big>");
 		}
 	}
-	else if (size < 0) {
-		for (i = 0; i > size; i--) {
-			temp = fitem_font_tags_open;
-			fitem_font_tags_open = g_strconcat(fitem_font_tags_open, "<small>", NULL);
-			g_free(temp);
-
-			temp = fitem_font_tags_close;
-			fitem_font_tags_close = g_strconcat(fitem_font_tags_close, "</small>", NULL);
-			g_free(temp);
+	else if (font_size_modifier < 0) {
+		for (i = font_size_modifier; i < 0; i++) {
+			g_string_prepend(test_string, "<small>");
+			g_string_append(test_string, "</small>");
 		}
 	}
 
 	/* (Re)set the icons with the new sizing. */
-	initialize_icons();
+	initialize_icons(test_string->str);
+
+	/* Parse LS_COLORS. */
+	parse_ls_colors(font_size_modifier);
+
+	g_string_free(test_string, TRUE);
 }
 
 
-static void initialize_icons(void) {
+static void initialize_icons(gchar* test_string) {
 #include "file_icons.h"
 
 	GtkIconTheme* current_theme;
 	GtkIconInfo* icon_info;
 
-	const gchar* test_string = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ123456789";
-
 	guint icon_size;
 	GtkWidget* test_label;
 	PangoLayout* test_layout;
-	gchar* label_markup;
 
 	int i;
 
@@ -414,15 +393,10 @@ static void initialize_icons(void) {
 	}
 
 	/* Figure out a good size for the file type icons. */
-	if (fitem_font_tags_open && fitem_font_tags_close)
-		label_markup = g_strconcat(fitem_font_tags_open, test_string, fitem_font_tags_close, NULL);
-	else
-		label_markup = g_strdup(test_string);
 	test_label = gtk_label_new(NULL);
-	gtk_label_set_markup(GTK_LABEL(test_label), label_markup);
+	gtk_label_set_markup(GTK_LABEL(test_label), test_string);
 	test_layout = gtk_label_get_layout(GTK_LABEL(test_label));
 	pango_layout_get_pixel_size(test_layout, NULL, &icon_size);
-	g_free(label_markup);
 	gtk_widget_destroy(test_label);
 
 	/* Try to get icons from the current theme. */
@@ -708,7 +682,7 @@ void file_box_flush(FileBox* fbox) {
 static void file_box_size_request(GtkWidget* widget, GtkRequisition* requisition) {
 	FileBox* this = FILE_BOX(widget);
 	if (!this->eat_size_requests) {
-		//g_printerr(".");
+		/*g_printerr(".");*/
 		wrap_box_size_request_optimal(widget, requisition, this->optimal_width);
 	}
 }
@@ -736,8 +710,7 @@ static void fitem_build_widgets(FItem* fi) {
 	GtkWidget* hbox;
 	GtkWidget* eventbox;
 
-	gchar* label_markup;
-	gchar* temp;
+	gchar* label_text;
 	gsize  length;
 
 	/* Event Box (to show selection) */
@@ -759,94 +732,13 @@ static void fitem_build_widgets(FItem* fi) {
 		gtk_box_pack_start(GTK_BOX(hbox), icon_image, FALSE, FALSE, 0);
 	}
 
-	/* Label -- must convert the text to utf8, then escape markup special characters. */
-	label_markup = g_filename_to_utf8(fi->name, strlen(fi->name), NULL, &length, NULL);
-	temp = g_markup_escape_text(label_markup, length);
-	g_free(label_markup);
+	/* Label -- must convert the text to utf8. */
+	label_text = g_filename_to_utf8(fi->name, strlen(fi->name), NULL, &length, NULL);
+	label = gtk_label_new(label_text);
+	g_free(label_text);
 
-	/* Add beginning and end tags, if present. */
-	if (fitem_font_tags_open && fitem_font_tags_close) {
-		label_markup = g_strconcat(fitem_font_tags_open, temp, fitem_font_tags_close, NULL);
-		g_free(temp);
-	}
-	else
-		label_markup = temp;
-
-	label = gtk_label_new(NULL);
-	//gtk_label_set_markup(GTK_LABEL(label), label_markup);
-	gtk_label_set_text(GTK_LABEL(label), label_markup);
-	g_free(label_markup);
-
-
-#if 0
-	//FIXME
-	PangoAttribute* p_attr;
-	PangoAttrList* p_list = NULL;
-	p_list = pango_attr_list_new();
-	switch (fi->type) {
-		case FT_REGULAR:
-			break;
-		case FT_EXECUTABLE:
-			p_attr = pango_attr_foreground_new(0x00ff, 0xffff, 0x00ff);
-			p_attr->start_index = 0;
-			p_attr->end_index = G_MAXINT;
-			pango_attr_list_insert(p_list, p_attr);
-			break;
-		case FT_DIRECTORY:
-			p_attr = pango_attr_weight_new(PANGO_WEIGHT_HEAVY);
-			p_attr->start_index = 0;
-			p_attr->end_index = G_MAXINT;
-			pango_attr_list_insert(p_list, p_attr);
-			p_attr = pango_attr_foreground_new(0x0000, 0x0000, 0xffff);
-			p_attr->start_index = 0;
-			p_attr->end_index = G_MAXINT;
-			pango_attr_list_insert(p_list, p_attr);
-			break;
-		default:
-			break;
-	}
-	/*
-	p_attr = pango_attr_scale_new(PANGO_SCALE_LARGE);
-	p_attr->start_index = 0;
-	p_attr->end_index = G_MAXINT;
-	pango_attr_list_insert(p_list, p_attr);
-	*/
-			/*
-	p_attr = pango_attr_weight_new(PANGO_WEIGHT_HEAVY);
-	p_attr->start_index = 0;
-	p_attr->end_index = G_MAXINT;
-	pango_attr_list_insert(p_list, p_attr);
-	*/
-
-	/*
-	p_attr = pango_attr_foreground_new(0xffff, 0xffff, 0xffff);
-	p_attr->start_index = 0;
-	p_attr->end_index = G_MAXINT;
-	pango_attr_list_insert(p_list, p_attr);
-	*/
-
-	/*
-	p_attr = pango_attr_underline_new(PANGO_UNDERLINE_ERROR);
-	p_attr->start_index = 0;
-	p_attr->end_index = G_MAXINT;
-	pango_attr_list_insert(p_list, p_attr);
-	*/
-	/*
-	p_attr = pango_attr_background_new(0xff88, 0xf788, 0x9688);
-	p_attr->start_index = 0;
-	p_attr->end_index = G_MAXINT;
-	pango_attr_list_insert(p_list, p_attr);
-	*/
-
-	//g_printerr("!");
-	//if (rand() < RAND_MAX/2)
-		gtk_label_set_attributes(GTK_LABEL(label), p_list);
-	//g_printerr("?");
-	//FIXME
-#endif
-
+	/* LS_COLORS. */
 	label_set_attributes(fi->name, fi->type, GTK_LABEL(label));
-
 
 	gtk_misc_set_padding(GTK_MISC(label), 1, 0);
 	gtk_widget_show(label);

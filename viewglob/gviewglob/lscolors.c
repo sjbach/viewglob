@@ -30,6 +30,7 @@
 #include <string.h>     /* For strcpy(). */
 #include <glib.h>
 #include <pango/pango.h>
+#include <math.h>
 
 #define STREQ(a, b) (strcmp ((a), (b)) == 0)
 
@@ -60,7 +61,7 @@ struct color_ext_type
 
 
 static void create_termtextattrs(void);
-static void create_pangoattrlists(void);
+static void create_pangoattrlists(gint size_modifier);
 static void termtextattr_init(TermTextAttr* tta);
 static void termtextattr_copy(TermTextAttr* dest, TermTextAttr* src);
 static void termtextattr_check_reverse(TermTextAttr* tta);
@@ -68,7 +69,7 @@ static gboolean are_equal(TermTextAttr* a, TermTextAttr* b);
 static TermTextAttr* scan_types_for_equivalency(TermTextAttr* tta);
 static TermTextAttr* scan_exts_for_equivalency(TermTextAttr* tta);
 static void parse_codes(struct bin_str* s, TermTextAttr* attr);
-static PangoAttrList* create_pango_list(TermTextAttr* tta);
+static PangoAttrList* create_pango_list(TermTextAttr* tta, gint size_modifier);
 
 
 /* Buffer for color sequences */
@@ -300,7 +301,7 @@ get_funky_string (char **dest, const char **src, gboolean equals_end,
 }
 
 void
-parse_ls_colors (void)
+parse_ls_colors (gint size_modifier)
 {
   const char *p;		/* Pointer to character being parsed */
   char *buf;			/* color_buf buffer pointer */
@@ -435,7 +436,7 @@ parse_ls_colors (void)
   }
 
   create_termtextattrs();
-  create_pangoattrlists();
+  create_pangoattrlists(size_modifier);
 }
 
 
@@ -473,7 +474,7 @@ static void create_termtextattrs(void) {
 
 
 /* Create PangoAttrLists from the TermTextAttrs. */
-static void create_pangoattrlists(void) {
+static void create_pangoattrlists(gint size_modifier) {
 	TermTextAttr* match;
 	struct color_ext_type* iter;
 	int i;
@@ -485,14 +486,14 @@ static void create_pangoattrlists(void) {
 		if (match)
 			type_ttas[i].p_list = match->p_list;
 		else
-			type_ttas[i].p_list = create_pango_list(&type_ttas[i]);
+			type_ttas[i].p_list = create_pango_list(&type_ttas[i], size_modifier);
 	}
 	for (iter = color_ext_list; iter; iter = iter->next) {
 		match = scan_exts_for_equivalency(&iter->tta);
 		if (match)
 			iter->tta.p_list = match->p_list;
 		else
-			iter->tta.p_list = create_pango_list(&iter->tta);
+			iter->tta.p_list = create_pango_list(&iter->tta, size_modifier);
 	}
 }
 
@@ -671,11 +672,12 @@ static gboolean are_equal(TermTextAttr* a, TermTextAttr* b) {
 
 
 /* Convert the given TermTextAttr into a PangoAttrList. */
-static PangoAttrList* create_pango_list(TermTextAttr* tta) {
+static PangoAttrList* create_pango_list(TermTextAttr* tta, gint size_modifier) {
 
 	PangoAttribute* p_attr;
 	PangoAttrList* p_list = pango_attr_list_new();
 	gboolean list_set = FALSE;
+	gdouble scale_factor;
 
 	static struct color_mapping {
 		guint16 r;
@@ -692,6 +694,19 @@ static PangoAttrList* create_pango_list(TermTextAttr* tta) {
 		{ 0x7188, 0xbe88, 0xbe88 }, /* TCC_CYAN */
 		{ 0xffff, 0xffff, 0xffff }, /* TCC_WHITE */
 	};
+
+	/* First set the font size. */
+	if (size_modifier != 0) {
+		if (size_modifier > 0)
+			scale_factor = pow(PANGO_SCALE_LARGE, size_modifier);
+		else
+			scale_factor = pow(PANGO_SCALE_SMALL, -size_modifier);
+		p_attr = pango_attr_scale_new(scale_factor);
+		p_attr->start_index = 0;
+		p_attr->end_index = G_MAXINT;
+		pango_attr_list_insert(p_list, p_attr);
+		list_set = TRUE;
+	}
 
 	/* Foreground colour */
 	if (tta->fg > TCC_NONE && tta->fg <= TCC_WHITE) {

@@ -52,7 +52,7 @@ struct _TermTextAttr {
 	PangoAttrList* p_list;
 };
 
-void parse_ls_colors(void);
+void parse_ls_colors(gint size_modifier);
 void label_set_attributes(gchar* name, FileType type, GtkLabel* label);
 
 #endif /* !LSCOLORS_H */

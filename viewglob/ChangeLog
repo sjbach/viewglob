@@ -1,3 +1,8 @@
+2005-03-06 19:49  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* file_box.c, lscolors.c, lscolors.h:
+	  Integrated font resizing into the LS_COLORS parsing stuff.
+
 2005-03-06 17:36  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* Makefile.am: adding lscolors.{c,h} and file_types.h
