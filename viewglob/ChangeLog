@@ -1,3 +1,8 @@
+2004-11-16 19:37  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* dlisting.c, dlisting.h, file_box.c, gviewglob.c, gviewglob.h:
+	  Display accepts -z flag to set modifier for all font sizes.
+
 2004-11-16 15:38  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* ptutil.c, ptutil.c.diff, ptutil.c.viewglob, ptutil.diff,

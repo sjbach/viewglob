@@ -609,11 +609,11 @@ static gboolean window_key_press_event(GtkWidget* window, GdkEventKey* event, gp
 
 static gboolean parse_args(int argc, char** argv) {
 	gboolean in_loop = TRUE;
-	gint max;
+	gint max, modifier;
 
 	opterr = 0;
 	while (in_loop) {
-		switch (getopt(argc, argv, "bc:g:f:n:s:vVw")) {
+		switch (getopt(argc, argv, "bc:g:f:n:s:vVwz:")) {
 			case -1:
 				DEBUG((df, "done\n"));
 				in_loop = FALSE;
@@ -664,6 +664,9 @@ static gboolean parse_args(int argc, char** argv) {
 				/* Show hidden files by default. */
 				v.show_hidden_files = TRUE;
 				break;
+			case 'z':
+				v.font_size_modifier = CLAMP(atoi(optarg), -10, 10);
+				break;
 		}
 	}
 	return TRUE;
@@ -701,11 +704,14 @@ int main(int argc, char *argv[]) {
 	v.show_icons = TRUE;
 	v.show_hidden_files = FALSE;
 	v.file_display_limit = DEFAULT_FILE_DISPLAY_LIMIT;
+	v.font_size_modifier = 0;
 	v.glob_fifo = v.cmd_fifo = v.feedback_fifo = NULL;
 	if (! parse_args(argc, argv) )
 		return 0;
 
-	file_box_set_sizing(-10);  // FIXME
+	/* Set the label font sizes. */
+	file_box_set_sizing(v.font_size_modifier);
+	dlisting_set_sizing(v.font_size_modifier);
 
 	/* Create gviewglob window. */
 	e.window = gtk_window_new(GTK_WINDOW_TOPLEVEL);

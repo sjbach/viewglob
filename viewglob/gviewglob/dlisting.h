@@ -66,11 +66,6 @@ struct _DListingClass {
 /* --- prototypes --- */
 GType       dlisting_get_type(void) G_GNUC_CONST;
 GtkWidget*  dlisting_new(void);
-void        dlisting_set_separator_color(GdkColor color);
-void        dlisting_set_show_hidden_pixbuf(GdkPixbuf* pixbuf);
-void        dlisting_set_show_all_pixbuf(GdkPixbuf* pixbuf);
-void        dlisting_set_show_hidden_files(gboolean show_hidden);
-void        dlisting_set_show_all_files(gboolean show_all);
 void        dlisting_destroy(DListing* dl);
 void        dlisting_set_name(DListing* dl, const gchar* name);
 void        dlisting_set_file_counts(DListing* dl, const gchar* selected, const gchar* total, const gchar* hidden);
@@ -78,6 +73,13 @@ void        dlisting_set_optimal_width(DListing* dl, gint width);
 void        dlisting_mark(DListing* d, gint rank);
 gboolean    dlisting_is_new(const DListing* dl);
 void        dlisting_free(DListing* dl);
+
+void        dlisting_set_separator_color(GdkColor color);
+void        dlisting_set_show_hidden_pixbuf(GdkPixbuf* pixbuf);
+void        dlisting_set_show_all_pixbuf(GdkPixbuf* pixbuf);
+void        dlisting_set_show_hidden_files(gboolean show_hidden);
+void        dlisting_set_show_all_files(gboolean show_all);
+void        dlisting_set_sizing(gint modifier);
 
 G_END_DECLS
 

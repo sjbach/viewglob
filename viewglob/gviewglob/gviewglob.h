@@ -26,12 +26,13 @@
 G_BEGIN_DECLS
 
 struct viewable_preferences {
-	/* Options */
+	/* Options. */
 	gboolean show_icons;
 	gboolean show_hidden_files;
 	guint file_display_limit;
+	gint font_size_modifier;
 
-	/* Fifos */
+	/* Fifo paths. */
 	gchar* glob_fifo;
 	gchar* cmd_fifo;
 	gchar* feedback_fifo;

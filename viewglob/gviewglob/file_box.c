@@ -340,7 +340,7 @@ void file_box_set_icon(FileType type, GdkPixbuf* icon) {
 	file_type_icons[type] = icon;
 }
 
-
+/* Set the size of FItem font (and the size of the file type icons). */
 void file_box_set_sizing(gint modifier) {
 
 	gint size;
@@ -348,8 +348,8 @@ void file_box_set_sizing(gint modifier) {
 
 	gint i;
 
-	g_return_if_fail(size < 10);   /* Constrain between -10 and 10. */
-	g_return_if_fail(size > -10);
+	g_return_if_fail(modifier <= 10);   /* Constrain between -10 and 10. */
+	g_return_if_fail(modifier >= -10);
 
 	g_free(fitem_font_tags_open);
 	g_free(fitem_font_tags_close);
@@ -420,6 +420,7 @@ static void initialize_icons(void) {
 	gtk_label_set_markup(GTK_LABEL(test_label), label_markup);
 	test_layout = gtk_label_get_layout(GTK_LABEL(test_label));
 	pango_layout_get_pixel_size(test_layout, NULL, &icon_size);
+	g_free(label_markup);
 	gtk_widget_destroy(test_label);
 
 	/* Try to get icons from the current theme. */
@@ -525,20 +526,15 @@ static void initialize_icons(void) {
 
 
 static GdkPixbuf* make_pixbuf_scaled(const guint8 icon_inline[], gint scale_size) {
-		gint width, height;
 		GdkPixbuf* temp;
 		GdkPixbuf* result;
 
 		temp = gdk_pixbuf_new_from_inline(-1, icon_inline, FALSE, NULL);
-		width = gdk_pixbuf_get_width(temp);
-		height = gdk_pixbuf_get_height(temp);
 		result = gdk_pixbuf_scale_simple(temp, scale_size, scale_size, GDK_INTERP_BILINEAR);
 
-		g_free(temp);
+		g_object_unref(temp);
 		return result;
 }
-
-
 
 
 gboolean file_box_get_show_hidden_files(FileBox* fbox) {

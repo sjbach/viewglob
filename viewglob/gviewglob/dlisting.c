@@ -29,6 +29,8 @@ extern FILE* df;
 #endif
 
 #define WIDTH_BUFFER 0
+#define BASE_DIR_FONT_SIZE    +2
+#define BASE_COUNT_FONT_SIZE  -1
 
 /* --- prototypes --- */
 static void  dlisting_class_init(DListingClass* klass);
@@ -52,6 +54,10 @@ static GdkPixbuf* show_all_pixbuf = NULL;
 static gboolean show_hidden_files;
 static gboolean show_all_files;
 
+static gchar* directory_font_tags_open = NULL;
+static gchar* directory_font_tags_close = NULL;
+static gchar* file_count_font_tags_open = NULL;
+static gchar* file_count_font_tags_close = NULL;
 
 /* --- functions --- */
 GType dlisting_get_type(void) {
@@ -284,9 +290,93 @@ void dlisting_set_show_all_files(gboolean show_all) {
 	show_all_files = show_all;
 }
 
+/* Set the sizes of the directory heading font and the file count font. */
+void dlisting_set_sizing(gint modifier) {
+
+	gint dir_size, count_size;
+	gchar* temp;
+
+	gint i;
+
+	g_return_if_fail(modifier <= 10);   /* Constrain between -10 and 10. */
+	g_return_if_fail(modifier >= -10);
+
+	g_free(directory_font_tags_open);
+	g_free(directory_font_tags_close);
+	g_free(file_count_font_tags_open);
+	g_free(file_count_font_tags_close);
+
+	directory_font_tags_open = g_strdup("");
+	directory_font_tags_close = g_strdup("");
+	file_count_font_tags_open = g_strdup("");
+	file_count_font_tags_close = g_strdup("");
+
+	dir_size = BASE_DIR_FONT_SIZE + modifier;
+	count_size = BASE_COUNT_FONT_SIZE + modifier;
+
+	/* Directory label sizing. */
+	if (dir_size > 0) {
+		for (i = 0; i < dir_size; i++) {
+			temp = directory_font_tags_open;
+			directory_font_tags_open = g_strconcat(
+					directory_font_tags_open, "<big>", NULL);
+			g_free (temp);
+
+			temp = directory_font_tags_close;
+			directory_font_tags_close = g_strconcat(
+					directory_font_tags_close, "</big>", NULL);
+			g_free (temp);
+		}
+	}
+	else if (dir_size < 0) {
+		for (i = 0; i > dir_size; i--) {
+			temp = directory_font_tags_open;
+			directory_font_tags_open = g_strconcat(
+					directory_font_tags_open, "<small>", NULL);
+			g_free (temp);
+
+			temp = directory_font_tags_close;
+			directory_font_tags_close = g_strconcat(
+					directory_font_tags_close, "</small>", NULL);
+			g_free (temp);
+		}
+	}
+
+	/* File count label sizing. */
+	if (count_size > 0) {
+		for (i = 0; i < count_size; i++) {
+			temp = file_count_font_tags_open;
+			file_count_font_tags_open = g_strconcat(
+					file_count_font_tags_open, "<big>", NULL);
+			g_free (temp);
+
+			temp = file_count_font_tags_close;
+			file_count_font_tags_close = g_strconcat(
+					file_count_font_tags_close, "</big>", NULL);
+			g_free (temp);
+		}
+	}
+	else if (count_size < 0) {
+		for (i = 0; i > count_size; i--) {
+			temp = file_count_font_tags_open;
+			file_count_font_tags_open = g_strconcat(
+					file_count_font_tags_open, "<small>", NULL);
+			g_free (temp);
+
+			temp = file_count_font_tags_close;
+			file_count_font_tags_close = g_strconcat(
+					file_count_font_tags_close, "</small>", NULL);
+			g_free (temp);
+		}
+	}
+}
+
+
+
 
 static void dlisting_reset_file_count_label(DListing* dl) {
 	gchar* temp_string;
+	gchar* markup;
 
 	glong n_displayed;
 	guint display_limit;
@@ -299,30 +389,40 @@ static void dlisting_reset_file_count_label(DListing* dl) {
 		n_displayed = atol(dl->total_count->str) - atol(dl->hidden_count->str);
 
 	if (is_zero(dl->total_count->str))
-		temp_string = g_strdup("<small>(Restricted)</small>");
+		temp_string = g_strdup("(Restricted)");
 	else if (display_limit == 0 || n_displayed <= display_limit) {
-		temp_string = g_strconcat("<small>",
+		temp_string = g_strconcat(
 				dl->selected_count->str, " selected, ",
 				dl->total_count->str, " total (",
-				dl->hidden_count->str, " hidden)</small>", NULL);
+				dl->hidden_count->str, " hidden)", NULL);
 	}
 	else {
-			temp_string = g_strconcat("<small>",
-					dl->selected_count->str, " selected, <b>",
-					dl->total_count->str, "</b> total (",
-					dl->hidden_count->str, " hidden) [Results truncated]</small>", NULL);
+		temp_string = g_strconcat(
+				dl->selected_count->str, " selected, <b>",
+				dl->total_count->str, "</b> total (",
+				dl->hidden_count->str, " hidden) [Results truncated]", NULL);
 	}
 
-	gtk_label_set_markup(GTK_LABEL(dl->count_label), temp_string);
-	g_free(temp_string);
+	if (file_count_font_tags_open && file_count_font_tags_close) {
+		markup = g_strconcat(
+				file_count_font_tags_open,
+				temp_string,
+				file_count_font_tags_close, NULL);
+		g_free(temp_string);
+	}
+	else
+		markup = temp_string;
+
+	gtk_label_set_markup(GTK_LABEL(dl->count_label), markup);
+	g_free(markup);
 }
 
 
 /* Must first convert new_name to utf8, then escape it, then add markup. */
 void dlisting_set_name(DListing* dl, const gchar* new_name) {
-	gchar* temp1;
-	gchar* temp2;
-	gchar* temp3;
+	gchar* utf8;
+	gchar* escaped;
+	gchar* markup;
 	gsize length;
 
 	g_return_if_fail(IS_DLISTING(dl));
@@ -330,14 +430,24 @@ void dlisting_set_name(DListing* dl, const gchar* new_name) {
 
 	g_string_assign(dl->name, new_name);
 
-	temp1 = g_filename_to_utf8(new_name, strlen(new_name), NULL, &length, NULL);
-	temp2 = g_markup_escape_text(temp1, length);
-	temp3 = g_strconcat("<b><big><big>", temp2, "</big></big></b>", NULL);
-	gtk_label_set_markup(GTK_LABEL(dl->name_label), temp3);
+	utf8 = g_filename_to_utf8(new_name, strlen(new_name), NULL, &length, NULL);
+	escaped = g_markup_escape_text(utf8, length);
 
-	g_free(temp1);
-	g_free(temp2);
-	g_free(temp3);
+	/* Add markup. */
+	if (directory_font_tags_open && directory_font_tags_close) {
+		markup = g_strconcat(
+				"<b>", directory_font_tags_open,
+				escaped, directory_font_tags_close,
+				"</b>", NULL);
+	}
+	else
+		markup = g_strconcat("<b>", escaped, "</b>", NULL);
+
+	gtk_label_set_markup(GTK_LABEL(dl->name_label), markup);
+
+	g_free(utf8);
+	g_free(escaped);
+	g_free(markup);
 }
 
 
