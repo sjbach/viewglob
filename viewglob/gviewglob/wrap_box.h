@@ -75,8 +75,8 @@ struct _WrapBoxChild {
 	WrapBoxChild* next;
 };
 
-#define GTK_JUSTIFY_TOP  GTK_JUSTIFY_LEFT
-#define GTK_JUSTIFY_BOTTOM GTK_JUSTIFY_RIGHT
+#define GTK_JUSTIFY_TOP     GTK_JUSTIFY_LEFT
+#define GTK_JUSTIFY_BOTTOM  GTK_JUSTIFY_RIGHT
 
 /* --- prototypes --- */
 GType      wrap_box_get_type(void) G_GNUC_CONST;
@@ -85,11 +85,12 @@ void       wrap_box_set_hspacing(WrapBox *wbox, guint hspacing);
 void       wrap_box_set_vspacing(WrapBox *wbox, guint vspacing);
 void       wrap_box_set_justify(WrapBox *wbox, GtkJustification justify);
 void       wrap_box_set_line_justify(WrapBox *wbox, GtkJustification line_justify);
-//void       wrap_box_set_optimal_width(WrapBox* wbox, guint optimal_width);
-void wrap_box_size_request_optimal(GtkWidget* widget, GtkRequisition* requisition, guint optimal_width);
-void       wrap_box_pack(WrapBox *wbox, GtkWidget *child);
-void       wrap_box_pack_pos(WrapBox* wbox, GtkWidget* child, guint pos);
+/*void       wrap_box_set_optimal_width(WrapBox* wbox, guint optimal_width);*/
+void       wrap_box_size_request_optimal(GtkWidget* widget, GtkRequisition* requisition, guint optimal_width);
+void       wrap_box_pack(WrapBox *wbox, GtkWidget *child, gboolean do_resize);
+void       wrap_box_pack_pos(WrapBox* wbox, GtkWidget* child, guint pos, gboolean do_resize);
 void       wrap_box_reorder_child(WrapBox *wbox, GtkWidget *child, gint position);
+void       wrap_box_remove (GtkContainer *container, GtkWidget *widget, gboolean do_resize);
 
 G_END_DECLS
 

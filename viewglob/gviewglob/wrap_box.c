@@ -58,7 +58,8 @@ static void   wrap_box_map(GtkWidget *widget);
 static void   wrap_box_unmap(GtkWidget *widget);
 static gint   wrap_box_expose(GtkWidget *widget, GdkEventExpose *event);
 static void   wrap_box_add(GtkContainer *container, GtkWidget *widget);
-static void   wrap_box_remove(GtkContainer *container, GtkWidget *widget);
+static void   wrap_box_remove_simple(GtkContainer *container, GtkWidget *widget);
+
 static void   wrap_box_forall(GtkContainer *container, gboolean include_internals, GtkCallback callback, gpointer callback_data);
 static GType  wrap_box_child_type(GtkContainer *container);
 
@@ -118,7 +119,7 @@ static void wrap_box_class_init (WrapBoxClass *class) {
 	widget_class->size_allocate = wrap_box_size_allocate;
 	
 	container_class->add = wrap_box_add;
-	container_class->remove = wrap_box_remove;
+	container_class->remove = wrap_box_remove_simple;
 	container_class->forall = wrap_box_forall;
 	container_class->child_type = wrap_box_child_type;
 	container_class->set_child_property = wrap_box_set_child_property;
@@ -373,7 +374,7 @@ void wrap_box_set_optimal_width(WrapBox* wbox, guint optimal_width) {
 #endif
 
 
-void wrap_box_pack(WrapBox *wbox, GtkWidget *child) {
+void wrap_box_pack(WrapBox *wbox, GtkWidget *child, gboolean do_resize) {
 	WrapBoxChild *child_info;
 
 	g_return_if_fail (IS_WRAP_BOX (wbox));
@@ -403,20 +404,21 @@ void wrap_box_pack(WrapBox *wbox, GtkWidget *child) {
 		if (GTK_WIDGET_MAPPED (wbox))
 			gtk_widget_map (child);
 
-		gtk_widget_queue_resize (child);
+		if (do_resize)
+			gtk_widget_queue_resize (child);
 	}
 }
 
 
 /* Pack this widget at the given position. */
-void wrap_box_pack_pos(WrapBox* wbox, GtkWidget* child, guint pos) {
+void wrap_box_pack_pos(WrapBox* wbox, GtkWidget* child, guint pos, gboolean do_resize) {
 	WrapBoxChild* child_info;
 
 	g_return_if_fail(IS_WRAP_BOX (wbox));
 	g_return_if_fail(GTK_IS_WIDGET (child));
 	g_return_if_fail(child->parent == NULL);
 
-	child_info = g_new (WrapBoxChild, 1);
+	child_info = g_new(WrapBoxChild, 1);
 	child_info->widget = child;
 	
 	if (wbox->children) {
@@ -448,7 +450,8 @@ void wrap_box_pack_pos(WrapBox* wbox, GtkWidget* child, guint pos) {
 		if (GTK_WIDGET_MAPPED(wbox))
 			gtk_widget_map(child);
 
-		gtk_widget_queue_resize (child);
+		if (do_resize)
+			gtk_widget_queue_resize (child);
 	}
 }
 
@@ -524,10 +527,14 @@ static gint wrap_box_expose (GtkWidget *widget, GdkEventExpose *event) {
 }
 
 static void wrap_box_add (GtkContainer *container, GtkWidget *widget) {
-	wrap_box_pack (WRAP_BOX (container), widget);
+	wrap_box_pack (WRAP_BOX (container), widget, TRUE);
 }
 
-static void wrap_box_remove (GtkContainer *container, GtkWidget *widget) {
+static void wrap_box_remove_simple(GtkContainer *container, GtkWidget *widget) {
+	wrap_box_remove(container, widget, FALSE);
+}
+
+void wrap_box_remove (GtkContainer *container, GtkWidget *widget, gboolean do_resize) {
 	WrapBox *wbox = WRAP_BOX (container);
 	WrapBoxChild *child, *last = NULL;
 
@@ -546,7 +553,7 @@ static void wrap_box_remove (GtkContainer *container, GtkWidget *widget) {
 			g_free (child);
 			wbox->n_children--;
 
-			if (was_visible)
+			if (was_visible && do_resize)
 				gtk_widget_queue_resize (GTK_WIDGET (container));
 
 			break;

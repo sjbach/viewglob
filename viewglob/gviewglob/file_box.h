@@ -83,6 +83,7 @@ struct _FileBox {
 	guint n_displayed_files;
 	guint file_max;
 
+	gboolean eat_size_requests;
 	GSList*   fi_slist;
 };
 

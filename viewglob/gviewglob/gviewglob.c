@@ -469,6 +469,7 @@ static void process_glob_data(const gchar* buff, gsize bytes, Exhibit* e) {
 	if (rs == RS_DONE) {
 		exhibit_cull(e);
 		exhibit_rearrange_and_show(e);
+		gtk_widget_queue_resize(e->listings_box);  /* To make the scrollbars rescale. */
 		DEBUG((df, "(^^)"));
 	}
 
@@ -481,10 +482,8 @@ static void exhibit_rearrange_and_show(Exhibit* e) {
 	DListing* dl;
 	GSList* search_result;
 
-	/* DEBUG((df, "DListings in order of rank:\n")); */
 	while ( (search_result = g_slist_find_custom(e->dl_slist, &next_rank, cmp_dlisting_same_rank)) ) {
 		dl = search_result->data;
-		/* DEBUG((df, " - %s\n", dl->name->str)); */
 
 		/* Commit the updates to the file box. */
 		file_box_flush(FILE_BOX(dl->file_box));

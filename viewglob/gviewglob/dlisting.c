@@ -57,20 +57,18 @@ static gint show_context_menu(GtkWidget *widget, GdkEvent *event) {
 
 
 static void show_hidden_files_activate_handler(GtkMenuItem* menu_item, DListing* dl) { 
-
-	DEBUG((df, "in show_hidden_blah: %s\n", dl->name->str));
 	file_box_set_show_hidden_files(FILE_BOX(dl->file_box), TRUE);
 	dlisting_reset_file_count_label(dl);
 	gtk_widget_set_state(GTK_WIDGET(menu_item), GTK_STATE_INSENSITIVE);
+	gtk_widget_queue_resize(dl->widget->parent);  /* Update scrollbar. */
 }
 
 
 static void show_all_files_activate_handler(GtkMenuItem* menu_item, DListing* dl) { 
-
-	DEBUG((df, "in show_all_blah: %s\n", dl->name->str));
 	file_box_set_file_display_limit(FILE_BOX(dl->file_box), 0);
 	dlisting_reset_file_count_label(dl);
 	gtk_widget_set_state(GTK_WIDGET(menu_item), GTK_STATE_INSENSITIVE);
+	gtk_widget_queue_resize(dl->widget->parent);  /* Update scrollbar. */
 }
 
 

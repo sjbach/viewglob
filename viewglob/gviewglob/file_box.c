@@ -42,9 +42,9 @@ static void  file_box_init(FileBox* fbox);
 /*static void  file_box_set_property(GObject* object, guint property_id, const GValue* value, GParamSpec* pspec);*/
 /*static void  file_box_get_property(GObject* object, guint property_id, GValue* value, GParamSpec* pspec);*/
 
-static void  file_box_size_request(GtkWidget* widget, GtkRequisition* requisition);
-
+static void   file_box_size_request(GtkWidget* widget, GtkRequisition* requisition);
 static guint  file_box_get_display_pos(FileBox* fbox, FItem* fitem);
+static void   file_box_allow_size_requests(FileBox* fbox, gboolean allow);
 
 static FItem*    fitem_new(const GString* name, FileType type, FileSelection selection);
 static void      fitem_build_widgets(FItem* fi);
@@ -53,6 +53,8 @@ static void      fitem_update_type_selection_and_order(FItem* fi, FileType t, Fi
 static gboolean  fitem_is_hidden(FItem* fi);
 static void      fitem_determine_display_category(FItem* fi, FileBox* fbox);
 static void      fitem_display(FItem* fi, FileBox* fbox);
+
+static gboolean size_request_kludge(GtkWidget* widget, GtkRequisition* allocation, gpointer user_data);
 
 static gint cmp_same_name(gconstpointer a, gconstpointer b);
 static gint cmp_ordering_ls(gconstpointer a, gconstpointer b);
@@ -131,6 +133,30 @@ static void file_box_class_init(FileBoxClass* class) {
 }
 
 
+/* This function prevents the size-request signal from propagating if eat_size_requests == TRUE.
+   It would be better to make FItem a new class which reimplements gtk_widget_show and prevents the
+   size request from happening in the first place. */
+static gboolean size_request_kludge(GtkWidget* widget, GtkRequisition* requisition, gpointer user_data) {
+	FileBox* fbox = FILE_BOX(widget);
+	return fbox->eat_size_requests;
+}
+
+
+static void file_box_allow_size_requests(FileBox* fbox, gboolean allow) {
+
+	if (fbox->eat_size_requests != allow)
+		return;
+
+	if (allow) {
+		/* Now we do a size request. */
+		fbox->eat_size_requests = FALSE;
+		gtk_widget_queue_resize(GTK_WIDGET(fbox));
+	}
+	else
+		fbox->eat_size_requests = TRUE;
+}
+
+
 
 static void file_box_init(FileBox *fbox) {
 	GTK_WIDGET_SET_FLAGS (fbox, GTK_NO_WINDOW);
@@ -141,6 +167,9 @@ static void file_box_init(FileBox *fbox) {
 	fbox->file_max = 32767;
 	fbox->file_display_limit = DEFAULT_FILE_DISPLAY_LIMIT;
 	fbox->fi_slist = NULL;
+	fbox->eat_size_requests = FALSE;
+
+	g_signal_connect(fbox, "size-request", G_CALLBACK(size_request_kludge), NULL);
 }
 
 
@@ -237,6 +266,8 @@ void file_box_set_show_hidden_files(FileBox* fbox, gboolean show) {
 	else
 		fdc = FDC_MASK;
 
+	file_box_allow_size_requests(fbox, FALSE);
+
 	/* Cycle through the hidden files and reveal or mask them. */
 	for (fi_iter = fbox->fi_slist; fi_iter; fi_iter = g_slist_next(fi_iter)) {
 		fi = fi_iter->data;
@@ -245,6 +276,8 @@ void file_box_set_show_hidden_files(FileBox* fbox, gboolean show) {
 			fitem_display(fi, fbox);
 		}
 	}
+
+	file_box_allow_size_requests(fbox, TRUE);
 }
 
 
@@ -260,8 +293,7 @@ void file_box_set_file_display_limit(FileBox* fbox, guint limit) {
 
 	fbox->file_display_limit = limit;
 
-
-	/*gtk_widget_hide(GTK_WIDGET(fbox));*/
+	file_box_allow_size_requests(fbox, FALSE);
 
 	/* Cycle through REVEAL fitems and re-display them up to the new limit.
 	   (fitems over that limit will be truncated). */
@@ -271,7 +303,7 @@ void file_box_set_file_display_limit(FileBox* fbox, guint limit) {
 			fitem_display(fi, fbox);
 	}
 
-	/*gtk_widget_show(GTK_WIDGET(fbox));*/
+	file_box_flush(fbox);
 }
 
 
@@ -338,7 +370,7 @@ static void fitem_display(FItem* fi, FileBox* fbox) {
 				if ( ! fi->widget ) {
 					/* Build widgets and pack it in. */
 					fitem_build_widgets(fi);
-					wrap_box_pack_pos(WRAP_BOX(fbox), fi->widget, file_box_get_display_pos(fbox, fi));
+					wrap_box_pack_pos(WRAP_BOX(fbox), fi->widget, file_box_get_display_pos(fbox, fi), FALSE);
 
 				}
 				fbox->n_displayed_files++;
@@ -348,7 +380,7 @@ static void fitem_display(FItem* fi, FileBox* fbox) {
 					/* It's not under the limit, but it's been selected.
 					   Doesn't have any widgets (if it does it's already displayed), so we make them. */
 					fitem_build_widgets(fi);
-					wrap_box_pack_pos(WRAP_BOX(fbox), fi->widget, file_box_get_display_pos(fbox, fi));
+					wrap_box_pack_pos(WRAP_BOX(fbox), fi->widget, file_box_get_display_pos(fbox, fi), FALSE);
 				}
 			}
 			else if (fi->widget) {
@@ -364,7 +396,7 @@ static void fitem_display(FItem* fi, FileBox* fbox) {
 				if (! fi->widget )  {
 					/* We're peeking at this FItem, but it doesn't have any widgets yet. */
 					fitem_build_widgets(fi);
-					wrap_box_pack_pos(WRAP_BOX(fbox), fi->widget, file_box_get_display_pos(fbox, fi));
+					wrap_box_pack_pos(WRAP_BOX(fbox), fi->widget, file_box_get_display_pos(fbox, fi), FALSE);
 				}
 
 			}
@@ -416,6 +448,9 @@ void file_box_begin_read(FileBox* fbox) {
 
 	fbox->n_displayed_files = 0;   /* This isn't really true, but n_displayed_files needs to be
 									  redefined during processing. */
+
+	/* There will be no size requests of the file box until file_box_flush(). */
+	file_box_allow_size_requests(fbox, FALSE);
 }
 
 
@@ -441,16 +476,21 @@ void file_box_flush(FileBox* fbox) {
 			fitem_free(fi, TRUE);
 			continue;
 		}
+		else if (fi->widget)
+			gtk_widget_show(fi->widget);
 		fi_iter = g_slist_next(fi_iter);
 	}
+
+	/* Now we do a size request. */
+	file_box_allow_size_requests(fbox, TRUE);
 }
 
 
 
 static void file_box_size_request(GtkWidget* widget, GtkRequisition* requisition) {
 	FileBox* this = FILE_BOX(widget);
-
-	wrap_box_size_request_optimal(widget, requisition, this->optimal_width);
+	if (!this->eat_size_requests)
+		wrap_box_size_request_optimal(widget, requisition, this->optimal_width);
 }
 
 
