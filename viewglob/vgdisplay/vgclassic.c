@@ -28,7 +28,6 @@
 #include "file-types.h"
 
 #include <gtk/gtk.h>
-#include <gdk/gdkx.h>
 #include <string.h>       /* For strcmp. */
 #include <unistd.h>       /* For getopt. */
 #include <stdio.h>        /* For BUFSIZ. */

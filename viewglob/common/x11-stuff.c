@@ -40,8 +40,6 @@
 
 #include <glib.h>
 
-static void activate_window (Display* disp, Window win,
-		gboolean switch_desktop);
 static Window *get_client_list (Display *disp, gulong *size);
 static gchar* get_property (Display* disp, Window win, Atom xa_prop_type,
 		gchar* prop_name, gulong* size);
@@ -62,12 +60,12 @@ void refocus(Display* disp, Window w1, Window w2) {
 	/* Refocus the window which isn't focused.  Or, if neither
 	   are focused (?), focus both. */
 	if (active_window == w1 && w2 != 0)
-		activate_window(disp, w2, FALSE);
+		focus_window(disp, w2, FALSE);
 	else if (active_window == w2 && w1 != 0)
-		activate_window(disp, w1, FALSE);
+		focus_window(disp, w1, FALSE);
 	else if (w1 != 0 && w2 != 0) {
-		activate_window(disp, w2, FALSE);
-		activate_window(disp, w1, FALSE);
+		focus_window(disp, w2, FALSE);
+		focus_window(disp, w1, FALSE);
 	}
 }
 
@@ -85,7 +83,7 @@ Window get_active_window(Display* disp) {
 }
 
 
-static void activate_window(Display* disp, Window win, gboolean switch_desktop) {
+void focus_window(Display* disp, Window win, gboolean switch_desktop) {
 	gulong* desktop;
 	/* desktop ID */
 	if ((desktop = (gulong*)get_property(disp, win,

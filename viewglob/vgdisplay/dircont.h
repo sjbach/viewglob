@@ -65,12 +65,15 @@ struct _DirCont {
 	GString* hidden;
 
 	GtkWidget* header;
+	GtkWidget* paint_event_box;
 	GtkWidget* scrolled_window;
 	GtkWidget* file_box;
 
 	gboolean is_pwd;
 	gboolean is_restricted;
 	gboolean is_active;
+	gboolean is_highlighted;
+
 	gint score;
 
 	PangoLayout* name_layout;

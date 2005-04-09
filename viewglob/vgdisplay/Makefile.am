@@ -6,9 +6,10 @@ INCLUDES = -I$(COMMON)
 pkglib_PROGRAMS = vgclassic vgmini
 vgclassic_SOURCES = vgclassic.c exhibit.c dlisting.c wrap_box.c file_box.c \
                     lscolors.c $(COMMON)/param-io.c $(COMMON)/hardened-io.c \
-		    display-common.c
+		    display-common.c $(COMMON)/x11-stuff.c
 vgmini_SOURCES = vgmini.c wrap_box.c file_box.c lscolors.c dircont.c \
-                 $(COMMON)/param-io.c $(COMMON)/hardened-io.c display-common.c
+                 $(COMMON)/param-io.c $(COMMON)/hardened-io.c  \
+		 display-common.c $(COMMON)/x11-stuff.c
 
 BUILT_SOURCES = app_icons.h file_icons.h
 app_icons.h: Makefile

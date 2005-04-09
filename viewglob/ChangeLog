@@ -1,3 +1,18 @@
+2005-04-08 22:00  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* x11-stuff.c, x11-stuff.h, common/Makefile.am, vgd/Makefile.am:
+	  Moved x11-stuff to common/.
+	* vgdisplay/Makefile.am, dircont.c, dircont.h, display-common.c,
+	  display-common.h, :
+	  - Took second stab at vgmini resizing (better but needs work).
+	  - Headers in vgmini highlight when mouseover.
+	  - Headers in vgmini are clickable (to activate).
+	  - Added preliminary jump-resizing of vgmini on context switch.
+	    Works well on some window managers but not all.
+	* vgseer.c:
+	  - Don't escape ~ in filenames.
+	  - Use single quote instead of double for vgexpand calls.
+
 2005-04-05 19:57  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* vgd.c: don't refocus unless display is open

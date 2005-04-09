@@ -46,6 +46,7 @@ enum glob_read_state {
 
 void set_icons(void);
 void write_xwindow_id(GtkWidget* gtk_window);
+gboolean resize_jump(GtkWidget* gtk_window, gchar* term_win_str);
 gchar* up_to_delimiter(gchar** ptr, char c);
 FileSelection map_selection_state(gchar c);
 FileType map_file_type(gchar c);

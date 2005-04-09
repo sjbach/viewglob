@@ -215,7 +215,7 @@ static void dlisting_size_allocate(GtkWidget* widget,
 	gtk_widget_size_allocate (GTK_WIDGET(dl->heading_event_box),
 			&child_allocation);
 
-	child_allocation.y = child_allocation.y + child_allocation.height;
+	child_allocation.y += child_allocation.height;
 	child_allocation.height = MAX(1,
 			allocation->height - child_allocation.height);
 

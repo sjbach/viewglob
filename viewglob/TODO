@@ -13,8 +13,13 @@ Critical:
 - vgdisplays: --red --green --blue, etc.
 - vgmini: scroll to active part of filebox
 - vgmini: single click to activate dc
+- vgmini: jumping, resizing to fit active terminal
+- make: autoscan
+- make: move pty_child_blah() into separate file which only vgseer uses
 
 Non-critical:
+- vgd: refocus activates the window which isn't activated instead of just
+  bringing to front
 - vgseer: sanitize mask better
 - vgexpand: fix $HOME to ~
 - vgseer: EIO when zsh exit

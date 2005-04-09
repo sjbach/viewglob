@@ -859,7 +859,7 @@ static gchar* escape_filename(gchar* name, struct user_state* u,
 			case ':':
 			case '{':
 			case '}':
-			case '~':
+			/*case '~':     Don't escape $HOME */
 			case '\\':
 			case '!':
 				if (pl == PL_AT_PROMPT)
@@ -958,8 +958,8 @@ static void call_vgexpand(struct user_state* u, struct vgd_stuff* vgd) {
 		mask_sane = g_strdup("*");
 	}
 
-	expand_command = g_strconcat("cd \"", u->cmd.pwd,
-			"\" && vgexpand -m \"", mask_sane, "\" -- ", cmd_sane,
+	expand_command = g_strconcat("cd \'", u->cmd.pwd,
+			"\' && vgexpand -m \'", mask_sane, "\' -- ", cmd_sane,
 			" ; cd /\n", NULL);
 
 	if (write_all(u->sandbox.fd_out, expand_command, strlen(expand_command))

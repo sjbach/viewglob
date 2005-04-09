@@ -38,6 +38,7 @@ struct vgmini {
 
 	GtkWidget* vbox;
 
+	GString* term_win;
 };
 
 
@@ -59,24 +60,10 @@ static gboolean window_configure_event(GtkWidget* window,
 		GdkEventConfigure* event, struct vgmini* vg);
 static void window_allocate_event(GtkWidget* window,
 		GtkAllocation* allocation, struct vgmini* vg);
-gint default_width(struct vgmini* vg);
-
-
-gint default_width(struct vgmini* vg) {
-
-	if (vg->dcs) {
-		/* Use the size of an existing file_box. */
-		GSList* iter;
-		for (iter = vg->dcs; iter; iter = g_slist_next(iter)) {
-			DirCont* dc = vg->dcs->data;
-			if (GTK_WIDGET_VISIBLE(dc->file_box))
-				return dc->file_box->allocation.width;
-		}
-	}
-
-	/* Didn't work, so just use the size of the main vbox. */
-	return vg->vbox->allocation.width;
-}
+gboolean window_focus_event(GtkWidget* widget, GdkEventFocus* event,
+		struct vgmini* vg);
+gboolean button_release_event(GtkWidget* header, GdkEventButton* event,
+		struct vgmini* vg);
 
 
 gint main(gint argc, char** argv) {
@@ -85,6 +72,7 @@ gint main(gint argc, char** argv) {
 
 	struct vgmini vg;
 	vg.cmdline = gtk_drawing_area_new();
+	vg.term_win = g_string_new(NULL);
 	vg.dcs = NULL;
 	vg.active = NULL;
 	vg.width_change = 0;
@@ -114,8 +102,11 @@ gint main(gint argc, char** argv) {
 			G_CALLBACK(window_delete_event), NULL);
 	g_signal_connect(G_OBJECT(vg.window), "key-press-event",
 			G_CALLBACK(window_key_press_event), NULL);
-//	g_signal_connect(G_OBJECT(area), "expose-event",
-//			G_CALLBACK(area_expose_event), NULL);
+
+	g_signal_connect(G_OBJECT(vg.window), "focus-in-event",
+			G_CALLBACK(window_focus_event), NULL);
+	g_signal_connect(G_OBJECT(vg.window), "focus-out-event",
+			G_CALLBACK(window_focus_event), NULL);
 
 	GIOChannel* stdin_ioc;
 	if ( (stdin_ioc = g_io_channel_unix_new(STDIN_FILENO)) == NULL) {
@@ -160,6 +151,13 @@ static gboolean receive_data(GIOChannel* source, GIOCondition condition,
 
 			case P_WIN_ID:
 				/* This display doesn't use the window id. */
+				if (!STREQ(vg->term_win->str, value)) {
+//				if ((win = strtoul(value, NULL, 10)) == ULONG_MAX)
+//					g_warning("Window ID out of bounds: %s", value);
+//				else if (win != vg->term_win && vg->window->window)
+					if (resize_jump(vg->window, value))
+						vg->term_win = g_string_assign(vg->term_win, value);
+				}
 				break;
 
 			case P_MASK:
@@ -304,6 +302,34 @@ static void process_glob_data(gchar* buf, gsize bytes, struct vgmini* vg) {
 	rearrange_and_show(vg);
 }
 
+gboolean button_release_event(GtkWidget* header, GdkEventButton* event,
+		struct vgmini* vg) {
+
+	GSList* iter;
+	DirCont* dc;
+	gboolean found = FALSE;
+
+	/* Find the dc with this header. */
+	if (vg->dcs) {
+		for (iter = vg->dcs; iter; iter = g_slist_next(iter)) {
+			dc = iter->data;
+			if (dc->header == header) {
+				found = TRUE;
+				break;
+			}
+		}
+	}
+
+	/* Activate it, and deactivate the old active dc. */
+	if (found && vg->active != dc) {
+		update_dc(vg, dc, TRUE);
+		if (vg->active)
+			update_dc(vg, vg->active, FALSE);
+		vg->active = dc;
+	}
+
+	return FALSE;
+}
 
 static DirCont* add_dircont(struct vgmini* vg, gchar* name, gint rank,
 		gchar* selected, gchar* total, gchar* hidden) {
@@ -342,6 +368,13 @@ static DirCont* add_dircont(struct vgmini* vg, gchar* name, gint rank,
 		dircont_set_name(dc, name);
 		dircont_set_counts(dc, selected, total, hidden);
 		dircont_set_pwd(dc, is_pwd);
+
+		/* Clicking the header activates it.  This must be done on this level
+		   rather than in dircont.c because the other dcs must be
+		   deactivated. */
+		g_signal_connect(G_OBJECT(dc->header), "button-release-event",
+				G_CALLBACK(button_release_event), vg);
+
 		/* Set optimal width as the width of the listings vbox. */
 		if (vg->active) {
 			dircont_set_optimal_width(dc,
@@ -532,7 +565,6 @@ static void window_allocate_event(GtkWidget* window,
 	DirCont* dc;
 
 	if (vg->width_change) {
-//		g_printerr("(width change: %d)", vg->width_change);
 		/* Cycle through the DirConts and set the new optimal width.  This
 		   will make them optimize themselves to the window's width. */
 		for (iter = vg->dcs; iter; iter = g_slist_next(iter)) {
@@ -542,6 +574,18 @@ static void window_allocate_event(GtkWidget* window,
 		}
 		vg->width_change = 0;
 	}
+}
+
+
+gboolean window_focus_event (GtkWidget* widget, GdkEventFocus* event,
+		struct vgmini* vg) {
+
+	if (event->in)
+		g_printerr("(in)");
+	else
+		g_printerr("(out)");
+
+	return FALSE;
 }
 
 
