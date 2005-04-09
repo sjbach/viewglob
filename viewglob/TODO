@@ -12,8 +12,6 @@ Critical:
 - vgseer: close stderr in user shell
 - vgdisplays: --red --green --blue, etc.
 - vgmini: scroll to active part of filebox
-- vgmini: single click to activate dc
-- vgmini: jumping, resizing to fit active terminal
 - make: autoscan
 - make: move pty_child_blah() into separate file which only vgseer uses
 

@@ -25,7 +25,7 @@
 #include "tc_setraw.h"
 #include "actions.h"
 #include "connection.h"
-#include "children.h"
+#include "child.h"
 #include "sequences.h"
 #include "shell.h"
 #include "hardened-io.h"

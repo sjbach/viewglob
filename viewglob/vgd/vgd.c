@@ -29,7 +29,7 @@
 #include "common.h"
 #include "hardened-io.h"
 #include "param-io.h"
-#include "children.h"
+#include "child.h"
 #include "x11-stuff.h"
 #include "shell.h"
 

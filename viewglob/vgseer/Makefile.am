@@ -3,13 +3,14 @@ LDADD = @GLIB_LIBS@
 COMMON = ../common
 INCLUDES = -I$(COMMON)
 
-pkglib_PROGRAMS = vgseer
+bin_PROGRAMS = vgseer
 
 vgseer_SOURCES = vgseer.c cmdline.c sequences.c tc_setraw.c \
                  connection.c actions.c sanitize.c \
                $(COMMON)/ptytty.c $(COMMON)/hardened-io.c \
-               $(COMMON)/children.c $(COMMON)/param-io.c $(COMMON)/shell.c
+               $(COMMON)/child.c pty-child.c $(COMMON)/param-io.c \
+	       $(COMMON)/shell.c
 
 noinst_HEADERS = cmdline.h sequences.h sanitize.h \
-                 tc_setraw.h actions.h connection.h
+                 tc_setraw.h actions.h connection.h pty-child.h
 

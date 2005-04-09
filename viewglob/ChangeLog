@@ -1,3 +1,12 @@
+2005-04-09 00:45  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* children.c, children.h: removed
+	* child.c, child.h, pty-child.c, pty-child.h: added
+	* common/Makefile.am, vgd/Makefile.am, vgseer/Makefile.am, vgd.c,
+	  vgseer.c:
+	  Moved pseudo terminal child stuff into pty-child, which only vgseer
+	  links.
+
 2005-04-08 22:00  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* x11-stuff.c, x11-stuff.h, common/Makefile.am, vgd/Makefile.am:
