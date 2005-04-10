@@ -98,6 +98,9 @@ static gboolean fork_shell(struct child* child, enum shell_type type,
 		gboolean sandbox, gchar* init_loc);
 static gboolean setup_zsh(gchar* init_loc);
 static gboolean putenv_wrapped(gchar* string);
+static void logging(const gchar *log_domain, GLogLevelFlags level,
+		const gchar *message, gpointer dummy);
+
 
 /* Program flow. */
 static void     main_loop(struct user_state* u, gint vgd_fd);
@@ -148,6 +151,11 @@ gint main(gint argc, gchar** argv) {
 	gchar* basename = g_path_get_basename(argv[0]);
 	g_set_prgname(basename);
 	g_free(basename);
+
+	/* Set up the log handler. */
+	g_log_set_handler(NULL,
+			G_LOG_LEVEL_WARNING | G_LOG_LEVEL_CRITICAL | G_LOG_LEVEL_MESSAGE |
+			G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION, logging, NULL);
 
 	/* Initialize the shell and display structs. */
 	child_init(&u.shell);
@@ -1204,3 +1212,19 @@ static gsize strlen_safe(const gchar* string) {
 	return n;
 }
 
+
+static void logging(const gchar *log_domain, GLogLevelFlags level,
+		const gchar *message, gpointer dummy) {
+
+	gchar* prog_name = g_get_prgname();
+	gchar* format;
+
+	if (level & G_LOG_LEVEL_CRITICAL)
+		format = "%s: CRITICAL: %s\n";
+	else if (level & G_LOG_LEVEL_WARNING)
+		format = "%s: Warning: %s\n";
+	else if (level & G_LOG_LEVEL_MESSAGE)
+		format = "%s: FYI: %s\n";
+
+	g_printerr(format, prog_name, message);
+}

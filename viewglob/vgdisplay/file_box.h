@@ -47,7 +47,8 @@ struct _FileBox {
 	gboolean  show_hidden_files;
 	guint     file_display_limit;
 
-	gboolean eat_size_requests;
+	gboolean  eat_size_requests;
+	FItem*    changed_fi;
 	GSList*   fis;
 };
 

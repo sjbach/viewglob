@@ -22,6 +22,7 @@
 #include "dircont.h"
 #include "file_box.h"
 #include "param-io.h"
+#include "syslogging.h"
 
 #include <string.h>
 #include <gtk/gtk.h>
@@ -69,6 +70,18 @@ gboolean button_release_event(GtkWidget* header, GdkEventButton* event,
 gint main(gint argc, char** argv) {
 
 	gtk_init(&argc, &argv);
+	
+	/* Set the program name. */
+	gchar* basename = g_path_get_basename(argv[0]);
+	g_set_prgname(basename);
+	g_free(basename);
+
+	/* Warning/error logging must go through syslog, otherwise it won't be
+	   seen. */
+	g_log_set_handler(NULL,
+			G_LOG_LEVEL_WARNING | G_LOG_LEVEL_CRITICAL | G_LOG_LEVEL_MESSAGE |
+			G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION, syslogging, NULL);
+	openlog_wrapped(g_get_prgname());
 
 	struct vgmini vg;
 	vg.cmdline = gtk_drawing_area_new();
@@ -489,6 +502,7 @@ static void update_dc(struct vgmini* vg, DirCont* dc, gboolean setting) {
 			GTK_BOX(vg->vbox),
 			GTK_WIDGET(dc),
 			setting, setting, 0, GTK_PACK_START);
+	dircont_scroll_to_changed(dc);
 	dircont_repaint_header(dc);
 }
 

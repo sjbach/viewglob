@@ -1,19 +1,22 @@
 
 Critical:
 - vgseer: sandbox vgexpand command options
+	- vgdisplay: make icon disable work
+	- vgdisplays: --red --green --blue, etc.
+	- make: package getopt_long (or alternative)
 - vgclassic: mask and developing mask
 - make: option to build only vgseer/vgexpand (and thus no GTK requirement)
-- make: package getopt_long (or alternative)
-- documentation: updates from 1.1.1
 - vgseer, vgdisplay: statuses
-- vgdisplay: make icon disable work
 - vgd: remap g_log: syslog
 - vgseer: remap g_log
-- vgseer: close stderr in user shell
-- vgdisplays: --red --green --blue, etc.
-- vgmini: scroll to active part of filebox
+- vgd: make work in konsole and gnome-terminal
+	konsole: only check beginning of title name for match
+- vgdisplays: shift click filename puts full path
+
+End:
+- documentation: updates from 1.1.1
 - make: autoscan
-- make: move pty_child_blah() into separate file which only vgseer uses
+- vgseer: close stderr in user shell
 
 Non-critical:
 - vgd: refocus activates the window which isn't activated instead of just

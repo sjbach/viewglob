@@ -26,7 +26,9 @@
 
 static gboolean get_win_geometry(Display* Xdisplay, Window win, gint* x,
 		gint* y, guint* w, guint* h);
-static void get_decorations(GdkWindow* gdk_win, gint* border, gint* title);
+static void get_decorations(GdkWindow* gdk_win, gint* left, gint* right,
+		gint* top, gint* bottom);
+
 
 /* Set the application icons. */
 void set_icons(void) {
@@ -68,6 +70,7 @@ void write_xwindow_id(GtkWidget* gtk_window) {
 	g_string_free(xwindow_string, TRUE);
 }
 
+
 #define WIDTH_VERT  240
 #define HEIGHT_HORZ 150
 gboolean resize_jump(GtkWidget* gtk_window, gchar* term_win_str) {
@@ -77,6 +80,8 @@ gboolean resize_jump(GtkWidget* gtk_window, gchar* term_win_str) {
 	if (!gtk_window->window)
 		return FALSE;
 
+	GdkWindow* gdk_win = gtk_window->window;
+
 	Window term_win;
 	Window me_win;
 
@@ -84,12 +89,12 @@ gboolean resize_jump(GtkWidget* gtk_window, gchar* term_win_str) {
 		g_warning("Window ID out of bounds: %s", term_win_str);
 		return FALSE;
 	}
-	me_win = GDK_WINDOW_XID(gtk_window->window);
+	me_win = GDK_WINDOW_XID(gdk_win);
 
-	Display* Xdisplay = GDK_DRAWABLE_XDISPLAY(gtk_window->window);
+	Display* Xdisplay = GDK_DRAWABLE_XDISPLAY(gdk_win);
 
-	gint border, title;
-	get_decorations(gtk_window->window, &border, &title);
+	gint left, right, top, bottom;
+	get_decorations(gdk_win, &left, &right, &top, &bottom);
 
 	gint term_x, term_y;
 	guint term_w, term_h;
@@ -108,14 +113,14 @@ gboolean resize_jump(GtkWidget* gtk_window, gchar* term_win_str) {
 		return FALSE;
 
 	/* Apply assumed decoration sizes. */
-	term_x -= border;
-	term_y -= title;
-	term_w += border * 2;
-	term_h += title + border;
-	me_x -= border;
-	me_y -= title;
-	me_w += border * 2;
-	me_h += title + border;
+	term_x -= left;
+	term_y -= top;
+	term_w += left + right;
+	term_h += top + bottom;
+	me_x -= left;
+	me_y -= top;
+	me_w += left + right;
+	me_h += top + bottom;
 
 	gboolean moved = FALSE;
 
@@ -126,8 +131,8 @@ gboolean resize_jump(GtkWidget* gtk_window, gchar* term_win_str) {
 				(term_y + (gint)term_h <= screen_height) ) {
 			me_x = term_x - (gint)WIDTH_VERT;
 			me_y = term_y;
-			me_w = WIDTH_VERT - border * 2;
-			me_h = term_h - title - border;
+			me_w = WIDTH_VERT - left - right;
+			me_h = term_h - top - bottom;
 			moved = TRUE;
 		}
 		/* Right */
@@ -135,8 +140,8 @@ gboolean resize_jump(GtkWidget* gtk_window, gchar* term_win_str) {
 				(term_y + (gint)term_h <= screen_height) ) {
 			me_x = term_x + (gint)term_w;
 			me_y = term_y;
-			me_w = WIDTH_VERT - border * 2;
-			me_h = term_h - title - border;
+			me_w = WIDTH_VERT - left - right;
+			me_h = term_h - top - bottom;
 			moved = TRUE;
 		}
 		/* Bottom */
@@ -144,8 +149,8 @@ gboolean resize_jump(GtkWidget* gtk_window, gchar* term_win_str) {
 				(term_y + (gint)term_h + (gint)HEIGHT_HORZ <= screen_height) ) {
 			me_x = term_x;
 			me_y = term_y + (gint)term_h;
-			me_w = term_w - border * 2;
-			me_h = HEIGHT_HORZ - title - border;
+			me_w = term_w - left - right;
+			me_h = HEIGHT_HORZ - top - bottom;
 			moved = TRUE;
 		}
 		/* Top */
@@ -153,13 +158,14 @@ gboolean resize_jump(GtkWidget* gtk_window, gchar* term_win_str) {
 				(term_y - (gint)HEIGHT_HORZ >= 0) ) {
 			me_x = term_x;
 			me_y = term_y - (gint)HEIGHT_HORZ;
-			me_w = term_w - border *2;
-			me_h = HEIGHT_HORZ - title - border;
+			me_w = term_w - left - right;
+			me_h = HEIGHT_HORZ - top - bottom;
 			moved = TRUE;
 		}
 	}
 
 #if 0
+	/* Moving without resizing: */
 	/* First try aligning to the left. */
 	if ( (term_x - (gint)me_w >= 0) &&
 			(term_y + (gint)me_h <= screen_height) ) {
@@ -181,7 +187,7 @@ gboolean resize_jump(GtkWidget* gtk_window, gchar* term_win_str) {
 #endif
 
 	if (moved) {
-		gdk_window_move_resize(gtk_window->window, me_x, me_y, me_w, me_h);
+		gdk_window_move_resize(gdk_win, me_x, me_y, me_w, me_h);
 		focus_window(Xdisplay, me_win, FALSE);
 		get_win_geometry(Xdisplay, me_win, &term_x, &term_y, &term_w,
 				&term_h);
@@ -191,14 +197,24 @@ gboolean resize_jump(GtkWidget* gtk_window, gchar* term_win_str) {
 
 
 /* Figure out the size of the window decorations (making assumptions) */
-static void get_decorations(GdkWindow* gdk_win, gint* border, gint* title) {
+static void get_decorations(GdkWindow* gdk_win, gint* left, gint* right,
+		gint* top, gint* bottom) {
+
 	gint outside_x, outside_y;
 	gint inside_x, inside_y;
 	gdk_window_get_root_origin(gdk_win, &inside_x, &inside_y);
 	gdk_window_get_origin(gdk_win, &outside_x, &outside_y);
 
-	*border = outside_x - inside_x;
-	*title = outside_y - inside_y;
+	GdkRectangle frame;
+	gdk_window_get_frame_extents(gdk_win, &frame);
+
+	gint width, height;
+	gdk_drawable_get_size(GDK_DRAWABLE(gdk_win), &width, &height);
+
+	*left = outside_x - inside_x;
+	*right = frame.width - width - *left;
+	*top = outside_y - inside_y;
+	*bottom = frame.height - height - *top;
 }
 
 

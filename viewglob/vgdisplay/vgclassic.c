@@ -25,12 +25,11 @@
 #include "dlisting.h"
 #include "exhibit.h"
 #include "param-io.h"
-#include "file-types.h"
+#include "syslogging.h"
 
 #include <gtk/gtk.h>
 #include <string.h>       /* For strcmp. */
 #include <unistd.h>       /* For getopt. */
-#include <stdio.h>        /* For BUFSIZ. */
 
 struct prefs {
 	/* Options. */
@@ -286,6 +285,20 @@ static void report_version(void) {
 
 gint main(gint argc, gchar **argv) {
 
+	gtk_init(&argc, &argv);
+
+	/* Set the program name. */
+	gchar* basename = g_path_get_basename(argv[0]);
+	g_set_prgname(basename);
+	g_free(basename);
+
+	/* Warning/error logging must go through syslog, otherwise it won't be
+	   seen. */
+	g_log_set_handler(NULL,
+			G_LOG_LEVEL_WARNING | G_LOG_LEVEL_CRITICAL | G_LOG_LEVEL_MESSAGE |
+			G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION, syslogging, NULL);
+	openlog_wrapped(g_get_prgname());
+
 	GtkWidget* vbox;
 	GtkWidget* scrolled_window;
 
@@ -295,8 +308,6 @@ gint main(gint argc, gchar **argv) {
 	Exhibit	e;
 	e.dls = NULL;
 	
-	gtk_init(&argc, &argv);
-
 	/* Option defaults. */
 	v.show_icons = TRUE;
 	v.font_size_modifier = 0;

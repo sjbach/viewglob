@@ -150,9 +150,10 @@ static gchar* get_property (Display* disp, Window win,
 	
 	xa_prop_name = XInternAtom(disp, prop_name, False);
 	
-	if (XGetWindowProperty(disp, win, xa_prop_name, 0, MAX_PROPERTY_VALUE_LEN / 4, False,
-			xa_prop_type, &xa_ret_type, &ret_format,
-			&ret_nitems, &ret_bytes_after, &ret_prop) != Success) {
+	if (XGetWindowProperty(disp, win, xa_prop_name, 0,
+				MAX_PROPERTY_VALUE_LEN / 4, False,
+				xa_prop_type, &xa_ret_type, &ret_format,
+				&ret_nitems, &ret_bytes_after, &ret_prop) != Success) {
 		g_warning("Cannot get %s property", prop_name);
 		return NULL;
 	}
@@ -233,9 +234,9 @@ static gchar* get_window_title (Display *disp, Window win) {
 			XInternAtom(disp, "UTF8_STRING", False), "_NET_WM_NAME", NULL);
 
 	if (net_wm_name)
-		title_utf8 = strdup(net_wm_name);
+		title_utf8 = g_strdup(net_wm_name);
 	else if (wm_name)
-		title_utf8 = strdup(wm_name);
+		title_utf8 = g_strdup(wm_name);
 	else
 		title_utf8 = NULL;
 

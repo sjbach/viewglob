@@ -55,7 +55,6 @@ static void      fitem_build_widgets(FItem* fi);
 static void      fitem_free(FItem* fi, gboolean destroy_widgets);
 static int       fitem_update_type_selection_and_order(FItem* fi, FileType t,
 		FileSelection s, FileBox* fbox, gint rank);
-static void      fitem_display(FItem* fi, FileBox* fbox);
 
 static gboolean size_request_kludge(GtkWidget* widget,
 		GtkRequisition* allocation, gpointer user_data);
@@ -157,6 +156,7 @@ static void file_box_init(FileBox *fbox) {
 	fbox->optimal_width = 0;
 	fbox->fis = NULL;
 	fbox->eat_size_requests = FALSE;
+	fbox->changed_fi = NULL;
 
 	g_signal_connect(fbox, "size-request", G_CALLBACK(size_request_kludge),
 			NULL);
@@ -458,21 +458,18 @@ int file_box_add(FileBox* fbox, gchar* name, FileType type,
 	}
 
 	fi->marked = TRUE;
-	fitem_display(fi, fbox);
-	return points;
-}
 
-
-/* Display the given FItem.
-   This involves creating and destroying widgets. */
-static void fitem_display(FItem* fi, FileBox* fbox) {
-
-	if (!fi->widget ) {
+	if (!fi->widget) {
 		/* Build widgets and pack it in. */
 		fitem_build_widgets(fi);
 		wrap_box_pack_pos(WRAP_BOX(fbox), fi->widget,
 				file_box_get_display_pos(fbox, fi), FALSE);
+
+		if (!fbox->changed_fi)
+			fbox->changed_fi = fi;
 	}
+
+	return points;
 }
 
 
@@ -506,6 +503,8 @@ void file_box_begin_read(FileBox* fbox) {
 		fi = fi_iter->data;
 		fi->marked = FALSE;
 	}
+
+	fbox->changed_fi = NULL;
 
 	/* There will be no size requests of the file box until
 	   file_box_flush(). */
@@ -708,6 +707,9 @@ static int fitem_update_type_selection_and_order(FItem* fi, FileType t,
 
 		points++;
 	}
+
+	if (points && !fbox->changed_fi)
+		fbox->changed_fi = fi;
 
 	return points;
 }

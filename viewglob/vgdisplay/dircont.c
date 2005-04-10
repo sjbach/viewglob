@@ -55,6 +55,7 @@ static gboolean scrolled_window_expose_event(GtkWidget* header,
 static void reset_count_layout(DirCont* dc); 
 static GdkPixbuf* create_gradient(GdkColor* color1, GdkColor* color2,
 		gint width, gint height, gboolean horz);
+static void scroll(DirCont* dc, gdouble pos);
 
 
 /* --- variables --- */
@@ -185,9 +186,6 @@ static void dircont_init(DirCont* dc) {
 	wrap_box_set_line_justify(WRAP_BOX(dc->file_box), GTK_JUSTIFY_LEFT);
 	gtk_widget_show(dc->file_box);
 
-//	gtk_scrolled_window_set_shadow_type(GTK_SCROLLED_WINDOW(dc->scrolled_window), GTK_SHADOW_NONE);
-//	gtk_viewport_set_shadow_type(GTK_VIEWPORT(dc->file_box->parent), GTK_SHADOW_NONE);
-
 	g_signal_connect(G_OBJECT(dc->header), "expose-event",
 			G_CALLBACK(header_expose_event), dc);
 	g_signal_connect(G_OBJECT(dc->scrolled_window), "expose-event",
@@ -242,13 +240,59 @@ gboolean enter_leave_notify_event(GtkWidget* header, GdkEventCrossing* event,
 }
 
 
+/* Put the position of a known changed widget in the middle of the scrolled
+   window. */
+void dircont_scroll_to_changed(DirCont* dc) {
+	g_return_if_fail(dc != NULL);
+	g_return_if_fail(IS_DIRCONT(dc));
+
+	FileBox* fb = FILE_BOX(dc->file_box);
+
+	if (fb->changed_fi) {
+
+		gint y = fb->changed_fi->widget->allocation.y;
+
+		GtkAdjustment* vadj= gtk_scrolled_window_get_vadjustment(
+				GTK_SCROLLED_WINDOW(dc->scrolled_window));
+		gdouble page_inc = vadj->page_increment;
+
+		gdouble pos = (gdouble)y - page_inc/2;
+
+		scroll(dc, pos);
+	}
+}
+
+
+/* Move the scrolled window to the given position, clamping correctly. */
+static void scroll(DirCont* dc, gdouble pos) {
+
+	gdouble current, page_inc, step_inc, upper, lower;
+
+	GtkAdjustment* vadj= gtk_scrolled_window_get_vadjustment(
+			GTK_SCROLLED_WINDOW(dc->scrolled_window));
+
+	current = gtk_adjustment_get_value(vadj);
+	page_inc = vadj->page_increment;
+	step_inc = vadj->step_increment;
+	lower = vadj->lower;
+
+	/* Otherwise we scroll down into a page of black. */
+	upper = vadj->upper - page_inc - step_inc;
+
+	pos = CLAMP(pos, lower, upper);
+
+	if (pos != current)
+		gtk_adjustment_set_value(vadj, CLAMP(pos, vadj->lower, vadj->upper));
+}
+
+
 static void dircont_size_request(GtkWidget* widget,
 		GtkRequisition* requisition) {
 	DirCont* dc;
 	GtkRequisition header_req = { 0, 0 }, paint_box_req = { 0, 0 };
 
 	dc = DIRCONT(widget);
-	
+
 	if (GTK_WIDGET_VISIBLE(dc->header))
 		gtk_widget_size_request(dc->header, &header_req);
 	if (GTK_WIDGET_VISIBLE(dc->paint_event_box))
@@ -728,8 +772,6 @@ static gboolean button_press_event(GtkWidget *widget, GdkEventButton *event,
 	g_return_val_if_fail(IS_DIRCONT(dc), FALSE);
 	g_return_val_if_fail(event != NULL, FALSE);
 
-	//FIXME single click activates
-
 	if (event->type == GDK_2BUTTON_PRESS && event->button == 1) {
 		/* Double left-click -- write out the directory name. */
 
@@ -799,34 +841,27 @@ void dircont_nav(DirCont* dc, DirContNav nav) {
 	g_return_if_fail(dc != NULL);
 	g_return_if_fail(IS_DIRCONT(dc));
 
-	gdouble upper, lower, current, step_inc, page_inc, change;
+	gdouble pos, page_inc;
 
 	GtkAdjustment* vadj= gtk_scrolled_window_get_vadjustment(
 			GTK_SCROLLED_WINDOW(dc->scrolled_window));
 
-	current = gtk_adjustment_get_value(vadj);
+	pos = gtk_adjustment_get_value(vadj);
 	page_inc = vadj->page_increment;
-	step_inc = vadj->step_increment;
-	lower = vadj->lower;
-	change = 0;
-
-	/* Otherwise we scroll down into a page of black. */
-	upper = vadj->upper - page_inc - step_inc;
 
 	switch (nav) {
 		case DCN_PGUP:
-			change = -page_inc;
+			pos -= page_inc;
 			break;
 		case DCN_PGDOWN:
-			change = +page_inc;
+			pos += page_inc;
 			break;
 		default:
 			g_return_if_reached();
 	}
 
 	/* Set the value. */
-	if (change)
-		gtk_adjustment_set_value(vadj, CLAMP(current + change, lower, upper));
+	scroll(dc, pos);
 }
 
 

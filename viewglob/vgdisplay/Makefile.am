@@ -6,13 +6,15 @@ INCLUDES = -I$(COMMON)
 pkglib_PROGRAMS = vgclassic vgmini
 vgclassic_SOURCES = vgclassic.c exhibit.c dlisting.c wrap_box.c file_box.c \
                     lscolors.c $(COMMON)/param-io.c $(COMMON)/hardened-io.c \
-		    display-common.c $(COMMON)/x11-stuff.c
+		    display-common.c $(COMMON)/x11-stuff.c  \
+		    $(COMMON)/syslogging.c
 vgmini_SOURCES = vgmini.c wrap_box.c file_box.c lscolors.c dircont.c \
                  $(COMMON)/param-io.c $(COMMON)/hardened-io.c  \
-		 display-common.c $(COMMON)/x11-stuff.c
+		 display-common.c $(COMMON)/x11-stuff.c $(COMMON)/syslogging.c
 
 BUILT_SOURCES = app_icons.h file_icons.h
-app_icons.h: Makefile
+#app_icons.h: Makefile
+app_icons.h:
 	rm -f app_icons.tmp app_icons.h
 	gdk-pixbuf-csource --raw --name=icon_16x16_inline \
 		icon_16x16.png > app_icons.tmp
@@ -25,7 +27,8 @@ app_icons.h: Makefile
 	mv app_icons.tmp app_icons.h
 
 # These are mostly standard Gnome icons.
-file_icons.h: Makefile
+#file_icons.h: Makefile
+file_icons.h:
 	rm -f file_icons.tmp file_icons.h
 	gdk-pixbuf-csource --raw --name=regular_inline \
 		gnome-fs-regular.png >> file_icons.tmp

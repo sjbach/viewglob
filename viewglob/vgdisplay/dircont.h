@@ -93,6 +93,7 @@ void dircont_set_mask_string(DirCont* dc, const gchar* mask_str);
 void dircont_set_name(DirCont* dc, const gchar* name);
 void dircont_set_counts(DirCont* dc,
 		const gchar* selected, const gchar* total, const gchar* hidden);
+void dircont_scroll_to_changed(DirCont* dc);
 void dircont_repaint_header(DirCont* dc);
 void dircont_mark(DirCont* d, gint rank);
 void dircont_set_active(DirCont* dc, gboolean setting);

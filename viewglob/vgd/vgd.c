@@ -21,6 +21,10 @@
 #include <string.h>
 #include <stdio.h>
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
 /* Sockets */
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -31,6 +35,7 @@
 #include "param-io.h"
 #include "child.h"
 #include "x11-stuff.h"
+#include "syslogging.h"
 #include "shell.h"
 
 
@@ -78,6 +83,7 @@ static void context_switch(struct state* s, struct vgseer_client* v);
 static void check_active_window(struct state* s);
 static void update_display(struct state* s, struct vgseer_client* v,
 		enum parameter param, gchar* value);
+static int daemonize(void);
 
 
 gint main(gint argc, gchar** argv) {
@@ -91,6 +97,15 @@ gint main(gint argc, gchar** argv) {
 	gchar* basename = g_path_get_basename(argv[0]);
 	g_set_prgname(basename);
 	g_free(basename);
+
+	/* Turn into a daemon. */
+	daemonize();
+
+	/* Use syslog for warnings and errors. */
+	g_log_set_handler(NULL,
+			G_LOG_LEVEL_WARNING | G_LOG_LEVEL_CRITICAL | G_LOG_LEVEL_MESSAGE |
+			G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION, syslogging, NULL);
+	openlog_wrapped(g_get_prgname());
 
 	state_init(&s);
 
@@ -667,6 +682,46 @@ static void die(struct state* s, gint result) {
 		(void) child_terminate(&s->display);
 
 	exit(result);
+}
+
+
+static gboolean daemonize(void) {
+
+	int i;
+	pid_t pid;
+
+	if ((pid = fork()) < 0)
+		return FALSE; 
+	else if (pid)
+		_exit(EXIT_SUCCESS);  /* Parent terminates. */
+
+	/* Child 1 continues... */
+
+	if (setsid() < 0)
+		return FALSE;
+
+//	if (signal(SIGHUP, SIG_IGN) == SIG_ERR)
+//		return FALSE;
+
+	if ((pid = fork()) < 0)
+		return FALSE;
+	else if (pid)
+		_exit(EXIT_SUCCESS);  /* Child 1 terminates. */
+
+	/* Child 2 continues... */
+
+	chdir("/");   /* Change working directory. */
+
+	/* Cose off file descriptors. */
+	for (i = 0; i < 64; i++)
+		(void) close(i);
+
+	/* Redirect stdin, stdout, and stderr to /dev/null. */
+	open("/dev/null", O_RDONLY);
+	open("/dev/null", O_RDWR);
+	open("/dev/null", O_RDWR);
+
+	return TRUE;
 }
 
 

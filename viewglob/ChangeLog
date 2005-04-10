@@ -1,3 +1,17 @@
+2005-04-10 18:44  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* syslogging.h, syslogging.c: added
+	* vgd/Makefile.am, common/Makefile.am, vgdisplay/Makefile.am, vgd.c,
+	  vgclassic.c, vgmini.c:
+	  - vgd becomes a daemon.
+	  - The displays and vgd use syslog for warnings/errors.
+	* dircont.c, dircont.h, file_box.c, file_box.h, vgmini.c:
+	  Automatically scroll to the part of the filebox which has most
+	  recently changed.
+	* display-common.c: better decoration discovery
+	* vgseer.c: Error/Warning messages are less scary looking
+	  
+
 2005-04-09 00:45  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* children.c, children.h: removed
