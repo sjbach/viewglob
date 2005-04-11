@@ -1,8 +1,8 @@
 dnl Process this file with autoconf to produce a configure script.
-AC_INIT([viewglob], [1.1.0])
+AC_INIT([viewglob], [1.1.1])
 AM_INIT_AUTOMAKE
 AM_CONFIG_HEADER([config.h])
-RELEASE_DATE="March 8, 2005"
+RELEASE_DATE="March 17, 2005"
 
 AC_DEFINE_UNQUOTED([VG_RELEASE_DATE], ["$RELEASE_DATE"] , [Date of release])
 
@@ -19,7 +19,6 @@ AC_HEADER_TIOCGWINSZ
 AC_CHECK_HEADERS([fcntl.h errno.h stdlib.h string.h sys/ioctl.h termios.h unistd.h stdlib.h])
 
 dnl Checks for typedefs, structures, and compiler characteristics.
-AC_HEADER_STDBOOL
 AC_C_CONST
 AC_C_INLINE
 AC_TYPE_SIZE_T

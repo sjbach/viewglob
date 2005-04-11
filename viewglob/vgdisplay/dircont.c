@@ -24,6 +24,7 @@
 #include <gtk/gtk.h>
 #include <string.h>   /* For strcmp */
 
+/* For create_gradient(). */
 #include <gdk-pixbuf/gdk-pixbuf.h>
 #include <gdk-pixbuf/gdk-pixdata.h>
 
@@ -52,10 +53,11 @@ static gboolean header_expose_event(GtkWidget* header, GdkEventExpose* event,
 		DirCont* dc);
 static gboolean scrolled_window_expose_event(GtkWidget* header,
 		GdkEventExpose* event, DirCont* dc);
+
 static void reset_count_layout(DirCont* dc); 
+static void scroll(DirCont* dc, gdouble pos);
 static GdkPixbuf* create_gradient(GdkColor* color1, GdkColor* color2,
 		gint width, gint height, gboolean horz);
-static void scroll(DirCont* dc, gdouble pos);
 
 
 /* --- variables --- */
@@ -138,6 +140,11 @@ static void dircont_class_init(DirContClass* class) {
 	parent_class = g_type_class_peek_parent(class);
 	widget_class->size_request = dircont_size_request;
 	widget_class->size_allocate = dircont_size_allocate;
+}
+
+
+GtkWidget* dircont_new (void) {
+	return g_object_new (DIRCONT_TYPE, NULL);
 }
 
 
@@ -250,13 +257,15 @@ void dircont_scroll_to_changed(DirCont* dc) {
 
 	if (fb->changed_fi) {
 
+		gdouble page_inc, pos;
+
 		gint y = fb->changed_fi->widget->allocation.y;
 
 		GtkAdjustment* vadj= gtk_scrolled_window_get_vadjustment(
 				GTK_SCROLLED_WINDOW(dc->scrolled_window));
-		gdouble page_inc = vadj->page_increment;
 
-		gdouble pos = (gdouble)y - page_inc/2;
+		page_inc = vadj->page_increment;
+		pos = (gdouble)y - page_inc/2;
 
 		scroll(dc, pos);
 	}
@@ -268,7 +277,7 @@ static void scroll(DirCont* dc, gdouble pos) {
 
 	gdouble current, page_inc, step_inc, upper, lower;
 
-	GtkAdjustment* vadj= gtk_scrolled_window_get_vadjustment(
+	GtkAdjustment* vadj = gtk_scrolled_window_get_vadjustment(
 			GTK_SCROLLED_WINDOW(dc->scrolled_window));
 
 	current = gtk_adjustment_get_value(vadj);
@@ -282,7 +291,7 @@ static void scroll(DirCont* dc, gdouble pos) {
 	pos = CLAMP(pos, lower, upper);
 
 	if (pos != current)
-		gtk_adjustment_set_value(vadj, CLAMP(pos, vadj->lower, vadj->upper));
+		gtk_adjustment_set_value(vadj, pos);
 }
 
 
@@ -336,14 +345,8 @@ static void dircont_size_allocate(GtkWidget* widget,
 }
 
 
-GtkWidget* dircont_new (void) {
-	return g_object_new (DIRCONT_TYPE, NULL);
-}
-
-
 /* Set the sizes of the directory heading font and the file count font. */
 void dircont_set_sizing(gint modifier) {
-
 	g_return_if_fail(modifier <= 10);
 	g_return_if_fail(modifier >= -10);
 
@@ -501,10 +504,7 @@ gboolean dircont_is_new(const DirCont* dc) {
 	g_return_val_if_fail(dc != NULL, TRUE);
 	g_return_val_if_fail(IS_DIRCONT(dc), TRUE);
 
-	if (dc->old_rank >= 0)
-		return FALSE;
-	else
-		return TRUE;
+	return dc->old_rank < 0;
 }
 
 
@@ -559,6 +559,9 @@ void dircont_free(DirCont* dc) {  //FIXME
 	g_string_free(dc->selected, TRUE);
 	g_string_free(dc->total, TRUE);
 	g_string_free(dc->hidden, TRUE);
+
+	g_object_unref(dc->name_layout);
+	g_object_unref(dc->counts_layout);
 
 	/* Should take care of everything else. */
 	gtk_widget_destroy(widget);
@@ -761,7 +764,6 @@ static gboolean header_expose_event(GtkWidget* header, GdkEventExpose* event,
 		}
 	}
 
-
 	return TRUE;
 }
 
@@ -793,7 +795,7 @@ static gboolean button_press_event(GtkWidget *widget, GdkEventButton *event,
 
 
 void dircont_set_optimal_width(DirCont* dc, gint width) {
-
+	g_return_if_fail(dc != NULL);
 	g_return_if_fail(IS_DIRCONT(dc));
 	g_return_if_fail(width >= 0);
 
@@ -808,6 +810,12 @@ void dircont_set_optimal_width(DirCont* dc, gint width) {
 /* Set the new mask text and update the given DirCont (which is probably the
    active DirCont). */
 void dircont_set_mask_string(DirCont* dc, const gchar* mask_str) {
+	g_return_if_fail(dc != NULL);
+	g_return_if_fail(IS_DIRCONT(dc));
+	g_return_if_fail(mask_str != NULL);
+
+	gchar* mask_utf8;
+	gchar* markup;
 
 	/* Initialize the layouts if necessary. */
 	if (!big_mask_layout || !small_mask_layout) {
@@ -817,10 +825,12 @@ void dircont_set_mask_string(DirCont* dc, const gchar* mask_str) {
 		gtk_widget_destroy(area);
 	}
 
+	mask_utf8 = g_filename_to_utf8(mask_str, -1, NULL, NULL, NULL);
+
 	/* Big mask layout (when directory name is short) */
-	gchar* markup = g_strconcat(
+	markup = g_strconcat(
 			dir_tag_open->str, "<small><b>",
-			mask_str,
+			mask_utf8,
 			"</b></small>", dir_tag_close->str, NULL);
 	pango_layout_set_markup(big_mask_layout, markup, -1);
 	g_free(markup);
@@ -829,10 +839,12 @@ void dircont_set_mask_string(DirCont* dc, const gchar* mask_str) {
 	/* Small mask layout (when directory name is long) */
 	markup = g_strconcat(
 			count_tag_open->str, "<b>",
-			"Mask: ", mask_str,
+			"Mask: ", mask_utf8,
 			"</b>", count_tag_close->str, NULL);
 	pango_layout_set_markup(small_mask_layout, markup, -1);
 	g_free(markup);
+
+	g_free(mask_utf8);
 }
 
 

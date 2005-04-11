@@ -1,4 +1,4 @@
-.TH VIEWGLOB 1 "5 March 2005"
+.TH VIEWGLOB 1 "17 March 2005"
 .SH NAME
 viewglob, gviewglob \- shell add\-on for windowing environments.
 .SH SYNOPSIS
@@ -227,6 +227,15 @@ The location of the default configuration file.
 .SM LS_COLORS
 Used by the display as described in
 .BR dir_colors (5).
+.TP
+If you encounter an issue where certain filenames do not show in the display and you are using an encoding other than UTF-8, you may want to read about the other GLib environment variables:
+.IP
+\fIhttp://developer.gnome.org/doc/API/2.0/glib/glib-running.html\fP
+.TP
+For example, for iso8859-1, run:
+.IP
+\fBG_FILENAME_ENCODING=ISO-8859-1 viewglob\fP
+
 .SH BUGS
 .PP
 Command line tracking seems to be pretty good for general use, but is far from perfect.

@@ -5,7 +5,9 @@ INCLUDES = -I$(COMMON)
 
 bin_PROGRAMS = vgd
 
-vgd_SOURCES = vgd.c $(COMMON)/param-io.c \
-              $(COMMON)/ptytty.c $(COMMON)/hardened-io.c $(COMMON)/shell.c \
+vgd_SOURCES = vgd.c tcp-listen.c $(COMMON)/param-io.c \
+              $(COMMON)/hardened-io.c $(COMMON)/shell.c \
 	      $(COMMON)/child.c $(COMMON)/x11-stuff.c $(COMMON)/syslogging.c
+
+noinst_HEADERS = tcp-listen.h
 

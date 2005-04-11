@@ -49,14 +49,18 @@ static gint cmp_dircont_same_rank(gconstpointer a, gconstpointer b);
 static gboolean receive_data(GIOChannel* source, GIOCondition condition,
 		gpointer data);
 static void process_glob_data(gchar* buf, gsize bytes, struct vgmini* vg);
+
 static DirCont* add_dircont(struct vgmini* vg, gchar* name, gint rank,
 		gchar* selected, gchar* total, gchar* hidden);
 static void unmark_all_dirconts(struct vgmini* vg);
 static void cull_dcs(struct vgmini* vg);
 static void rearrange_and_show(struct vgmini* vg);
-static void do_order(struct vgmini* vg, const gchar* order);
 static void update_dc(struct vgmini* vg, DirCont* dc, gboolean setting);
 static void activate_dc(struct vgmini* vg, gboolean next);
+
+static void do_order(struct vgmini* vg, const gchar* order);
+static void set_cmd(struct vgmini* vg, const gchar* string);
+
 static gboolean window_configure_event(GtkWidget* window,
 		GdkEventConfigure* event, struct vgmini* vg);
 static void window_allocate_event(GtkWidget* window,
@@ -84,11 +88,14 @@ gint main(gint argc, char** argv) {
 	openlog_wrapped(g_get_prgname());
 
 	struct vgmini vg;
-	vg.cmdline = gtk_drawing_area_new();
 	vg.term_win = g_string_new(NULL);
 	vg.dcs = NULL;
 	vg.active = NULL;
 	vg.width_change = 0;
+
+	/* vgmini keeps sizes a little smaller than vgclassic. */
+	file_box_set_sizing(-1);
+	dircont_set_sizing(-1);
 
 	/* Toplevel window. */
 	vg.window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
@@ -101,11 +108,15 @@ gint main(gint argc, char** argv) {
 	vg.vbox = gtk_vbox_new(FALSE, 0);
 	gtk_widget_show(vg.vbox);
 
-	/* vgmini keeps sizes a little smaller than vgclassic. */
-	file_box_set_sizing(-1);
-	dircont_set_sizing(-1);
+	/* Read-only Viewglob command line.  This only appears when the display
+	   is the active window. */
+	vg.cmdline = gtk_entry_new();
+	gtk_editable_set_editable(GTK_EDITABLE(vg.cmdline), FALSE);
+	gtk_widget_set_sensitive(vg.cmdline, FALSE);
+	gtk_widget_hide(vg.cmdline);
 
 	gtk_container_add(GTK_CONTAINER(vg.window), vg.vbox);
+	gtk_box_pack_end(GTK_BOX(vg.vbox), vg.cmdline, FALSE, FALSE, 0);
 
 	g_signal_connect(G_OBJECT(vg.window), "configure-event",
 			G_CALLBACK(window_configure_event), &vg);
@@ -117,9 +128,9 @@ gint main(gint argc, char** argv) {
 			G_CALLBACK(window_key_press_event), NULL);
 
 	g_signal_connect(G_OBJECT(vg.window), "focus-in-event",
-			G_CALLBACK(window_focus_event), NULL);
+			G_CALLBACK(window_focus_event), &vg);
 	g_signal_connect(G_OBJECT(vg.window), "focus-out-event",
-			G_CALLBACK(window_focus_event), NULL);
+			G_CALLBACK(window_focus_event), &vg);
 
 	GIOChannel* stdin_ioc;
 	if ( (stdin_ioc = g_io_channel_unix_new(STDIN_FILENO)) == NULL) {
@@ -159,15 +170,12 @@ static gboolean receive_data(GIOChannel* source, GIOCondition condition,
 				break;
 
 			case P_CMD:
-//				exhibit_set_cmd(vg, value);
+				set_cmd(vg, value);
 				break;
 
 			case P_WIN_ID:
 				/* This display doesn't use the window id. */
 				if (!STREQ(vg->term_win->str, value)) {
-//				if ((win = strtoul(value, NULL, 10)) == ULONG_MAX)
-//					g_warning("Window ID out of bounds: %s", value);
-//				else if (win != vg->term_win && vg->window->window)
 					if (resize_jump(vg->window, value))
 						vg->term_win = g_string_assign(vg->term_win, value);
 				}
@@ -175,7 +183,6 @@ static gboolean receive_data(GIOChannel* source, GIOCondition condition,
 
 			case P_MASK:
 				dircont_set_mask_string(vg->active, value);
-				//FIXME
 				break;
 
 			case P_DEVELOPING_MASK:
@@ -393,11 +400,8 @@ static DirCont* add_dircont(struct vgmini* vg, gchar* name, gint rank,
 			dircont_set_optimal_width(dc,
 					vg->active->file_box->allocation.width);
 		}
-		else {
+		else
 			dircont_set_optimal_width(dc, 240); //FIXME
-		}
-//		dircont_set_optimal_width(dc, vg->listings_box->allocation.width);
-//		dircont_set_optimal_width(dc, 240); //FIXME
 		dircont_mark(dc, rank);
 		dc->score += 100;
 		vg->dcs = g_slist_append(vg->dcs, dc);
@@ -564,6 +568,14 @@ static void activate_dc(struct vgmini* vg, gboolean next) {
 }
 
 
+/* Set the given string as the command line (after converting to utf8). */
+static void set_cmd(struct vgmini* vg, const gchar* string) {
+	gchar* cmdline_utf8 = g_filename_to_utf8(string, -1, NULL, NULL, NULL);
+	gtk_entry_set_text(GTK_ENTRY(vg->cmdline), cmdline_utf8);
+	g_free(cmdline_utf8);
+}
+
+
 /* Track the width of the toplevel window. */
 static gboolean window_configure_event(GtkWidget* window,
 		GdkEventConfigure* event, struct vgmini* vg) {
@@ -591,13 +603,14 @@ static void window_allocate_event(GtkWidget* window,
 }
 
 
+/* Hide or show the command line. */
 gboolean window_focus_event (GtkWidget* widget, GdkEventFocus* event,
 		struct vgmini* vg) {
 
 	if (event->in)
-		g_printerr("(in)");
+		gtk_widget_show(vg->cmdline);
 	else
-		g_printerr("(out)");
+		gtk_widget_hide(vg->cmdline);
 
 	return FALSE;
 }
@@ -621,60 +634,4 @@ static gint cmp_dircont_same_rank(gconstpointer a, gconstpointer b) {
 	else
 		return -1;
 }
-
-
-
-#if 0
-/* Resize the DirConts if necessary. */
-static void window_allocate_event(GtkWidget* window,
-		GtkAllocation* allocation, struct vgmini* vg) {
-	GSList* iter;
-	DirCont* dc;
-
-	if (vg->width_change) {
-		/* Cycle through the DirConts and set the new optimal width.  This
-		   will make them optimize themselves to the window's width. */
-		for (iter = vg->dcs; iter; iter = g_slist_next(iter)) {
-			dc = iter->data;
-			dircont_set_optimal_width(dc,
-					((gint)dc->optimal_width) + vg->width_change);
-		}
-		vg->width_change = 0;
-	}
-}
-
-
-/* Track the width of the toplevel window. */
-static gboolean window_configure_event(GtkWidget* window,
-		GdkEventConfigure* event, struct vgmini* vg) {
-	vg->width_change += event->width - window->allocation.width;
-	return FALSE;
-}
-#endif
-
-
-
-
-
-/*
-Window:
-	GtkDrawingArea
-		- For command line
-		- Hides when window not active
-	GtkVBox
-		Dlistings
-	GtkStatusBar
-		- For current mask
-Developing Mask draws on top of the header of the first DL.
-
-DListing equivalent:
-	Vbox
-		GtkDrawingArea for full header
-			- Expose event
-			- Highlight event
-			- Lose highlight event
-		ScrolledWindow <-- hide when not active
-			FileBox
-
-   */
 

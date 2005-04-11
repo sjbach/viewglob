@@ -194,7 +194,8 @@ Window get_xid_from_title(Display* disp, gchar* title) {
 
 		for (j = 0; j < client_list_size / 4; j++) {
 			gchar* window_title = get_window_title(disp, client_list[j]);
-			if (window_title && strcmp(title, window_title) == 0)
+			/* title can appear anywhere in the window's title. */
+			if (window_title && strstr(window_title, title))
 				return client_list[j];
 		}
 

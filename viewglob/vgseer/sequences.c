@@ -501,7 +501,7 @@ static void analyze_effect(MatchEffect effect, Connection* b,
 			   and wait for the next PS1. */
 			cmd_clear(cmd);
 			b->pl = PL_EXECUTING;
-			action_queue(A_SEND_LOST);
+			b->ss = SS_LOST;
 			break;
 
 		case ME_NO_EFFECT:
@@ -509,6 +509,7 @@ static void analyze_effect(MatchEffect effect, Connection* b,
 
 		case ME_CMD_EXECUTED:
 			b->pl = PL_EXECUTING;
+			b->ss = SS_EXECUTING;
 			break;
 
 		case ME_CMD_STARTED:
@@ -517,12 +518,14 @@ static void analyze_effect(MatchEffect effect, Connection* b,
 			else
 				cmd_clear(cmd);
 			b->pl = PL_AT_PROMPT;
+			b->ss = SS_PROMPT;
 			action_queue(A_SEND_CMD);
 			break;
 
 		case ME_CMD_REBUILD:
 			cmd->rebuilding = TRUE;
 			b->pl = PL_EXECUTING;
+			b->ss = SS_EXECUTING;
 			break;
 
 		case ME_PWD_CHANGED:

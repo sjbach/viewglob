@@ -52,6 +52,9 @@ void connection_init(Connection* cnct, gchar* name, int fd_in, int fd_out,
 	cnct->holdover = NULL;
 	cnct->ho_written = FALSE;
 	cnct->skip = 0;
+
+	/* The shell_status is of course only relevant to the user shell. */
+	cnct->ss = SS_EXECUTING;
 }
 
 

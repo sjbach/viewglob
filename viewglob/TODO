@@ -1,20 +1,19 @@
 
 Critical:
+- vgping
 - vgseer: sandbox vgexpand command options
 	- vgdisplay: make icon disable work
 	- vgdisplays: --red --green --blue, etc.
 	- make: package getopt_long (or alternative)
 - vgclassic: mask and developing mask
 - make: option to build only vgseer/vgexpand (and thus no GTK requirement)
-- vgseer, vgdisplay: statuses
-- vgd: remap g_log: syslog
-- vgseer: remap g_log
+- vgdisplay: statuses
 - vgd: make work in konsole and gnome-terminal
-	konsole: only check beginning of title name for match
 - vgdisplays: shift click filename puts full path
+- vgd, vgseer: domain naming
+- remove #if HAVE_CONFIG blah from all except common.h
 
 End:
-- documentation: updates from 1.1.1
 - make: autoscan
 - vgseer: close stderr in user shell
 
@@ -24,7 +23,6 @@ Non-critical:
 - vgseer: sanitize mask better
 - vgexpand: fix $HOME to ~
 - vgseer: EIO when zsh exit
-- make: .PHONY build for the icons
 - vgd: vgseer_client into separate file
 - vgseer: filename insertion is buggy at inserting within a word
 - vgseer: rename Connection

@@ -17,8 +17,6 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#include "config.h"
-
 #include "common.h"
 
 #include "sanitize.h"
@@ -30,17 +28,13 @@
 #include "shell.h"
 #include "hardened-io.h"
 #include "param-io.h"
+#include "tcp-connect.h"
 
 #include <stdio.h>
 #include <signal.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <string.h>
-
-/* Sockets */
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
 
 #if HAVE_SYS_WAIT_H
 #  include <sys/wait.h>
@@ -107,6 +101,7 @@ static void     main_loop(struct user_state* u, gint vgd_fd);
 static void     io_activity(struct user_state* u, Connection* shell_conn,
 		Connection* term_conn, struct vgd_stuff* vgd);
 static gboolean action_loop(struct user_state* u, struct vgd_stuff* vgd);
+static void     send_status(enum shell_status ss, struct vgd_stuff* vgd);
 static void     child_wait(struct user_state* u);
 static void     process_shell(struct user_state* u, Connection* cnct);
 static void     process_sandbox(struct user_state* u, struct vgd_stuff* vgd);
@@ -116,7 +111,7 @@ static gboolean scan_for_newline(const Connection* b);
 static void     scan_sequences(Connection* b, struct user_state* u);
 
 /* Communication with vgd. */
-static gint     connect_to_vgd(gchar* server, gint port,
+static gint     connect_to_vgd(gchar* server, gchar* port,
 		struct user_state* u, gchar* expand_opts);
 static gboolean set_term_title(gint fd, gchar* title);
 static gchar*   escape_filename(gchar* name, struct user_state* u,
@@ -175,7 +170,7 @@ gint main(gint argc, gchar** argv) {
 	clean_fail(&u.sandbox);
 
 	/* Connect to vgd and negotiate setup. */
-	vgd_fd = connect_to_vgd("127.0.0.1", 16108, &u, opts.expand_params);
+	vgd_fd = connect_to_vgd("localhost", "16108", &u, opts.expand_params);
 	if (vgd_fd == -1)
 		clean_fail(NULL);
 
@@ -211,9 +206,9 @@ gint main(gint argc, gchar** argv) {
 }
 
 
-static gint connect_to_vgd(gchar* server, gint port, struct user_state* u,
+// FIXME don't need to transfer pid
+static gint connect_to_vgd(gchar* server, gchar* port, struct user_state* u,
 		gchar* expand_opts) {
-	struct sockaddr_in sa;
 	gint fd;
 	gchar string[100];
 
@@ -223,28 +218,9 @@ static gint connect_to_vgd(gchar* server, gint port, struct user_state* u,
 		return -1;
 	}
 
-	/* Setup the socket. */
-	(void) memset(&sa, 0, sizeof(sa));
-	sa.sin_family = AF_INET;
-	sa.sin_port = htons(port);
-	if (inet_aton(server, &sa.sin_addr) == 0) {
-		g_critical("\"%s\" is an invalid address", server);
-		return -1;
-	}
-	if ( (fd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-		g_critical("Could not create socket: %s", g_strerror(errno));
-		return -1;
-	}
-
 	/* Attempt to connect to vgd. */
-	while (connect(fd, (struct sockaddr*)&sa, sizeof(sa)) == -1) {
-		if (errno == EINTR)
-			continue;
-		else {
-			g_critical("Could not connect to vgd: %s", g_strerror(errno));
-			return -1;
-		}
-	}
+	if ( (fd = tcp_connect(server, port)) == -1)
+		return -1;
 
 	/* Send over information. */
 	enum parameter param;
@@ -415,10 +391,22 @@ static void main_loop(struct user_state* u, gint vgd_fd) {
 		child_wait(u);
 
 		in_loop = action_loop(u, &vgd);
+		if (in_loop)
+			send_status(shell_conn.ss, &vgd);
 	}
 
 	connection_free(&shell_conn);
 	connection_free(&term_conn);
+}
+
+
+static void send_status(enum shell_status ss, struct vgd_stuff* vgd) {
+	static enum shell_status ss_prev = -1;
+
+	if (ss != ss_prev) {
+		put_param_wrapped(vgd->fd, P_STATUS, shell_status_to_string(ss));
+		ss_prev = ss;
+	}
 }
 
 
@@ -465,8 +453,8 @@ static gboolean action_loop(struct user_state* u, struct vgd_stuff* vgd) {
 				break;
 
 			case A_SEND_LOST:
-				param = P_STATUS;
-				value = "lost";
+				vgd->shell_conn->ss = SS_LOST;
+				param = P_NONE;
 				break;
 
 			case A_SEND_UP:
@@ -624,11 +612,6 @@ static void process_sandbox(struct user_state* u, struct vgd_stuff* vgd) {
 
 	if ((nread = sandbox_read(u->sandbox.fd_in, buf, sizeof(buf))) < 0)
 		return;
-
-//	FILE* temp;
-//	temp = fopen("/tmp/sandbox.txt", "a");
-//	fwrite(buf, 1, nread, temp);
-//	fclose(temp);
 
 	if (vgd->vgexpand_called) {
 		gchar* start = NULL;

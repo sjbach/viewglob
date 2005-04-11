@@ -21,6 +21,7 @@
 #include <string.h>
 #include <stdio.h>
 
+/* For open() */
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -35,8 +36,9 @@
 #include "param-io.h"
 #include "child.h"
 #include "x11-stuff.h"
-#include "syslogging.h"
 #include "shell.h"
+#include "syslogging.h"
+#include "tcp-listen.h"
 
 
 struct state {
@@ -89,9 +91,6 @@ static int daemonize(void);
 gint main(gint argc, gchar** argv) {
 
 	struct state s;
-	struct sockaddr_in sa;
-
-	gint port = 16108;
 
 	/* Set the program name. */
 	gchar* basename = g_path_get_basename(argv[0]);
@@ -108,6 +107,8 @@ gint main(gint argc, gchar** argv) {
 	openlog_wrapped(g_get_prgname());
 
 	state_init(&s);
+//	s.display.exec_name = "/home/steve/vg/vgdisplay/vgclassic";
+	s.display.exec_name = "/home/steve/vg/vgdisplay/vgmini";
 
 	/* Get a connection to the X display. */
 	if ( (s.Xdisplay = XOpenDisplay(NULL)) == NULL) {
@@ -116,25 +117,8 @@ gint main(gint argc, gchar** argv) {
 	}
 
 	/* Setup listening socket. */
-	(void) memset(&sa, 0, sizeof(sa));
-	sa.sin_family = AF_INET;
-	sa.sin_addr.s_addr = INADDR_ANY;
-	sa.sin_port = htons(port);
-	if ( (s.listen_fd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-		g_critical("Could not create socket: %s", g_strerror(errno));
+	if ( (s.listen_fd = tcp_listen("localhost", "16108")) == -1)
 		exit(EXIT_FAILURE);
-	}
-	if (bind(s.listen_fd, (struct sockaddr*) &sa, sizeof(sa)) == -1) {
-		g_critical("Could not bind socket: %s", g_strerror(errno));
-		exit(EXIT_FAILURE);
-	}
-	if (listen(s.listen_fd, SOMAXCONN) == -1) {
-		g_critical("Could not listen on socket: %s", g_strerror(errno));
-		exit(EXIT_FAILURE);
-	}
-
-//	s.display.exec_name = "/home/steve/vg/vgdisplay/vgclassic";
-	s.display.exec_name = "/home/steve/vg/vgdisplay/vgmini";
 
 	poll_loop(&s);
 
@@ -171,7 +155,7 @@ static void poll_loop(struct state* s) {
 				nready--;
 			}
 
-			if (child_running(&s->display) && 
+			if (nready && child_running(&s->display) && 
 					FD_ISSET(s->display.fd_in, &rset)) {
 				process_display(s);
 				nready--;
@@ -188,9 +172,7 @@ static void poll_loop(struct state* s) {
 						break;
 					}
 				}
-
 			}
-
 		}
 		
 		if (s->clients)
@@ -214,8 +196,7 @@ static void check_active_window(struct state* s) {
 			v = iter->data;
 			if (new_active_win == v->win) {
 				s->active = v;
-				if (child_running(&s->display))
-					context_switch(s, v);
+				context_switch(s, v);
 				break;
 			}
 		}
@@ -241,7 +222,8 @@ static void context_switch(struct state* s, struct vgseer_client* v) {
 	g_return_if_fail(s != NULL);
 	g_return_if_fail(v != NULL);
 
-	g_message("(disp) Context switch to client %d", v->fd);
+	if (!child_running(&s->display))
+		return;
 
 	gint fd = s->display.fd_out;
 
@@ -281,12 +263,10 @@ static void process_display(struct state* s) {
 
 		case P_FILE:
 			/* Pass the file on to the client. */
-			g_message("(disp) P_FILE: %s", value);
 			break;
 
 		case P_KEY:
 			/* Pass the key on to the client. */
-			g_message("(disp) P_KEY: %s", value);
 			break;
 
 		case P_WIN_ID:
@@ -294,9 +274,6 @@ static void process_display(struct state* s) {
 			if ((s->display_win = strtoul(value, NULL, 10)) == ULONG_MAX) {
 				g_warning("(disp) window ID is out of bounds: %s", value);
 				s->display_win = 0;
-			}
-			else {
-				g_message("(disp) Display has window id %lu", s->display_win);
 			}
 			param = P_NONE;
 			break;
@@ -347,21 +324,21 @@ static void process_client(struct state* s, struct vgseer_client* v) {
 				drop_client(s, v);
 			}
 
+			g_message("status: %s", value);
+
 			if (new_status != v->status) {
 				v->status = new_status;
-				g_message("(%d) New status: %s", v->fd, value);
 				update_display(s, v, param, value);
 			}
 			break;
 
 		case P_PWD:
+			// FIXME PWD required?
 			v->pwd = g_string_assign(v->pwd, value);
-			g_message("(%d) New pwd: %s", v->fd, v->pwd->str);
 			break;
 
 		case P_CMD:
 			v->cli = g_string_assign(v->cli, value);
-			g_message("(%d) New cli: %s", v->fd, v->cli->str);
 			update_display(s, v, param, value);
 			break;
 
@@ -370,29 +347,27 @@ static void process_client(struct state* s, struct vgseer_client* v) {
 			v->developing_mask = g_string_truncate(v->developing_mask, 0);
 			v->mask = g_string_assign(v->mask, value);
 
-			if (v->mask->len == 0)
-				g_message("(%d) Mask cleared", v->fd);
-			else
-				g_message("(%d) New mask: %s", v->fd, v->mask->str);
-			update_display(s, v, P_MASK, value);
 			update_display(s, v, P_DEVELOPING_MASK, "");
+			update_display(s, v, P_MASK, value);
 			break;
 
 		case P_DEVELOPING_MASK:
 			v->developing_mask = g_string_assign(v->developing_mask, value);
-			if (v->developing_mask->len == 0)
-				g_message("(%d) Developing mask cleared", v->fd);
-			else {
-				g_message("(%d) New developing mask: %s", v->fd,
-						v->developing_mask->str);
-			}
+
 			update_display(s, v, param, value);
 			break;
 
 		case P_ORDER:
-			g_message("(%d) Received P_ORDER: %s", v->fd, value);
-			if (STREQ(value, "refocus") && child_running(&s->display))
-				refocus(s->Xdisplay, v->win, s->display_win);
+			if (STREQ(value, "refocus")) {
+				/* If vgd doesn't recognize that the active terminal has
+				   changed, you can force it to take notice by refocusing. */
+				if (s->active != v) {
+					s->active = v;
+					context_switch(s, v);
+				}
+				if (child_running(&s->display))
+					refocus(s->Xdisplay, v->win, s->display_win);
+			}
 			else if (STREQ(value, "toggle")) {
 				if (child_running(&s->display))
 					child_terminate(&s->display);
@@ -412,7 +387,6 @@ static void process_client(struct state* s, struct vgseer_client* v) {
 
 		case P_VGEXPAND_DATA:
 			v->expanded = g_string_assign(v->expanded, value);
-			g_message("(%d) Received vgexpand_data: (lots)", v->fd);
 			update_display(s, v, param, value);
 			break;
 
@@ -433,9 +407,10 @@ static void process_client(struct state* s, struct vgseer_client* v) {
 static void update_display(struct state* s, struct vgseer_client* v,
 		enum parameter param, gchar* value) {
 
-	if (	s->active == v &&
-			child_running(&s->display) &&
-			!put_param(s->display.fd_out, param, value)) {
+	if (s->active != v || !child_running(&s->display))
+		return;
+
+	if (!put_param(s->display.fd_out, param, value)) {
 		g_critical("Couldn't send parameter to display");
 		//FIXME restart display
 	}
@@ -469,12 +444,16 @@ static void drop_client(struct state* s, struct vgseer_client* v) {
 	if (s->active == v) {
 		if (s->clients) {
 			s->active = s->clients->data;
-			if (child_running(&s->display))
-				context_switch(s, s->active);
+			context_switch(s, s->active);
 		}
 		else
 			s->active = NULL;
 	}
+
+	/* If we're not running in persistent mode, and this was the last client,
+	   exit. */
+	if (!s->persistent && !s->clients)
+		die(s, EXIT_SUCCESS);
 }
 
 
@@ -595,7 +574,7 @@ static void new_vgseer_client(struct state* s, gint client_fd) {
 		g_warning("(%d) Couldn't locate client's window", client_fd);
 		goto reject;
 	}
-	g_message("(%d) Client has window id %lu", client_fd, v->win);
+
 	if (!put_param(client_fd, P_ORDER, "continue"))
 		goto reject;
 
@@ -685,6 +664,8 @@ static void die(struct state* s, gint result) {
 }
 
 
+/* This function taken from UNIX Network Programming, Volume I 3rd Ed.
+   by W. Richard Stevens, Bill Fenner, and Andrew M. Rudoff. */
 static gboolean daemonize(void) {
 
 	int i;

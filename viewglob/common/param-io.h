@@ -20,15 +20,10 @@
 #ifndef PARAM_IO_H
 #define PARAM_IO_H
 
-#if HAVE_CONFIG_H
-#  include "config.h"
-#endif
-
 #include "common.h"
 
-#include <glib.h>
-
 G_BEGIN_DECLS
+
 
 /* Order must be maintained. */
 enum parameter {
@@ -73,6 +68,7 @@ enum parameter {
 
 gboolean get_param(int fd, enum parameter* param, gchar** value);
 gboolean put_param(int fd, enum parameter param, gchar* value);
+
 
 G_END_DECLS
 

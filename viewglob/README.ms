@@ -4,9 +4,9 @@
 .so giftcurs.tmac
 .
 .TL
-Viewglob 1.1.0 README
+Viewglob 1.1.1 README
 .br
-March 8, 2005
+March 17, 2005
 .AU
 Stephen Bach <sjbach@users.sourceforge.net>
 .
@@ -37,6 +37,28 @@ Feedback is welcome!
 .
 .Sh NEW IN THIS RELEASE
 .LP
+The Viewglob display was sometimes forgetting to convert filenames from their locale encoding to the encoding which GLib uses, resulting in frequent annoying error messages for people not using UTF-8.  This has been fixed and some information about encodings has been added to the manual.
+.
+.Sh INSTALLATION
+.LP
+See the file \fBINSTALL\fP for generic instructions.  This program follows the ./configure && make && make install convention.
+.
+.Sh PORTABILITY
+.LP
+Tested on:
+.Vs
+FreeBSD 4.10 with GTK+ 2.4.3
+GNU/Linux (various) with GTK+ 2.4+
+Mac OS X 10.3.5 with fink unstable providing GTK+ 2.4.9 (Viewglob 0.9)
+.Ve
+The program has been built with portability in mind, so it should (ha) run on most POSIX-compliant systems with minimal fuss.  I happily accept patches for portability issues.
+.
+.Sh REQUIREMENTS
+.LP
+Viewglob requires a version of Bash (any, as far as I know) and GTK+ 2.4.  A version of Zsh is also obviously required if you wish to use Zsh under Viewglob.
+.
+.Sh NEW IN PREVIOUS RELEASE 1.1.0
+.LP
 Viewglob now understands the LS_COLORS environment variable used by GNU ls.  Filenames can be coloured (fg and bg), boldened, and underlined.  You shouldn't have to do anything special to make this work, assuming your system is setup to use dircolors already.
 .LP
 If you'd like to disable the LS_COLORS stuff in the display (but keep it working in your shell), you could use a wrapper script:
@@ -58,24 +80,6 @@ export LS_COLORS='no=00:fi=00:di=01;34:*.tar=01;31:*.tgz=01;31' # etc.
 exec viewglob
 .Ve
 On a separate note, the algorithm for the refocus shortcut (C-g <TAB> or C-g <ENTER>) has been tweaked to be a little smarter.
-.
-.Sh INSTALLATION
-.LP
-See the file \fBINSTALL\fP for generic instructions.  This program follows the ./configure && make && make install convention.
-.
-.Sh PORTABILITY
-.LP
-Tested on:
-.Vs
-FreeBSD 4.10 with GTK+ 2.4.3
-GNU/Linux (various) with GTK+ 2.4+
-Mac OS X 10.3.5 with fink unstable providing GTK+ 2.4.9 (Viewglob 0.9)
-.Ve
-The program has been built with portability in mind, so it should (ha) run on most POSIX-compliant systems with minimal fuss.  I happily accept patches for portability issues.
-.
-.Sh REQUIREMENTS
-.LP
-Viewglob requires a version of Bash (any, as far as I know) and GTK+ 2.4.  A version of Zsh is also obviously required if you wish to use Zsh under Viewglob.
 .
 .Sh NEW IN PREVIOUS RELEASE 1.0.3
 .LP

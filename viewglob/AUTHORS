@@ -6,10 +6,12 @@ Stephen Bach <sjbach@users.sourceforge.net>
 - Andy Bastien thought of making the display toggleable.
 - Artis Rozentals suggested the option to display directories in reverse
   order.
+- Johannes Jordan reported a bug having to do with filename encoding.
 
 This package also uses code from the following people, but without their
 participation or endorsement:
 
+	W. Richard Stevens
 	Marc J. Rochkind
 	Geoff Wing
 	Gary V. Vaughan

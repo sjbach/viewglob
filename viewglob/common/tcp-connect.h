@@ -17,33 +17,18 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#if HAVE_CONFIG_H
-#  include "config.h"
-#endif
-
-#include <syslog.h>
+#ifndef TCP_LISTEN_H
+#define TCP_LISTEN_H
 
 #include "common.h"
-#include "syslogging.h"
+
+G_BEGIN_DECLS
 
 
-void openlog_wrapped(const gchar* ident) {
-	openlog(ident, LOG_PID, LOG_USER);
-}
+int tcp_connect(const char* host, const char* serv);
 
 
-void syslogging(const gchar* log_domain, GLogLevelFlags log_level,
-		const gchar* message, gpointer dummy) {
+G_END_DECLS
 
-	int priority;
-
-	if (log_level & G_LOG_LEVEL_CRITICAL)
-		priority = LOG_CRIT;
-	else if (log_level & G_LOG_LEVEL_WARNING)
-		priority = LOG_WARNING;
-	else
-		priority = LOG_NOTICE;
-
-	syslog(priority, message);
-}
+#endif
 

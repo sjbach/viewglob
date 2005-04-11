@@ -24,6 +24,8 @@
 #  include "config.h"
 #endif
 
+#include "shell.h"
+
 G_BEGIN_DECLS
 
 /* Status of a match attempt. */
@@ -50,19 +52,20 @@ struct _Connection {
 	gchar* name;
 	gint fd_in;
 	gint fd_out;
-	gchar* buf;              /* Read/write buffer. */
+	gchar* buf;             /* Read/write buffer. */
 	gsize size;
-	gsize filled;          /* The amount of the buffer that is actually
+	gsize filled;           /* The amount of the buffer that is actually
 	                           filled. */
-	gsize pos;             /* The offset of the segment being examined. */
-	gsize seglen;          /* Length of the examined segment. */
+	gsize pos;              /* The offset of the segment being examined. */
+	gsize seglen;           /* Length of the examined segment. */
 	enum process_level pl;  /* Processing level of the buffer. */
 	MatchStatus status;     /* Result of the last check_seqs() attempt. */
-	gchar* holdover;         /* Segment leftover from the last read. */
+	gchar* holdover;        /* Segment leftover from the last read. */
 	gboolean ho_written;    /* The holdover was written already (and thus
 	                           should be skipped. */
-	gsize skip;            /* Number of bytes to skip writing (already
+	gsize skip;             /* Number of bytes to skip writing (already
 	                           written). */
+	enum shell_status ss;
 };
 
 
