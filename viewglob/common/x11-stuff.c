@@ -25,10 +25,6 @@
 /* Modified from main.c in the wmctrl package. */
 
 
-#if HAVE_CONFIG_H
-#  include "config.h"
-#endif
-
 #include "common.h"
 #include "x11-stuff.h"
 #define MAX_PROPERTY_VALUE_LEN 4096

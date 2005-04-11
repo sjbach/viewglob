@@ -20,10 +20,6 @@
 #ifndef HARDENED_IO_H
 #define HARDENED_IO_H
 
-#if HAVE_CONFIG_H
-#  include "config.h"
-#endif
-
 #include "common.h"
 #include <sys/uio.h>
 

@@ -10,10 +10,6 @@
 
 */
 
-#if HAVE_CONFIG_H
-#  include "config.h"
-#endif
-
 #include "common.h"
 #include "tc_setraw.h"
 #include <termios.h>

@@ -7,11 +7,9 @@ Critical:
 	- make: package getopt_long (or alternative)
 - vgclassic: mask and developing mask
 - make: option to build only vgseer/vgexpand (and thus no GTK requirement)
-- vgdisplay: statuses
+- vgmini: statuses
 - vgd: make work in konsole and gnome-terminal
 - vgdisplays: shift click filename puts full path
-- vgd, vgseer: domain naming
-- remove #if HAVE_CONFIG blah from all except common.h
 
 End:
 - make: autoscan

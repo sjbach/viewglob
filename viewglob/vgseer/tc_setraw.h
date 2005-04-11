@@ -20,10 +20,6 @@
 #ifndef TC_SETRAW_H
 #define TC_SETRAW_H
 
-#if HAVE_CONFIG_H
-#  include "config.h"
-#endif
-
 #include "common.h"
 
 G_BEGIN_DECLS

@@ -20,10 +20,6 @@
 #ifndef TCP_LISTEN_H
 #define TCP_LISTEN_H
 
-#if HAVE_CONFIG_H
-#  include "config.h"
-#endif
-
 #include "common.h"
 
 #include <sys/types.h>

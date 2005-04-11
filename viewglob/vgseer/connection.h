@@ -20,10 +20,6 @@
 #ifndef CONNECTION_H
 #define CONNECTION_H
 
-#if HAVE_CONFIG_H
-#  include "config.h"
-#endif
-
 #include "shell.h"
 
 G_BEGIN_DECLS

@@ -27,10 +27,6 @@
 #ifndef X11_STUFF_H
 #define X11_STUFF_H
 
-#if HAVE_CONFIG_H
-#  include "config.h"
-#endif
-
 #include "common.h"
 #include <X11/Xlib.h>
 
