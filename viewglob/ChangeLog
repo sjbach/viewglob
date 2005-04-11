@@ -1,3 +1,16 @@
+2005-04-11 19:30  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* vgd.1, vgseer.1: moving some options around
+	* logging.c, logging.h: added
+	* param-io.c, param-io.h, vgd.c, vgseer.c:
+	  - Change term-title set process.
+	  - vgexpand opts get sent backwards from vgd to vgseer.
+	  - vgd doesn't need to know vgseer pids.
+	* vgd/Makefile.am, vgd.c:
+	  - Do all setup before becoming daemon to allow for normal error
+	    reporting.
+	* vgexpand.c: fix small bug
+
 2005-04-11 12:15  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* tcp-connect.c, tcp-connect.h, tcp-listen.c, tcp-listen.h:

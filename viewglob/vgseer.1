@@ -14,7 +14,7 @@ vgseer \- Viewglob shell overseer.
 This program follows the usual GNU command line syntax, with long options starting with two dashes.  A summary is included below.
 .TP
 .B \-h, \-\-host=<name>
-Connect to a vgd process on the given host.  The default is 127.0.0.1 (localhost).
+Connect to a vgd process on the given host.  The default is localhost.
 .TP
 .B \-p, \-\-port=<number>
 Connect to a vgd process through the given port.  The default is 16108 (1-GLOB).
@@ -24,12 +24,6 @@ Shell to be used.  \fIname\fP can be "bash" or "zsh" (default is bash).
 .TP
 .B \-f, \-\-config\-file=<path>
 Use an alternate config file (\fI~/.viewglobrc\fP is the default).  FIXME
-.TP
-.B \-s, \-\-sort\-style=<windows|ls>
-In the display, sort files with directories first (Windows) or purely by name (ls).  ls mode is the default.
-.TP
-.B \-r, \-\-dir\-order=<descending|ascending|ascending\-pwd\-first>
-In the display, list directories in descending order (the default), ascending (last referenced directory has the top listing), or ascending with the current directory always first.
 .TP
 .B \-t, \-\-disable\-star
 Disable the asterisk character which is usually at the beginning of a vgseer shell prompt.

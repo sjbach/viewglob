@@ -433,7 +433,7 @@ static void correlate(gchar* dir_name, gchar* file_name, dev_t dev_id,
 		search_dir = search_dir->next_dir;
 	}
 
-	if (file_name) {
+	if (file_name && search_dir->files) {
 		search_dir->lookup = file_name;
 		search_dir->lookup_len = strlen(file_name);
 		g_tree_foreach(search_dir->files, mark_traverse, search_dir);

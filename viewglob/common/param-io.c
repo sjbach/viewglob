@@ -34,7 +34,8 @@ static gchar* params[P_COUNT] = {
 	"none",
 	"purpose",
 	"version",
-	"pid",
+	"term-title",
+	"vgexpand-opts",
 	"status",
 	"pwd",
 	"cmd",
@@ -72,7 +73,7 @@ gboolean get_param(int fd, enum parameter* param, gchar** value) {
 			goto eof_reached;
 			/*break;*/
 		case IOR_ERROR:
-			g_warning("Error while reading data length: %s",
+			g_critical("Error while reading data length: %s",
 					g_strerror(errno));
 			return FALSE;
 			/*break;*/
@@ -89,7 +90,7 @@ gboolean get_param(int fd, enum parameter* param, gchar** value) {
 			goto eof_reached;
 			/*break;*/
 		case IOR_ERROR:
-			g_warning("Error while reading data: %s", g_strerror(errno));
+			g_critical("Error while reading data: %s", g_strerror(errno));
 			return FALSE;
 			/*break;*/
 		default:
@@ -131,7 +132,7 @@ gboolean get_param(int fd, enum parameter* param, gchar** value) {
 	return TRUE;
 
 	fail:
-	g_warning("Data in incorrect format");
+	g_critical("Data in incorrect format");
 	return FALSE;
 }
 
@@ -152,7 +153,7 @@ gboolean put_param(int fd, enum parameter param, gchar* value) {
 
 	/* Make sure the length is okay, and convert to network format. */
 	if (len > BUFFER_SIZE) {
-		g_warning("String length is greater than %u", BUFFER_SIZE);
+		g_critical("String length is greater than %u", BUFFER_SIZE);
 		return FALSE;
 	}
 	bytes = htonl((guint32)len);
@@ -164,7 +165,7 @@ gboolean put_param(int fd, enum parameter param, gchar* value) {
 	iov[1].iov_base = string;
 	iov[1].iov_len = len;
 	if (writev_all(fd, iov, 2) != IOR_OK) {
-		g_warning("Could not write pair: %s", g_strerror(errno));
+		g_critical("Could not write pair: %s", g_strerror(errno));
 		return FALSE;
 	}
 

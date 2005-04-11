@@ -29,6 +29,7 @@
 #include "hardened-io.h"
 #include "param-io.h"
 #include "tcp-connect.h"
+#include "logging.h"
 
 #include <stdio.h>
 #include <signal.h>
@@ -57,9 +58,12 @@
 /* Structure for the state of the user's shell. */
 struct user_state {
 	struct cmdline cmd;
+
 	struct child shell;
 	struct child sandbox;
 	enum shell_type type;
+
+	gchar* vgexpand_opts;
 };
 
 /* Structure for data relevant to communicating with vgd. */
@@ -92,9 +96,6 @@ static gboolean fork_shell(struct child* child, enum shell_type type,
 		gboolean sandbox, gchar* init_loc);
 static gboolean setup_zsh(gchar* init_loc);
 static gboolean putenv_wrapped(gchar* string);
-static void logging(const gchar *log_domain, GLogLevelFlags level,
-		const gchar *message, gpointer dummy);
-
 
 /* Program flow. */
 static void     main_loop(struct user_state* u, gint vgd_fd);
@@ -186,6 +187,8 @@ gint main(gint argc, gchar** argv) {
 		clean_fail(NULL);
 	}
 
+	(void) chdir("/");
+
 	/* Enter main_loop. */
 	cmd_init(&u.cmd);
 	init_seqs(u.type);
@@ -206,14 +209,15 @@ gint main(gint argc, gchar** argv) {
 }
 
 
-// FIXME don't need to transfer pid
 static gint connect_to_vgd(gchar* server, gchar* port, struct user_state* u,
 		gchar* expand_opts) {
 	gint fd;
-	gchar string[100];
+	gchar term_title[100];
 
-	/* Convert the pid into a string. */
-	if (snprintf(string, sizeof(string), "%ld", (glong) getpid()) <= 0) {
+	/* Create the temporary title to use so that vgd can locate the
+	   terminal. */
+	if (snprintf(term_title, sizeof(term_title), "vgseer%ld",
+				(glong) getpid()) <= 0) {
 		g_critical("Couldn't convert the pid to a string");
 		return -1;
 	}
@@ -229,7 +233,7 @@ static gint connect_to_vgd(gchar* server, gchar* port, struct user_state* u,
 		goto fail;
 	if (!put_param(fd, P_VERSION, VERSION))
 		goto fail;
-	if (!put_param(fd, P_PROC_ID, string))
+	if (!put_param(fd, P_TERM_TITLE, term_title))
 		goto fail;
 
 	/* Wait for acknowledgement. */
@@ -255,25 +259,26 @@ static gint connect_to_vgd(gchar* server, gchar* port, struct user_state* u,
 	if (!get_param(fd, &param, &value) || param != P_ORDER ||
 			!STREQ(value, "set-title"))
 		goto fail;
+
 	/* Set the terminal title. */
-	if (snprintf(string, sizeof(string), "vgseer%ld",
-				(glong) getpid()) <= 0) {
-		g_critical("Couldn't convert the pid to a string");
-		goto fail;
-	}
-	if (!set_term_title(STDOUT_FILENO, string)) {
+	if (!set_term_title(STDOUT_FILENO, term_title)) {
 		g_critical("Couldn't set the term title");
 		goto fail;
 	}
 
-	/* Alert vgd, get acknowledgement, set title as something better. */
+	/* Alert vgd that we've set the title. */
 	if (!put_param(fd, P_STATUS, "title-set"))
 		goto fail;
-	if (!get_param(fd, &param, &value) || param != P_ORDER ||
-			!STREQ(value, "continue"))
+
+	/* Next receive the vgexpand execution options. */
+	if (!get_param(fd, &param, &value) || param != P_VGEXPAND_OPTS)
 		goto fail;
+
+	u->vgexpand_opts = g_strdup(value);
+
+	/* It's safe to change the title to something else now. */
 	if (!set_term_title(STDOUT_FILENO, "viewglob"))
-		g_warning("Couldn't set the term title");
+		g_warning("Couldn't fix the term title");
 
 	return fd;
 
@@ -950,12 +955,13 @@ static void call_vgexpand(struct user_state* u, struct vgd_stuff* vgd) {
 	}
 
 	expand_command = g_strconcat("cd \'", u->cmd.pwd,
-			"\' && vgexpand -m \'", mask_sane, "\' -- ", cmd_sane,
-			" ; cd /\n", NULL);
+			"\' && vgexpand -m \'", mask_sane, "\' ", u->vgexpand_opts,
+			" -- ", cmd_sane, " ; cd /\n", NULL);
 
-	if (write_all(u->sandbox.fd_out, expand_command, strlen(expand_command))
-			== IOR_ERROR)
+	if (write_all(u->sandbox.fd_out, expand_command,
+				strlen(expand_command)) == IOR_ERROR)
 		disable_vgseer(vgd);
+
 	vgd->vgexpand_called = TRUE;
 
 	/* Send the command line. */
@@ -1195,19 +1201,3 @@ static gsize strlen_safe(const gchar* string) {
 	return n;
 }
 
-
-static void logging(const gchar *log_domain, GLogLevelFlags level,
-		const gchar *message, gpointer dummy) {
-
-	gchar* prog_name = g_get_prgname();
-	gchar* format;
-
-	if (level & G_LOG_LEVEL_CRITICAL)
-		format = "%s: CRITICAL: %s\n";
-	else if (level & G_LOG_LEVEL_WARNING)
-		format = "%s: Warning: %s\n";
-	else if (level & G_LOG_LEVEL_MESSAGE)
-		format = "%s: FYI: %s\n";
-
-	g_printerr(format, prog_name, message);
-}

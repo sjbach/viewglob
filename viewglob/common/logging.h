@@ -17,17 +17,16 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#ifndef SYSLOGGING_H
-#define SYSLOGGING_H
+#ifndef LOGGING_H
+#define LOGGING_H
 
 #include "common.h"
 
 G_BEGIN_DECLS
 
 
-void openlog_wrapped(const gchar* ident);
-void syslogging(const gchar* log_domain, GLogLevelFlags log_level,
-		const gchar* message, gpointer dummy);
+void logging(const gchar *log_domain, GLogLevelFlags level,
+		const gchar *message, gpointer dummy);
 
 
 G_END_DECLS

@@ -101,7 +101,7 @@ gint main(gint argc, char** argv) {
 	vg.window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	gtk_container_set_border_width(GTK_CONTAINER(vg.window), 0);
 	gtk_window_set_title(GTK_WINDOW(vg.window), "vg");
-	gtk_window_set_default_size(GTK_WINDOW(vg.window), 260, 316);
+	gtk_window_set_default_size(GTK_WINDOW(vg.window), 240, 316);
 	set_icons();
 
 	/* VBox for the DirConts. */

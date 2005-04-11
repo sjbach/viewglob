@@ -34,7 +34,8 @@ enum parameter {
 
 	/* Used in vgseer initialization. */
 	P_VERSION,
-	P_PROC_ID,            /* P_PID conflicts with wait.h. */
+	P_TERM_TITLE,
+	P_VGEXPAND_OPTS,
 
 	/* Volatile vgseer properties. */
 	P_STATUS,
@@ -53,13 +54,13 @@ enum parameter {
 	P_KEY,
 	P_FILE,
 
-	/* From and to the display. */
+	/* To and from the display. */
 	P_WIN_ID,
 
 	/* Explanation for a previous parameter. */
 	P_REASON,
 
-	/* For when the connection gets closed (read = 0) */
+	/* For when the connection gets closed (read == 0) */
 	P_EOF,
 
 	/* The number of parameter types. */

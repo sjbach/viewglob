@@ -73,7 +73,8 @@ int tcp_listen(const char* host, const char* serv) {
 	} while ( (res = res->ai_next) != NULL);
 
 	if (res == NULL) {	/* errno from final socket() or bind() */
-		g_critical("tcp_listen error for %s, %s", host, serv);
+		g_critical("tcp_listen error for %s, %s: %s",
+				host, serv, g_strerror(errno));
 		return -1;
 	}
 

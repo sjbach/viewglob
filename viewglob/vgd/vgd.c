@@ -37,9 +37,11 @@
 #include "child.h"
 #include "x11-stuff.h"
 #include "shell.h"
-#include "syslogging.h"
 #include "tcp-listen.h"
+#include "logging.h"
+#include "syslogging.h"
 
+#define DEFAULT_VGEXPAND_OPTS "-d"
 
 struct state {
 	GList*                clients;
@@ -49,13 +51,13 @@ struct state {
 
 	Display*              Xdisplay;
 	gboolean              persistent;
+	GString*              vgexpand_opts;
 	gint                  listen_fd;
 };
 
 
 struct vgseer_client {
 	/* Static properties (set once) */
-	pid_t             pid;
 	Window            win;
 	gint              fd;
 
@@ -97,14 +99,9 @@ gint main(gint argc, gchar** argv) {
 	g_set_prgname(basename);
 	g_free(basename);
 
-	/* Turn into a daemon. */
-	daemonize();
-
-	/* Use syslog for warnings and errors. */
 	g_log_set_handler(NULL,
 			G_LOG_LEVEL_WARNING | G_LOG_LEVEL_CRITICAL | G_LOG_LEVEL_MESSAGE |
-			G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION, syslogging, NULL);
-	openlog_wrapped(g_get_prgname());
+			G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION, logging, NULL);
 
 	state_init(&s);
 //	s.display.exec_name = "/home/steve/vg/vgdisplay/vgclassic";
@@ -119,6 +116,15 @@ gint main(gint argc, gchar** argv) {
 	/* Setup listening socket. */
 	if ( (s.listen_fd = tcp_listen("localhost", "16108")) == -1)
 		exit(EXIT_FAILURE);
+
+	/* Turn into a daemon. */
+	daemonize();
+
+	/* Use syslog for warnings and errors now that we're a daemon */
+	g_log_set_handler(NULL,
+			G_LOG_LEVEL_WARNING | G_LOG_LEVEL_CRITICAL | G_LOG_LEVEL_MESSAGE |
+			G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION, syslogging, NULL);
+	openlog_wrapped(g_get_prgname());
 
 	poll_loop(&s);
 
@@ -324,8 +330,6 @@ static void process_client(struct state* s, struct vgseer_client* v) {
 				drop_client(s, v);
 			}
 
-			g_message("status: %s", value);
-
 			if (new_status != v->status) {
 				v->status = new_status;
 				update_display(s, v, param, value);
@@ -521,6 +525,8 @@ static void new_vgseer_client(struct state* s, gint client_fd) {
 	gchar* value;
 	struct vgseer_client* v;
 
+	gchar* term_title = NULL;
+
 	g_message("(%d) Client is a vgseer", client_fd);
 
 	v = g_new(struct vgseer_client, 1);
@@ -546,17 +552,11 @@ static void new_vgseer_client(struct state* s, gint client_fd) {
 		g_free(warning);
 	}
 
-	/* Pid */
-	if (!get_param(client_fd, &param, &value) || param != P_PROC_ID)
+	/* Title */
+	if (!get_param(client_fd, &param, &value) || param != P_TERM_TITLE)
 		goto out_of_sync;
-	switch (v->pid = strtol(value, NULL, 10)) {
-		case LONG_MIN:
-		case LONG_MAX:
-			g_warning("(%d) Pid value is out of bounds: \"%s\"",
-					client_fd, value);
-			goto reject;
-	}
-
+	term_title = g_strdup(value);
+	
 	/* Tell vgseer client to set a title on its terminal. */
 	if (!put_param(client_fd, P_ORDER, "set-title"))
 		goto reject;
@@ -564,18 +564,14 @@ static void new_vgseer_client(struct state* s, gint client_fd) {
 			!STREQ(value, "title-set"))
 		goto out_of_sync;
 
-	/* Find the client's window. */
-	gchar title[100];
-	if (snprintf(title, sizeof(title), "vgseer%ld", (long) v->pid) <= 0) {
-		g_critical("Couldn't convert the pid to a string");
-		goto reject;
-	}
-	if ( (v->win = get_xid_from_title(s->Xdisplay, title)) == 0) {
+	/* Find the client's terminal window. */
+	if ( (v->win = get_xid_from_title(s->Xdisplay, term_title)) == 0) {
 		g_warning("(%d) Couldn't locate client's window", client_fd);
 		goto reject;
 	}
 
-	if (!put_param(client_fd, P_ORDER, "continue"))
+	/* Finally, send over the vgexpand options. */
+	if (!put_param(client_fd, P_VGEXPAND_OPTS, s->vgexpand_opts->str))
 		goto reject;
 
 	/* We've got a new client. */
@@ -604,6 +600,7 @@ out_of_sync:
 	g_warning("(%d) Client sent unexpected data", client_fd);
 reject:
 	g_warning("(%d) Client rejected", client_fd);
+	g_free(term_title);
 	g_free(v);
 	(void) close(client_fd);
 }
@@ -691,13 +688,12 @@ static gboolean daemonize(void) {
 
 	/* Child 2 continues... */
 
-	chdir("/");   /* Change working directory. */
-
-	/* Cose off file descriptors. */
-	for (i = 0; i < 64; i++)
-		(void) close(i);
+	(void) chdir("/");   /* Change working directory. */
 
 	/* Redirect stdin, stdout, and stderr to /dev/null. */
+	(void) close(STDIN_FILENO);
+	(void) close(STDOUT_FILENO);
+	(void) close(STDERR_FILENO);
 	open("/dev/null", O_RDONLY);
 	open("/dev/null", O_RDWR);
 	open("/dev/null", O_RDWR);
@@ -714,6 +710,7 @@ void state_init(struct state* s) {
 	child_init(&s->display);
 	s->display_win = 0;
 
+	s->vgexpand_opts = g_string_new(DEFAULT_VGEXPAND_OPTS);
 	s->Xdisplay = NULL;
 	s->active = NULL;
 }
@@ -721,7 +718,6 @@ void state_init(struct state* s) {
 
 void vgseer_client_init(struct vgseer_client* v) {
 
-	v->pid = -1;
 	v->win = 0;
 	v->fd = -1;
 

@@ -17,20 +17,22 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#ifndef SYSLOGGING_H
-#define SYSLOGGING_H
-
 #include "common.h"
-
-G_BEGIN_DECLS
-
-
-void openlog_wrapped(const gchar* ident);
-void syslogging(const gchar* log_domain, GLogLevelFlags log_level,
-		const gchar* message, gpointer dummy);
+#include "logging.h"
 
 
-G_END_DECLS
+void logging(const gchar *log_domain, GLogLevelFlags level,
+		const gchar *message, gpointer dummy) {
 
-#endif
+	gchar* level_str;
+
+	if (level & G_LOG_LEVEL_CRITICAL)
+		level_str = "CRITICAL";
+	else if (level & G_LOG_LEVEL_WARNING)
+		level_str = "Warning";
+	else
+		level_str = "FYI";
+
+	g_printerr("%s: %s: %s\n", g_get_prgname(), level_str, message);
+}
 
