@@ -1,12 +1,11 @@
-# Only the viewglob/gviewglob script should be in the path.
-# It calls the other programs in the package.
+
 bin_SCRIPTS = viewglob
 pkglib_SCRIPTS = getopt.sh
 pkglib_DATA = init-viewglob.bashrc .zshrc
 
 viewglob:
 	rm -f viewglob.tmp
-	sed -e 's,@datadir\@,$(pkglibdir),g' \
+	sed -e 's,@pkglibdir\@,$(pkglibdir),g' \
 		-e 's,@BASH_FULL_PATH\@,$(BASH_FULL_PATH),g' \
 		-e 's,@PACKAGE_NAME\@,$(PACKAGE_NAME),g' \
 		-e 's,@PACKAGE_VERSION\@,$(PACKAGE_VERSION),g' \
@@ -23,9 +22,20 @@ getopt.sh:
 	mv getopt.sh.tmp getopt.sh
 
 .zshrc:
-	cp -f init-viewglob.zshrc .zshrc
+	rm -f init-viewglob.zshrc.tmp
+	sed -e 's,@pkglibdir\@,$(pkglibdir),g' \
+		init-viewglob.zshrc.in > init-viewglob.zshrc.tmp
+	mv init-viewglob.zshrc.tmp .zshrc
 
-CLEANFILES = viewglob .zshrc getopt.sh
+init-viewglob.bashrc:
+	rm -f init-viewglob.bashrc.tmp
+	sed -e 's,@pkglibdir\@,$(pkglibdir),g' \
+		init-viewglob.bashrc.in > init-viewglob.bashrc.tmp
+	mv init-viewglob.bashrc.tmp init-viewglob.bashrc
+
+
+CLEANFILES = viewglob init-viewglob.bashrc init-viewglob.bashrc.tmp \
+             .zshrc init-viewglob.zshrc.tmp getopt.sh
 EXTRA_DIST = init-viewglob.bashrc init-viewglob.zshrc \
              viewglob.in getopt.sh.in
 

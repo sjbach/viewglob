@@ -104,8 +104,8 @@ gint main(gint argc, gchar** argv) {
 			G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION, logging, NULL);
 
 	state_init(&s);
-//	s.display.exec_name = "/home/steve/vg/vgdisplay/vgclassic";
-	s.display.exec_name = "/home/steve/vg/vgdisplay/vgmini";
+//	s.display.exec_name = VG_LIB_DIR "/vgclassic";
+	s.display.exec_name = VG_LIB_DIR "/vgmini";
 
 	/* Get a connection to the X display. */
 	if ( (s.Xdisplay = XOpenDisplay(NULL)) == NULL) {
@@ -665,7 +665,6 @@ static void die(struct state* s, gint result) {
    by W. Richard Stevens, Bill Fenner, and Andrew M. Rudoff. */
 static gboolean daemonize(void) {
 
-	int i;
 	pid_t pid;
 
 	if ((pid = fork()) < 0)

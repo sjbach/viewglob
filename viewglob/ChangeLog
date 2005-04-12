@@ -1,3 +1,17 @@
+2005-04-12 00:24  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* fgetopt.c, fgetopt.h:
+	  Replacement for GNU getopt_long() added.
+	* read-conf.c, read-conf.h:
+	  Configuration file read library added.
+	* init-viewglob.bashrc, init-viewglob.zshrc: removed
+	* init-viewglob.bashrc.in, init-viewglob.zshrc.in: added
+	* tcp-connect.c: errors are critical
+	* vgd/Makefile.am, vgseer/Makefile.am:
+	  Get VG_LIB_DIR from make.
+	* vgseer.c:
+	  Parse configuration file and use getopt_long().
+
 2005-04-11 19:30  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* vgd.1, vgseer.1: moving some options around

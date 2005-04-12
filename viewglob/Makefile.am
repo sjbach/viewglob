@@ -2,8 +2,8 @@ AUTOMAKE_OPTIONS = gnu
 AM_CFLAGS = -Wall -g
 
 #SUBDIRS = shell vgd vgdisplay vgping vgseer vgexpand
-SUBDIRS = vgseer vgdisplay vgexpand shell 
-man_MANS = viewglob.1
+SUBDIRS = vgseer vgd vgdisplay vgexpand shell 
+man_MANS = viewglob.1 vgseer.1 vgd.1
 EXTRA_DIST = COPYING2 HACKING $(man_MANS)
 
 # Also put the manpage under the name gviewglob.

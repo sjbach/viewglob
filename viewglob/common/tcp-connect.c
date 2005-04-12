@@ -45,7 +45,7 @@ int tcp_connect(const char *host, const char *serv) {
 	hints.ai_socktype = SOCK_STREAM;
 
 	if ( (n = getaddrinfo(host, serv, &hints, &res)) != 0) {
-		g_warning("tcp_connect error for %s, %s: %s",
+		g_critical("tcp_connect error for %s, %s: %s",
 				 host, serv, gai_strerror(n));
 		return -1;
 	}
@@ -63,7 +63,8 @@ int tcp_connect(const char *host, const char *serv) {
 	} while ( (res = res->ai_next) != NULL);
 
 	if (res == NULL) {	/* errno set from final connect() */
-		g_warning("tcp_connect error for %s, %s", host, serv);
+		g_critical("tcp_connect error for %s, %s: %s", host, serv,
+				g_strerror(errno));
 		return -1;
 	}
 

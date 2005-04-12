@@ -38,7 +38,7 @@ if [ "$VG_SANDBOX" = yep ]; then
 	unset PROMPT_COMMAND
 
 	# Only viewglob programs (glob-expand) in the path.
-	PATH="$VG_DIR"
+	PATH="@pkglibdir@"
 
 else
 	# This is all for the user's shell.
@@ -65,5 +65,5 @@ export VG_VIEWGLOB_ACTIVE=yep
 # Don't want to clutter the environment.
 unset VG_ASTERISK
 unset VG_SANDBOX
-unset VG_DIR
+unset VG_LIB_DIR
 

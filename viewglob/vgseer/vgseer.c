@@ -30,6 +30,8 @@
 #include "param-io.h"
 #include "tcp-connect.h"
 #include "logging.h"
+#include "read-conf.h"
+#include "fgetopt.h"
 
 #include <stdio.h>
 #include <signal.h>
@@ -55,6 +57,9 @@
 # include <sys/ioctl.h>
 #endif
 
+
+#define CONF_FILE         ".viewglob/vgseer.conf"
+
 /* Structure for the state of the user's shell. */
 struct user_state {
 	struct cmdline cmd;
@@ -78,9 +83,10 @@ struct vgd_stuff {
 /* Program argument options. */
 struct options {
 	enum shell_type shell;
+	gchar* host;
+	gchar* port;
 	gchar* executable;
 	gchar* init_loc;
-	gchar* expand_params;
 };
 
 
@@ -92,6 +98,9 @@ static void     clean_fail(struct child* new_lamb);
 static gsize    strlen_safe(const gchar* string);
 
 /* Setup. */
+static void read_conf_file(struct options* opts);
+static void parse_args(gint argc, gchar** argv, struct options* opts);
+static void clean_opts(struct options* opts);
 static gboolean fork_shell(struct child* child, enum shell_type type,
 		gboolean sandbox, gchar* init_loc);
 static gboolean setup_zsh(gchar* init_loc);
@@ -113,14 +122,13 @@ static void     scan_sequences(Connection* b, struct user_state* u);
 
 /* Communication with vgd. */
 static gint     connect_to_vgd(gchar* server, gchar* port,
-		struct user_state* u, gchar* expand_opts);
+		struct user_state* u);
 static gboolean set_term_title(gint fd, gchar* title);
 static gchar*   escape_filename(gchar* name, struct user_state* u,
 		enum process_level pl, gchar* holdover);
 static void    call_vgexpand(struct user_state* u, struct vgd_stuff* vgd);
 static void put_param_wrapped(gint fd, enum parameter param, gchar* value);
 
-static void parse_args(gint argc, gchar** argv, struct options* opts);
 static void report_version(void);
 
 static void send_term_size(gint shell_fd);
@@ -136,7 +144,7 @@ gboolean term_size_changed = FALSE;
 gint main(gint argc, gchar** argv) {
 
 	/* Program options. */
-	struct options opts = { ST_BASH, NULL, NULL, NULL };
+	struct options opts;
 
 	/* Almost everything revolves around this. */
 	struct user_state u;
@@ -153,12 +161,24 @@ gint main(gint argc, gchar** argv) {
 			G_LOG_LEVEL_WARNING | G_LOG_LEVEL_CRITICAL | G_LOG_LEVEL_MESSAGE |
 			G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION, logging, NULL);
 
+	/* Initialize the options. */
+	(void) putenv_wrapped("VG_ASTERISK=yep");
+	opts.shell = ST_BASH;
+	opts.host = g_strdup("localhost");
+	opts.port = g_strdup("16108");
+	opts.executable = NULL;
+	opts.init_loc = NULL;
+
+	/* Fill in the opts struct. */
+	read_conf_file(&opts);
+	parse_args(argc, argv, &opts);
+
+	clean_opts(&opts);
+
 	/* Initialize the shell and display structs. */
 	child_init(&u.shell);
 	child_init(&u.sandbox);
 
-	/* Fill in the opts struct. */
-	parse_args(argc, argv, &opts);
 	u.shell.exec_name = u.sandbox.exec_name = opts.executable;
 	u.type = opts.shell;
 
@@ -171,7 +191,7 @@ gint main(gint argc, gchar** argv) {
 	clean_fail(&u.sandbox);
 
 	/* Connect to vgd and negotiate setup. */
-	vgd_fd = connect_to_vgd("localhost", "16108", &u, opts.expand_params);
+	vgd_fd = connect_to_vgd(opts.host, opts.port, &u);
 	if (vgd_fd == -1)
 		clean_fail(NULL);
 
@@ -209,8 +229,52 @@ gint main(gint argc, gchar** argv) {
 }
 
 
-static gint connect_to_vgd(gchar* server, gchar* port, struct user_state* u,
-		gchar* expand_opts) {
+static void read_conf_file(struct options* opts) {
+	gchar* value;
+	gchar* conf_file;
+	enum opt_type opt;
+
+	value = getenv("HOME");
+	if (!value) {
+		g_warning("User has no home!");
+		return;
+	}
+
+	conf_file = g_strconcat(value, "/", CONF_FILE, NULL);
+
+	if (open_conf(conf_file)) {
+
+		while ((opt = read_opt(&value)) != OT_DONE) {
+			switch (opt) {
+				case OT_HOST:
+					g_free(opts->host);
+					opts->host = g_strdup(value);
+					break;
+				case OT_PORT:
+					g_free(opts->port);
+					opts->port = g_strdup(value);
+					break;
+				case OT_SHELL_MODE:
+					opts->shell = string_to_shell_status(value);
+					break;
+				case OT_DISABLE_STAR:
+					putenv_wrapped("VG_ASTERISK=");
+					break;
+				case OT_EXECUTABLE:
+					g_free(opts->executable);
+					opts->executable = g_strdup(value);
+					break;
+				default:
+					/* Just ignore anything else. */
+					break;
+			}
+		}
+	}
+}
+
+
+static gint connect_to_vgd(gchar* server, gchar* port,
+		struct user_state* u) {
 	gint fd;
 	gchar term_title[100];
 
@@ -293,59 +357,80 @@ fail:
 static void parse_args(gint argc, gchar** argv, struct options* opts) {
 	gboolean in_loop = TRUE;
 
-	opterr = 0;
+	struct option long_options[] = {
+		{ "host", 1, NULL, 'h' },
+		{ "port", 1, NULL, 'p' },
+		{ "shell-mode", 1, NULL, 'c' },
+		{ "disable-star", 0, NULL, 't' },
+		{ "executable", 1, NULL, 'e' },
+		{ "help", 0, NULL, 'H' },
+		{ "version", 0, NULL, 'V' },
+		{ 0, 0, 0, 0},
+	};
+
 	while (in_loop) {
-		switch (getopt(argc, argv, "c:e:i:vVx:")) {
+		switch (getopt_long(argc, argv, "h:p:c:te:vVH", long_options, NULL)) {
 			case -1:
 				in_loop = FALSE;
 				break;
-			case '?':
-				g_critical("Unknown option specified");
-				clean_fail(NULL);
+
+			case 'h':
+				g_free(opts->host);
+				opts->host = g_strdup(optarg);
 				break;
+
+			case 'p':
+				g_free(opts->port);
+				opts->port = g_strdup(optarg);
+				break;
+
 			case 'c':
-				/* Set the shell mode. */
-				if (strcmp(optarg, "bash") == 0)
-					opts->shell = ST_BASH;
-				else if (strcmp(optarg, "zsh") == 0)
-					opts->shell = ST_ZSH;
-				else {
-					g_critical("Unknown shell mode \"%s\"", optarg);
-					clean_fail(NULL);
-				}
+				opts->shell = string_to_shell_status(optarg);
 				break;
+
+			case 't':
+				putenv_wrapped("VG_ASTERISK=");
+				break;
+
 			case 'e':
-				/* Shell executable */
 				g_free(opts->executable);
 				opts->executable = g_strdup(optarg);
 				break;
-			case 'i':
-				/* Shell initialization command */
-				g_free(opts->init_loc);
-				opts->init_loc = g_strdup(optarg);
+
+			case 'H':
+//				usage();  FIXME
 				break;
+
 			case 'v':
 			case 'V':
 				report_version();
 				break;
-			case 'x':
-				/* Vgexpand parameters */
-				g_free(opts->expand_params);
-				opts->expand_params = g_strdup(optarg);
+
+			case '?':
+			default:
+				g_critical("Unknown option specified");
+				clean_fail(NULL);
 				break;
 		}
 	}
+}
 
-	if (!opts->executable) {
-		g_critical("No shell executable specified");
-		clean_fail(NULL);
+
+static void clean_opts(struct options* opts) {
+
+	if (opts->shell == ST_BASH) {
+		if (!opts->executable)
+			opts->executable = g_strdup("bash");
+		opts->init_loc = g_strconcat(
+				VG_LIB_DIR, "/init-viewglob.bashrc", NULL);
 	}
-	else if (!opts->init_loc) {
-		g_critical("No shell initialization command specified");
-		clean_fail(NULL);
+	else if (opts->shell == ST_ZSH) {
+		if (!opts->executable)
+			opts->executable = g_strdup("zsh");
+		opts->init_loc = g_strdup(VG_LIB_DIR);
 	}
-	else if (!opts->expand_params) {
-		g_critical("No shell expansion parameters specified");
+	else {
+		g_critical("Invalid shell mode specified");
 		clean_fail(NULL);
 	}
 }

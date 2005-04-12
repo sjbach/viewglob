@@ -10,6 +10,8 @@ Critical:
 - vgmini: statuses
 - vgd: make work in konsole and gnome-terminal
 - vgdisplays: shift click filename puts full path
+- vgmini: refocusing jump_resizes display
+- vgseer: if VG_VIEWGLOB_ACTIVE in environment, don't load
 
 End:
 - make: autoscan
