@@ -24,26 +24,9 @@
 
 G_BEGIN_DECLS
 
-enum opt_type {
-	OT_HOST,
-	OT_PORT,
-	OT_SHELL_MODE,
-	OT_DISABLE_STAR,
-	OT_EXECUTABLE,
-	OT_PERSISTENT,
-	OT_SORT_STYLE,
-	OT_DIR_ORDER,
-	OT_FONT_SIZE_MODIFIER,
-	OT_DISABLE_ICONS,
-	OT_ERROR,
-	OT_DONE,
-	OT_COUNT,
-};
 
+gboolean conf_to_args(int* argc, char*** argv, gchar* file);
 
-
-gboolean open_conf(gchar* file);
-enum opt_type read_opt(gchar** value);
 
 G_END_DECLS
 

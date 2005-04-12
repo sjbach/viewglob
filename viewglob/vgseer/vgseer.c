@@ -30,8 +30,8 @@
 #include "param-io.h"
 #include "tcp-connect.h"
 #include "logging.h"
-#include "read-conf.h"
 #include "fgetopt.h"
+#include "conf-to-args.h"
 
 #include <stdio.h>
 #include <signal.h>
@@ -98,13 +98,13 @@ static void     clean_fail(struct child* new_lamb);
 static gsize    strlen_safe(const gchar* string);
 
 /* Setup. */
-static void read_conf_file(struct options* opts);
 static void parse_args(gint argc, gchar** argv, struct options* opts);
 static void clean_opts(struct options* opts);
 static gboolean fork_shell(struct child* child, enum shell_type type,
 		gboolean sandbox, gchar* init_loc);
 static gboolean setup_zsh(gchar* init_loc);
 static gboolean putenv_wrapped(gchar* string);
+static void usage(void);
 
 /* Program flow. */
 static void     main_loop(struct user_state* u, gint vgd_fd);
@@ -170,7 +170,12 @@ gint main(gint argc, gchar** argv) {
 	opts.init_loc = NULL;
 
 	/* Fill in the opts struct. */
-	read_conf_file(&opts);
+	int conf_argc;
+	gchar** conf_argv;
+	if (conf_to_args(&conf_argc, &conf_argv, CONF_FILE)) {
+		parse_args(conf_argc, conf_argv, &opts);
+		g_strfreev(conf_argv);
+	}
 	parse_args(argc, argv, &opts);
 
 	clean_opts(&opts);
@@ -226,50 +231,6 @@ gint main(gint argc, gchar** argv) {
 	ok &= child_terminate(&u.sandbox);
 	g_print("[Exiting viewglob]\n");
 	return (ok ? EXIT_SUCCESS : EXIT_FAILURE);
-}
-
-
-static void read_conf_file(struct options* opts) {
-	gchar* value;
-	gchar* conf_file;
-	enum opt_type opt;
-
-	value = getenv("HOME");
-	if (!value) {
-		g_warning("User has no home!");
-		return;
-	}
-
-	conf_file = g_strconcat(value, "/", CONF_FILE, NULL);
-
-	if (open_conf(conf_file)) {
-
-		while ((opt = read_opt(&value)) != OT_DONE) {
-			switch (opt) {
-				case OT_HOST:
-					g_free(opts->host);
-					opts->host = g_strdup(value);
-					break;
-				case OT_PORT:
-					g_free(opts->port);
-					opts->port = g_strdup(value);
-					break;
-				case OT_SHELL_MODE:
-					opts->shell = string_to_shell_status(value);
-					break;
-				case OT_DISABLE_STAR:
-					putenv_wrapped("VG_ASTERISK=");
-					break;
-				case OT_EXECUTABLE:
-					g_free(opts->executable);
-					opts->executable = g_strdup(value);
-					break;
-				default:
-					/* Just ignore anything else. */
-					break;
-			}
-		}
-	}
 }
 
 
@@ -368,6 +329,7 @@ static void parse_args(gint argc, gchar** argv, struct options* opts) {
 		{ 0, 0, 0, 0},
 	};
 
+	optind = 0;
 	while (in_loop) {
 		switch (getopt_long(argc, argv, "h:p:c:te:vVH", long_options, NULL)) {
 			case -1:
@@ -398,12 +360,17 @@ static void parse_args(gint argc, gchar** argv, struct options* opts) {
 				break;
 
 			case 'H':
-//				usage();  FIXME
+				usage();
 				break;
 
 			case 'v':
 			case 'V':
 				report_version();
+				break;
+
+			case ':':
+				g_critical("Option missing argument");
+				clean_fail(NULL);
 				break;
 
 			case '?':
@@ -437,8 +404,27 @@ static void clean_opts(struct options* opts) {
 
 
 static void report_version(void) {
-	printf("seer %s\n", VERSION);
+	printf("%s %s\n", g_get_prgname(), VERSION);
 	printf("Released %s\n", VG_RELEASE_DATE);
+	exit(EXIT_SUCCESS);
+}
+
+
+static void usage(void) {
+	g_print("usage: vgseer [-h <host>] [-p <port>] [-c <shell mode>]\n");
+	g_print("              [-e <shell executable>] [-t]\n\n");
+
+	g_print("-h, --host            Host to connect to.            "
+			"(default: localhost)\n");
+	g_print("-p, --port            vgd listen port on host.       "
+			"(default: 16108)\n");
+	g_print("-c, --shell-mode      Shell to use (bash or zsh).    "
+			"(default: bash)\n\n");
+
+	g_print("-e, --executable      Alternate shell executable.\n");
+	g_print("-t, --disable-star    Don't show the little asterisk.\n");
+	g_print("-H, --help            Display this usage.\n");
+	g_print("-V, --version         Print the version.\n");
 	exit(EXIT_SUCCESS);
 }
 

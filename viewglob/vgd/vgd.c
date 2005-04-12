@@ -40,8 +40,11 @@
 #include "tcp-listen.h"
 #include "logging.h"
 #include "syslogging.h"
+#include "fgetopt.h"
+#include "conf-to-args.h"
 
-#define DEFAULT_VGEXPAND_OPTS "-d"
+#define DEFAULT_VGEXPAND_OPTS  "-d"
+#define CONF_FILE              ".viewglob/vgd.conf"
 
 struct state {
 	GList*                clients;
@@ -52,6 +55,8 @@ struct state {
 	Display*              Xdisplay;
 	gboolean              persistent;
 	GString*              vgexpand_opts;
+
+	gchar*                port;
 	gint                  listen_fd;
 };
 
@@ -88,6 +93,9 @@ static void check_active_window(struct state* s);
 static void update_display(struct state* s, struct vgseer_client* v,
 		enum parameter param, gchar* value);
 static int daemonize(void);
+static void parse_args(gint argc, gchar** argv, struct state* s);
+static void report_version(void);
+static void usage(void);
 
 
 gint main(gint argc, gchar** argv) {
@@ -104,8 +112,15 @@ gint main(gint argc, gchar** argv) {
 			G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION, logging, NULL);
 
 	state_init(&s);
-//	s.display.exec_name = VG_LIB_DIR "/vgclassic";
-	s.display.exec_name = VG_LIB_DIR "/vgmini";
+
+	/* Get program execution options. */
+	gint conf_argc;
+	gchar** conf_argv;
+	if (conf_to_args(&conf_argc, &conf_argv, CONF_FILE)) {
+		parse_args(conf_argc, conf_argv, &s);
+		g_strfreev(conf_argv);
+	}
+	parse_args(argc, argv, &s);
 
 	/* Get a connection to the X display. */
 	if ( (s.Xdisplay = XOpenDisplay(NULL)) == NULL) {
@@ -114,7 +129,7 @@ gint main(gint argc, gchar** argv) {
 	}
 
 	/* Setup listening socket. */
-	if ( (s.listen_fd = tcp_listen("localhost", "16108")) == -1)
+	if ( (s.listen_fd = tcp_listen(NULL, s.port)) == -1)
 		exit(EXIT_FAILURE);
 
 	/* Turn into a daemon. */
@@ -129,6 +144,197 @@ gint main(gint argc, gchar** argv) {
 	poll_loop(&s);
 
 	return EXIT_SUCCESS;
+}
+
+
+static void parse_args(gint argc, gchar** argv, struct state* s) {
+	gboolean in_loop = TRUE;
+
+	struct option long_options[] = {
+		{ "port", 1, NULL, 'p' },
+		{ "display", 1, NULL, 'd' },
+		{ "persistent", 0, NULL, 'P' },
+		{ "sort-style", 1, NULL, 's' },
+		{ "dir-order", 1, NULL, 'r' },
+		{ "font-size-modifier", 1, NULL, 'z' },
+		{ "black", 1, NULL, '1' },
+		{ "red", 1, NULL, '2' },
+		{ "green", 1, NULL, '3' },
+		{ "yellow", 1, NULL, '4' },
+		{ "blue", 1, NULL, '5' },
+		{ "magenta", 1, NULL, '6' },
+		{ "cyan", 1, NULL, '7' },
+		{ "white", 1, NULL, '8' },
+		{ "disable-icons", 0, NULL, 'b' },
+		{ "help", 0, NULL, 'H' },
+		{ "version", 0, NULL, 'V' },
+		{ 0, 0, 0, 0},
+	};
+
+	optind = 0;
+	while (in_loop) {
+		switch (getopt_long(argc, argv,
+					"p:d:ps:r:z:bHV", long_options, NULL)) {
+			case -1:
+				in_loop = FALSE;
+				break;
+
+			/* Port */
+			case 'p':
+				g_free(s->port);
+				s->port = g_strdup(optarg);
+				break;
+
+			/* Display */
+			case 'd':
+				/* vgmini and vgclassic can be accepted without providing a
+				   path. */
+				g_free(s->display.exec_name);
+				if (STREQ(optarg, "vgmini") || STREQ(optarg, "vgclassic")) {
+					s->display.exec_name = g_strconcat(
+							VG_LIB_DIR, "/", optarg, NULL);
+				}
+				else
+					s->display.exec_name = g_strdup(optarg);
+				break;
+
+			/* Persistence */
+			case 'P':
+				s->persistent = TRUE;
+				break;
+
+			/* Sort style */
+			case 's':
+				if (STREQ(optarg, "ls"))
+					optarg = "-l";
+				else if (STREQ(optarg, "windows") || STREQ(optarg, "win"))
+					optarg = "-w";
+				else
+					optarg = "";
+				s->vgexpand_opts = g_string_append(
+						s->vgexpand_opts, optarg);
+				break;
+
+			/* Dir order */
+			case 'r':
+				if (STREQ(optarg, "descending"))
+					optarg = "-d";
+				else if (STREQ(optarg, "ascending"))
+					optarg = "-a";
+				else if (STREQ(optarg, "ascending-pwd-first"))
+					optarg = "-p";
+				else
+					optarg = "";
+				s->vgexpand_opts = g_string_append(
+						s->vgexpand_opts, optarg);
+				break;
+
+			/* Font size modifier */
+			case 'z':
+				args_add(&s->display.args, "-z");
+				args_add(&s->display.args, optarg);
+				break;
+
+			/* Colours */
+			case '1':
+				args_add(&s->display.args, "--black");
+				args_add(&s->display.args, optarg);
+				break;
+			case '2':
+				args_add(&s->display.args, "--red");
+				args_add(&s->display.args, optarg);
+				break;
+			case '3':
+				args_add(&s->display.args, "--green");
+				args_add(&s->display.args, optarg);
+				break;
+			case '4':
+				args_add(&s->display.args, "--yellow");
+				args_add(&s->display.args, optarg);
+				break;
+			case '5':
+				args_add(&s->display.args, "--blue");
+				args_add(&s->display.args, optarg);
+				break;
+			case '6':
+				args_add(&s->display.args, "--magenta");
+				args_add(&s->display.args, optarg);
+				break;
+			case '7':
+				args_add(&s->display.args, "--cyan");
+				args_add(&s->display.args, optarg);
+				break;
+			case '8':
+				args_add(&s->display.args, "--white");
+				args_add(&s->display.args, optarg);
+				break;
+
+			case 'b':
+				args_add(&s->display.args, "--disable-icons");
+				break;
+
+			case 'H':
+				usage();
+				break;
+
+			case 'v':
+			case 'V':
+				report_version();
+				break;
+
+			case ':':
+				g_critical("Option missing argument");
+				exit(EXIT_FAILURE);
+				break;
+
+			case '?':
+			default:
+				g_critical("Unknown option provided");
+				exit(EXIT_FAILURE);
+				break;
+		}
+	}
+}
+
+
+static void usage(void) {
+	g_print("usage: vgd  [-p <port>] [-P] [-d <display>] [-s <sort style>\n");
+	g_print("            [-r <dir order>] [-z <font size modifier>] [-b]\n");
+	g_print("            [--<colour> <colour string>]\n\n");
+
+	g_print("-p, --port                     "
+			"Listen on this port.      (default: 16108)\n");
+	g_print("-d, --display                  "
+			"Display program.          (default: vgmini)\n");
+	g_print("-s, --sort-style               "
+			"Windows or ls.            (default: ls)\n");
+	g_print("-r, --dir-order                "
+			"Directory list ordering.  (default: ascending)\n\n");
+
+	g_print("-z, --font-size-modifier       "
+			"Increase/decrease display font size.\n");
+	g_print("-b, --disable-icons            "
+			"Do not show file type icons.\n\n");
+
+	g_print("--black, --red, --green        "
+			"LS_COLORS terminal colour interpretations.\n");
+	g_print("--yellow, --blue, --magenta    "
+			"These can be names or hex representations\n");
+	g_print("--magenta --cyan, --white      "
+			"such as #RRGGBB.\n\n");
+
+	g_print("-H, --help                     "
+			"Display this usage.\n");
+	g_print("-V, --version                  "
+			"Print the version.\n");
+	exit(EXIT_SUCCESS);
+}
+
+
+static void report_version(void) {
+	printf("vgd %s\n", VERSION);
+	printf("Released %s\n", VG_RELEASE_DATE);
+	exit(EXIT_SUCCESS);
 }
 
 
@@ -704,14 +910,17 @@ static gboolean daemonize(void) {
 void state_init(struct state* s) {
 	s->clients = NULL;
 	s->persistent = FALSE;
-	s->listen_fd = -1;
 
 	child_init(&s->display);
+	s->display.exec_name = g_strdup(VG_LIB_DIR "/vgmini");
 	s->display_win = 0;
 
 	s->vgexpand_opts = g_string_new(DEFAULT_VGEXPAND_OPTS);
 	s->Xdisplay = NULL;
 	s->active = NULL;
+
+	s->port = g_strdup("16108");
+	s->listen_fd = -1;
 }
 
 

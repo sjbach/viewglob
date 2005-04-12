@@ -1,6 +1,6 @@
 
 bin_SCRIPTS = viewglob
-pkglib_SCRIPTS = getopt.sh
+pkglib_SCRIPTS = getopt.sh conf-to-args.sh
 pkglib_DATA = init-viewglob.bashrc .zshrc
 
 viewglob:
@@ -36,15 +36,7 @@ init-viewglob.bashrc:
 
 CLEANFILES = viewglob init-viewglob.bashrc init-viewglob.bashrc.tmp \
              .zshrc init-viewglob.zshrc.tmp getopt.sh
-EXTRA_DIST = init-viewglob.bashrc init-viewglob.zshrc \
-             viewglob.in getopt.sh.in
-
-# Have the program also callable under the name gviewglob.
-#install-exec-hook:
-#	cd $(DESTDIR)$(bindir) && \
-#	rm -f gviewglob && \
-#	$(LN_S) viewglob gviewglob
-#
-#uninstall-local:
-#	rm -f $(DESTDIR)$(bindir)/gviewglob
+EXTRA_DIST = init-viewglob.bashrc.in init-viewglob.bashrc \
+             init-viewglob.zshrc.in .zshrc \
+             viewglob.in getopt.sh.in conf-to-args.sh
 

@@ -1,4 +1,4 @@
-.TH VIEWGLOB 1 "17 March 2005"
+.TH VIEWGLOB 1 "@RELEASE_DATE@" "" "Viewglob Manual"
 .SH NAME
 viewglob, gviewglob \- shell add\-on for windowing environments.
 .SH SYNOPSIS
@@ -19,7 +19,7 @@ Note: either name is equivalent for calling the program.
 This program follows the usual GNU command line syntax, with long options starting with two dashes.  A summary is included below.
 .TP
 .B \-c, \-\-shell\-mode=name
-Shell to be used.  \fIname\fP can be "bash" or "zsh" (default is bash).
+Shell to be used.  \fIname\fP can be \*(lqbash\*(rq or \*(lqzsh\*(rq (default is bash).
 .TP
 .B \-d, \-\-display=path
 Use an alternate display program.
@@ -43,7 +43,7 @@ List directories in descending order (the default), ascending (last referenced d
 Maximum number of files to show in the display for each directory.  A [Results Truncated] indicator will show if the max has been reached.  Note that you can always force show all files with the context menu.  If \-\-show\-max is passed 0, there is no limit.
 .TP
 .B \-z, \-\-font\-size\-modifier=<+/\-##>
-Increase or decrease the base font size in the display by the given number.  E.g. "\-z +2" increases the window manager's default by 2, while "\-z \-2" decreases the default by 2.
+Increase or decrease the base font size in the display by the given number.  E.g. \*(lq\-z +2\*(rq increases the window manager's default by 2, while \*(lq\-z \-2\*(rq decreases the default by 2.
 .TP
 .B \-b, \-\-disable\-icons
 Don't show file type icons in the display.
@@ -100,7 +100,7 @@ Refocus windows:
 .PD
 .RE
 .LP
-Their C\- counterparts also work.  To enter a real C\-g to the shell, type it twice.  If the display is killed or closed through the window manager (e.g. you clicked the little "x" icon), it's only been toggled off.  To get it back, type C\-g <SPACE> in the terminal.
+Their C\- counterparts also work.  To enter a real C\-g to the shell, type it twice.  If the display is killed or closed through the window manager (e.g. you clicked the little \*(lqx\*(rq icon), it's only been toggled off.  To get it back, type C\-g <SPACE> in the terminal.
 .LP
 To disable Viewglob functionality (i.e. close the display and stop tracking the command line, etc.), you can type C\-g q.  Once Viewglob has been disabled in this manner, it can't be re\-enabled without exiting.
 .LP
@@ -109,7 +109,7 @@ The refocus shortcut will send a quick request to the window manager to activate
 .PP
 \fBFile/Directory Name Insertion\fP
 .RS 4
-The name of any file or directory can be passed to the terminal by double left\-clicking.  If shift is held, the full path of the file or directory is passed.  By default Viewglob is in "\fIsmart\-insert\fP" mode, which means it inserts the names or paths the way it thinks you want to (but may be wrong sometimes \-\- it's "smart" as defined by Microsoft).  \fISmart\-insert\fP works as follows:
+The name of any file or directory can be passed to the terminal by double left\-clicking.  If shift is held, the full path of the file or directory is passed.  By default Viewglob is in \*(lq\fIsmart\-insert\fP\*(rq mode, which means it inserts the names or paths the way it thinks you want to (but may be wrong sometimes \-\- it's \*(lqsmart\*(rq as defined by Microsoft).  \fISmart\-insert\fP works as follows:
 .LP
 .RS 4
 If you are currently at the command line (i.e. the shell has control of the terminal):
@@ -142,7 +142,7 @@ Note that insertion of file names works pretty much the same as just pasting tex
 .PP
 \fBDisplay Peculiarities\fP
 .RS 4
-If the number of files in a shown directory is above the given max, Viewglob will truncate the results (with an indicator).  You can force Viewglob to display the contents of the whole directory by right\-clicking the heading for the listing and choosing "Show all files".  By default hidden files are not shown, but you can view them using the same mechanism.
+If the number of files in a shown directory is above the given max, Viewglob will truncate the results (with an indicator).  You can force Viewglob to display the contents of the whole directory by right\-clicking the heading for the listing and choosing \*(lqShow all files\*(rq.  By default hidden files are not shown, but you can view them using the same mechanism.
 .LP
 Directories referenced in several different ways will always be interpreted as the same directory if they're on the same device and have the same inode (i.e. they are indeed the same).  Therefore these three names are equivalent to Viewglob (and a trailing slash does not differentiate a directory from one without a trailing slash):
 .IP
@@ -187,11 +187,11 @@ windows
 The configuration file has a lower priority than options specified on the command line, and can be disregarded completely with \-f.
 
 .SH NOTES
-First of all, when I say below "such\-and\-such feature of bash/zsh doesn't work in Viewglob", I just mean that the display will not show expansion information for that feature.  The functionality of both shells is UNCHANGED by running Viewglob.  Anyhow.
+First of all, when I say below \*(lqsuch\-and\-such feature of bash/zsh doesn't work in Viewglob\*(rq, I just mean that the display will not show expansion information for that feature.  The functionality of both shells is UNCHANGED by running Viewglob.  Anyhow.
 .PP
-Unfortunately, I haven't found a good way to predict history expansion (stuff involving the special char "!").  The Viewglob display will pretend any construction starting with an unescaped ! does not exist.  Exceptions: a ! by itself, or the !(foo) pattern match.
+Unfortunately, I haven't found a good way to predict history expansion (stuff involving the special char \*(lq!\*(rq).  The Viewglob display will pretend any construction starting with an unescaped ! does not exist.  Exceptions: a ! by itself, or the !(foo) pattern match.
 .PP
-A Viewglob'd shell session will not extend to subshells.  That is, if while in a Viewglob session you run, say, "\fIbash\fP" or "\fIsu\fP", Viewglob will probably be temporarily disabled until you exit the new shell.  This is a consequence of Viewglob's implementation, but I'd probably keep this behaviour even if I could get around it.
+A Viewglob'd shell session will not extend to subshells.  That is, if while in a Viewglob session you run, say, \*(lq\fIbash\fP\*(rq or \*(lq\fIsu\fP\*(rq, Viewglob will probably be temporarily disabled until you exit the new shell.  This is a consequence of Viewglob's implementation, but I'd probably keep this behaviour even if I could get around it.
 .PP
 Since Viewglob doesn't track changes in shell variables, I've decided to take out variable interpretation entirely.  If Viewglob sees what it thinks is a variable in its command line, it'll stop processing it until it's removed.  The variables will of course work fine in the shell itself.
 .PP
@@ -209,7 +209,7 @@ Only the first command in a compound command will be interpreted by Viewglob.  F
 .IP
 $ mv *.jp{e,}g ~/photos/ && rm *
 .PP
-Viewglob will stop listening when it sees "&&", and the display will only register *.jp{e,}g.  This isn't an implementation problem \- it's just that showing globbing for the subsequent commands could be deceptive, as the filesystem could be changed by executing the first command (as it is in this case).
+Viewglob will stop listening when it sees \*(lq&&\*(rq, and the display will only register *.jp{e,}g.  This isn't an implementation problem \- it's just that showing globbing for the subsequent commands could be deceptive, as the filesystem could be changed by executing the first command (as it is in this case).
 .PP
 Command substitution (stuff with backticks (`) or $(command)) is ignored by Viewglob for the reason given above.  Works fine in your shell though.
 .PP

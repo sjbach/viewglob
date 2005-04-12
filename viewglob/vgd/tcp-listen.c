@@ -57,8 +57,8 @@ int tcp_listen(const char* host, const char* serv) {
 
 	do {
 		listenfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-		if (listenfd < 0)
-			continue;		/* error, try next one */
+		if (listenfd < 0)   /* error, try next one. */
+			continue;
 
 		if (setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR,
 					&on, sizeof(on)) == -1) {
@@ -73,8 +73,8 @@ int tcp_listen(const char* host, const char* serv) {
 	} while ( (res = res->ai_next) != NULL);
 
 	if (res == NULL) {	/* errno from final socket() or bind() */
-		g_critical("tcp_listen error for %s, %s: %s",
-				host, serv, g_strerror(errno));
+		g_critical("Could not setup a listening socket.\n"
+				"The last error was: %s", g_strerror(errno));
 		return -1;
 	}
 

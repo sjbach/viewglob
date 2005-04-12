@@ -1,3 +1,21 @@
+2005-04-12 19:34  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* vgd.1, vgseer.1, viewglob.1: removed
+	* vgd.1.in, vgseer.1.in, viewglob.1.in: added
+	* ./Makefile.am:
+	  Insert the release date into manpages automatically.
+	* read-conf.c, read-conf.h: removed
+	* conf-to-args.c, conf-to-args.h, conf-to-args.sh: added
+	  Using different approach to parsing config files.
+	* shell/Makefile.am, common/Makefile.am, vgd/Makefile.am, vgd.c,
+	  vgseer/Makefile.am, vgseer.c:
+	  - Use conf-to-args.
+	  - Added option parsing.
+	  - Added usages.
+	* child.c: removed unnecessary warning
+	* tcp-listen.c: more useful error reporting
+	* vgexpand.c: allow changing to ls mode
+
 2005-04-12 00:24  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* fgetopt.c, fgetopt.h:

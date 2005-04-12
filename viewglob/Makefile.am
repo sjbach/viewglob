@@ -2,9 +2,29 @@ AUTOMAKE_OPTIONS = gnu
 AM_CFLAGS = -Wall -g
 
 #SUBDIRS = shell vgd vgdisplay vgping vgseer vgexpand
-SUBDIRS = vgseer vgd vgdisplay vgexpand shell 
+SUBDIRS = common vgseer vgd vgdisplay vgexpand shell 
 man_MANS = viewglob.1 vgseer.1 vgd.1
+
+viewglob.1:
+	rm -f viewglob.1.tmp
+	sed -e 's/@RELEASE_DATE\@/$(RELEASE_DATE)/g' \
+		viewglob.1.in > viewglob.1.tmp
+	mv viewglob.1.tmp viewglob.1
+
+vgseer.1:
+	rm -f vgseer.1.tmp
+	sed -e 's/@RELEASE_DATE\@/$(RELEASE_DATE)/g' \
+		vgseer.1.in > vgseer.1.tmp
+	mv vgseer.1.tmp vgseer.1
+
+vgd.1:
+	rm -f vgd.1.tmp
+	sed -e 's/@RELEASE_DATE\@/$(RELEASE_DATE)/g' \
+		vgd.1.in > vgd.1.tmp
+	mv vgd.1.tmp vgd.1
+
 EXTRA_DIST = COPYING2 HACKING $(man_MANS)
+CLEAN_FILES = viewglob.1.tmp vgseer.1.tmp vgd.1.tmp
 
 # Also put the manpage under the name gviewglob.
 #install-data-hook:

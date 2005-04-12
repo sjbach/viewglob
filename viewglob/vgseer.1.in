@@ -1,0 +1,74 @@
+.TH VGSEER 1 "@RELEASE_DATE@" "" "Viewglob Manual"
+.SH NAME
+vgseer \- Viewglob shell overseer.
+.SH SYNOPSIS
+.B vgseer
+.RI [ options ]
+
+.SH DESCRIPTION
+\fIvgseer\fP creates a Viewglob-supervised interactive shell and opens up an Internet-domain socket connection to a listening \fIvgd\fP process.  It maintains a snapshot of the relevant parts of its local filesystem and tracks the user's command line and other information, which is communicated to vgd.
+.PP
+In basic usage, you can run vgseer with no arguments and it will connect to a local vgd on the default port.  If that's all you want to do, though, you may as well just use the \fIviewglob\fP wrapper script.
+.PP
+If you've connected to a remote machine with telnet or ssh and would like Viewglob tracking for that shell+terminal, you can do so by calling vgseer and passing it the host/port of your local vgd.  Obviously this requires vgseer to be installed on the remote machine.
+.PP
+\fIvgseer\fP is compatible with any recent version of \fIbash\fP or \fIzsh\fP and doesn't assume any particular shell configuration.
+
+.SH OPTIONS
+This program follows the usual GNU command line syntax, with long options starting with two dashes.  A summary is included below.
+.TP
+.B \-h, \-\-host=<name>
+Connect to a vgd process on the given host.  The default is localhost.
+.TP
+.B \-p, \-\-port=<number>
+Connect to a vgd process through the given port.  The default is 16108 (1-GLOB).
+.TP
+.B \-c, \-\-shell\-mode=<name>
+Shell to be used.  \fIname\fP can be \*(lqbash\*(rq or \*(lqzsh\*(rq (default is bash).
+.TP
+.B \-t, \-\-disable\-star
+Disable the asterisk character which is usually at the beginning of a vgseer shell prompt.
+.TP
+.B \-e, \-\-executable=<path>
+Use the given executable as the shell instead of its first reference in the path.  Note that if this isn't a version of the shell chosen with \-\-shell\-mode, you won't get very far.
+.TP
+.B \-H, \-\-help
+Show summary of options.
+.TP
+.B \-V, \-\-version
+Show the version of the program.
+
+.SH FILES
+.I ~/.viewglob/vgseer.conf
+.IP
+If present, this file specifies a default configuration for vgseer.  The file syntax is:
+.IP
+<\fIlong_option_name\fP> [ <\fIwhitespace\fP> <\fIvalue\fP> ]
+.IP
+The '#' character can be used for comments.
+.IP
+So, to always use zsh, disable the asterisk at the prompt, and always connect to a vgd on a host named juniper, the file should contain:
+.IP
+.RS
+.PD 0
+.TP 15n
+shell\-mode
+zsh
+.TP
+disable\-star
+.TP
+host
+juniper
+.PD
+.RE
+.IP
+Configuration file options can be overridden on the command line.
+
+.SH AUTHORS
+Stephen Bach <sjbach@users.sourceforge.net>
+.SH SEE ALSO
+.BR viewglob (1),
+.BR vgd (1),
+.BR bash (1),
+.BR zsh (1).
+

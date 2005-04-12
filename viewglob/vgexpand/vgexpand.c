@@ -166,6 +166,8 @@ static gint parse_args(gint argc, gchar** argv, gchar** mask_string) {
 				ordering = SO_ASCENDING_PWD_FIRST;
 			else if (STREQ("-w", *(argv + j)))
 				filename_cmp = cmp_win;
+			else if (STREQ("-l", *(argv + j)))
+				filename_cmp = cmp_win;
 			else if (STREQ("-m", *(argv + j))) {
 				j++;
 				if (j < i)

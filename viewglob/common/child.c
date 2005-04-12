@@ -63,10 +63,8 @@ void args_init(struct arguments* a) {
 void args_add(struct arguments* a, gchar* new_arg) {
 	gchar* temp;
 
-	if (new_arg) {
-		temp = g_new(gchar, strlen(new_arg) + 1);
-		strcpy(temp, new_arg);
-	}
+	if (new_arg)
+		temp = g_strdup(new_arg);
 	else
 		temp = NULL;
 
@@ -130,7 +128,8 @@ gboolean child_fork(struct child* c) {
 
 			child_fail:
 			g_critical("Exec failed: %s", g_strerror(errno));
-			g_critical("If vgseer does not exit, you should do so manually");
+			g_critical("If the program does not exit, you should "
+					"do so manually");
 			_exit(EXIT_FAILURE);
 			break;
 	}
@@ -174,9 +173,7 @@ gboolean child_terminate(struct child* c) {
 				c->pid = -1;
 				break;
 			case -1:
-				if (errno == ESRCH)
-					g_warning("Child already terminated");
-				else {
+				if (errno != ESRCH) {
 					g_critical("Could not terminate child: %s",
 							g_strerror(errno));
 					ok = FALSE;
