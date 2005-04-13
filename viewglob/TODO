@@ -1,6 +1,5 @@
 
 Critical:
-- vgping
 - vgclassic: mask and developing mask
 - make: option to build only vgseer/vgexpand (and thus no GTK requirement)
 - vgmini: statuses

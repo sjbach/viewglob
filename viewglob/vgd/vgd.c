@@ -693,15 +693,19 @@ static void new_client(struct state* s) {
 	// TODO add time limits to get_param
 	/* Receive client's purpose. */
 	if (get_param(new_fd, &param, &value) && param == P_PURPOSE) {
-		if (STREQ(value, "ping"))
+		if (STREQ(value, "vgping"))
 			new_ping_client(new_fd);
 		else if (STREQ(value, "vgseer"))
 			new_vgseer_client(s, new_fd);
-		else
+		else {
 			g_warning("(%d) Unexpected purpose: \"%s\"", new_fd, value);
+			(void) close(new_fd);
+		}
 	}
-	else
+	else {
 		g_warning("(%d) Did not receive purpose from client", new_fd);
+		(void) close(new_fd);
+	}
 }
 
 

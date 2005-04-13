@@ -1,64 +1,54 @@
 #! @BASH_FULL_PATH@
 # Copyright (C) 2004, 2005 Stephen Bach
-# This is the configurator for the program seer from the viewglob package.
+# This is script is a wrapper interface to the Viewglob package.
 #
-# viewglob is free software; you can redistribute it and/or modify
+# Viewglob is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 #
-# viewglob is distributed in the hope that it will be useful,
+# Viewglob is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with viewglob; if not, write to the Free Software
+# along with Viewglob; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 SCRIPT_NAME="${0##*/}"
-export VG_DIR="@pkglibdir@"
+VG_LIB_DIR="@pkglibdir@"
+VGPING="$VG_LIB_DIR/vgping"
 
-# Option defaults.
-VG_CONFIG_FILE="$HOME/.viewglobrc"
-VG_SHELL_MODE_DEFAULT=bash
-VG_DISPLAY_DEFAULT="$VG_DIR/gviewglob"
-VG_SHOW_MAX_DEFAULT=500
-VG_SORT_STYLE_DEFAULT=ls
-VG_DIR_ORDER_DEFAULT=descending
-VG_FONT_SIZE_MODIFIER_DEFAULT=0
+# Execution configuration
+VGSEER_ONLY=
+VGSEER_OPTS=
+VGD_OPTS=
+
+# vgping needs a default.
+HOST=localhost
+PORT=16108
 
 # We need extended globbing.
 shopt -s extglob
 
 vg_usage() {
 	cat >&2 << EOF
-usage: $SCRIPT_NAME [-d <display program>] [-f <config file>]
-                   [-o <shell output file>] [-O <terminal output file]
-                   [-p <name|inode>] [-s <ls|windows>] [-z <+/-#>] [-n <##>]
-                   [-r <descending|ascending|ascending-pwd-first>]
-                   [-b] [-t] [-m] [-w] [ -e <executable>]
--c, --shell-mode            Shell to use (bash or zsh).
--d, --display               Path to a display program to use instead of the
-                            default.
--f, --config-file           Alternate config file.
--o, --shell-output          Output a transcript of the shell's output to the
-                            given file.
--O, --term-output           Output a transcript of the terminal's input to given
-                            file (i.e. the stuff you type into the shell).
--s, --sort-style            File sorting style.
--r, --dir-order             Order in which to list directories in the display.
--z, --font-size-modifier    Increase or decrease the size of text in the
-                            display.
--n, --show-max              Maximum number of files to show per directory
-                            (you can still force show if max is reached).
--b, --disable-icons         Don't show file/directory icons in display.
--t, --disable-star          Don't show the viewglob asterisk indicator in the
-                            shell.
--m, --disable-smart-insert  Always insert escaped filenames.
--w, --show-hidden           Display hidden files by default.
--e, --executable            Alternate shell executable to run
-                            (you probably don't need to use this).
+usage: $SCRIPT_NAME [-h <host>] [-p <port>] [-c <shell mode>] [-d <display>]
+                [-s <sort style>] [-r <dir ordering] [-t] [-b]
+                [-z <font size modifier>]
+
+-h, --host                  Host to connect to.            (default: localhost)
+-p, --port                  Port to use or connect to.     (default: 16108)
+-c, --shell-mode            Shell to use (bash or zsh).    (default: bash)
+-d, --display               Display program.               (default: vgmini)
+-s, --sort-style            Windows (dirs first) or ls.    (default: ls)
+-r, --dir-order             Directory list ordering.       (default: ascending)
+
+-t, --disable-star          Don't show Viewglob terminal asterisk
+-b, --disable-icons         Don't show file type icons.
+-z, --font-size-modifier    Increase/decrease display font size.
+
 -h, --help                  This usage.
 -V, --version               Print the version.
 EOF
@@ -79,17 +69,12 @@ EOF
 	exit 0
 }
 
+
+# Option verification functions
+
 vg_test_shell_mode() {
 	if [ "$1" != bash ] && [ "$1" != zsh ]
 		then vg_error "Shell mode must be \"bash\" or \"zsh\"" 1
-	fi
-}
-
-vg_test_executable() {
-	if [ ! "$1" ]
-		then vg_error "No executable specified" 1
-	elif [ ! -x "$1" ]
-		then vg_error "$1 is not present or not executable" 1
 	fi
 }
 
@@ -98,20 +83,6 @@ vg_test_display() {
 		then vg_error "No display program specified" 1
 	elif [ ! -x "$1" ]
 		then vg_error "$1 is not present or not executable" 1
-	fi
-}
-
-vg_test_config_file() {
-	if [ ! "$1" ]
-		then vg_error "No config file specified" 1
-	elif [ ! -e "$1" ]
-		then vg_error "$1 does not exist" 1
-	fi
-}
-
-vg_test_output_file() {
-	if [ ! "$1" ]
-		then vg_error "No output file specified" 1
 	fi
 }
 
@@ -129,12 +100,6 @@ vg_test_dir_order() {
 	fi
 }
 
-vg_test_show_max() {
-	if [[ "$1" != *([0-9]) ]]
-		then vg_error "Argument to show-max must be a real number" 1
-	fi
-}
-
 vg_test_font_size_modifier() {
 	if [[ "$1" != ?([-+])*([0-9]) ]]
 		then vg_error "Invalid font size modifier" 1
@@ -142,94 +107,69 @@ vg_test_font_size_modifier() {
 }
 
 
-if [[ -z "$DISPLAY" ]]
-	then vg_error "Must be run from a graphical environment" 2
-elif [[ "$VG_VIEWGLOB_ACTIVE" = yep ]]
+if [[ "$VG_VIEWGLOB_ACTIVE" = yep ]]
 	then vg_error "This shell is already being monitored" 2
+elif [[ -z "$DISPLAY" ]]
+	then VGSEER_ONLY=yep
 fi
-
-# The viewglob initialization script will pick up this variable from the
-# environment.
-export VG_ASTERISK=yep
 
 # This is an excellent script to replace bash's getopts with one which allows
 # long names.  I found it on Google Groups.  It's written by Grigoriy Strokin
 # (grg@philol.msu.ru).  The script is also available in the bash package under
 # examples/functions/getoptx.bash.
-. $VG_DIR/getopt.sh
+. $VG_LIB_DIR/getopt.sh
 
 # Parse the options.
-while getoptex "b; c: e: d: f: m; n: o: O: r: s: t; w; h; v; V; z: shell-mode: executable: display: config-file: shell-output: show-hidden; show-max: font-size-modifier: sort-style: dir-order: term-output: disable-star; disable-icons; disable-smart-insert; help; version;" "$@"
+while getoptex "h: p: b; c: d: r: s: t; H; v; V; z: host: port: shell-mode: display: font-size-modifier: sort-style: dir-order: disable-star; disable-icons; help; version;" "$@"
 	do case "$OPTOPT" in
 
+		h|host)
+			VGSEER_ONLY=yep
+			HOST="$OPTARG"
+			VGSEER_OPTS="$VGSEER_OPTS --host=$OPTARG"
+			;;
+
+		p|port)
+			VGSEER_OPTS="$VGSEER_OPTS --port=$OPTARG"
+			PORT="$OPTARG"
+			VGD_OPTS="$VGD_OPTS --port=$OPTARG"
+			;;
+
 		b|disable-icons)
-			VG_DISPLAY_OPTS="${VG_DISPLAY_OPTS} -b"
+			VGD_OPTS="$VGD_OPTS --disable-icons"
 			;;
 
 		c|shell-mode)
 			vg_test_shell_mode "$OPTARG"
-			VG_SHELL_MODE="$OPTARG"
-			;;
-
-		e|executable)
-			vg_test_executable "$OPTARG"
-			VG_EXECUTABLE="$OPTARG"
+			VGSEER_OPTS="$VGSEER_OPTS --shell-mode=$OPTARG"
 			;;
 
 		d|display)
 			vg_test_display "$OPTARG"
-			VG_DISPLAY="$OPTARG"
-			;;
-
-		f|config-file)
-			vg_test_config_file "$OPTARG"
-			VG_CONFIG_FILE="$OPTARG"
-			;;
-
-		m|disable-smart-insert)
-			VG_DISPLAY_OPTS="${VG_DISPLAY_OPTS} -m"
-			;;
-
-		o|shell-output)
-			vg_test_output_file "$OPTARG"
-			VG_SHELL_OUTPUT="$OPTARG"
-			;;
-
-		O|term-output)
-			vg_test_output_file "$OPTARG"
-			VG_TERM_OUTPUT="$OPTARG"
+			VGD_OPTS="$VGD_OPTS --display=$OPTARG"
 			;;
 
 		s|sort-style)
 			[ "$OPTARG" == windows ] && OPTARG=win
 			vg_test_sort_style "$OPTARG"
-			VG_SORT_STYLE=$OPTARG
+			VGD_OPTS="$VGD_OPTS --sort-style=$OPTARG"
 			;;
 
 		r|dir-order)
 			vg_test_dir_order "$OPTARG"
-			VG_DIR_ORDER=$OPTARG
+			VGD_OPTS="$VGD_OPTS --dir-order=$OPTARG"
 			;;
 
 		t|disable-star)
-			VG_ASTERISK=nope
+			VGSEER_OPTS="$VGSEER_OPTS --disable-star"
 			;;
 
 		z|font-size-modifier)
 			vg_test_font_size_modifier "$OPTARG"
-			VG_FONT_SIZE_MODIFIER=$OPTARG
+			VGD_OPTS="$VGD_OPTS --font-size-modifier=$OPTARG"
 			;;
 
-		n|show-max)
-			vg_test_show_max "$OPTARG"
-			VG_SHOW_MAX=$OPTARG
-			;;
-
-		w|show-hidden)
-			VG_DISPLAY_OPTS="${VG_DISPLAY_OPTS} -w"
-			;;
-		
-		h|help) vg_usage ;;
+		H|help) vg_usage ;;
 
 		v|V|version) vg_version ;;
 
@@ -243,106 +183,25 @@ if [ "$OPTOPT" = \? ]
 	then exit 5
 fi
 
-# Parse the config file.  These options will not override the command line
-# options.
-if [ -r "$VG_CONFIG_FILE" ]; then
-	while read opt arg; do
-		case "$opt" in
-			\#*)
-				# Ignore comments.
-				;;
-			shell-mode)
-				[[ -z "$VG_SHELL_MODE" ]] && vg_test_shell_mode "$arg" && \
-					VG_SHELL_MODE="$arg"
-				;;
-			display)
-				[[ -z "$VG_DISPLAY" ]] && vg_test_display "$arg" && \
-					VG_DISPLAY="$arg"
-				;;
-			executable)
-				[[ -z "$VG_EXECUTABLE" ]] && vg_test_executable "$arg" && \
-					VG_EXECUTABLE="$arg"
-				;;
-			disable-icons)
-				VG_DISPLAY_OPTS="${VG_DISPLAY_OPTS} -b"
-				;;
-			disable-star)
-				VG_ASTERISK=nope
-				;;
-			disable-smart-insert)
-				VG_DISPLAY_OPTS="${VG_DISPLAY_OPTS} -m"
-				;;
-			compare-mode)
-				# Do nothing -- this is for compatibility with old config files.
-				;;
-			show-max)
-				[[ -z "$VG_SHOW_MAX" ]] && vg_test_show_max "$arg" && \
-					VG_SHOW_MAX=$arg
-				;;
-			font-size-modifier)
-				[[ -z "$VG_FONT_SIZE_MODIFIER" ]] && \
-					vg_test_font_size_modifier "$OPTARG" && \
-					VG_FONT_SIZE_MODIFIER=$arg
-				;;
-			show-hidden)
-				VG_DISPLAY_OPTS="${VG_DISPLAY_OPTS} -w"
-				;;
-			sort-style)
-				[ "$arg" == windows ] && arg="win"
-				[[ -z "$VG_SORT_STYLE" ]] && vg_test_sort_style "$arg" && \
-					VG_SORT_STYLE=$arg
-				;;
-			dir-order)
-				[[ -z "$VG_DIR_ORDER" ]] && vg_test_dir_order "$arg" && \
-					VG_DIR_ORDER=$arg
-				;;
-			*)
-				if [[ "$opt" ]]
-					then vg_error "unknown option \"$opt\"" 3
-				fi
-				# Ignore empty lines.
-				;;
-		esac
-	done < "$VG_CONFIG_FILE"
-fi
+if [ "$VGSEER_ONLY" = yep ]; then
+	# Either we're running in a display-less environment or the user
+	# specified a host to connect to, implying we're not going local.
 
+	if ! $VGPING $HOST $PORT ; then
+		vg_error "Couldn't handshake with a vgd at ${HOST}:${PORT}" 6
+	fi
 
-# Set default values for unused variables.
-# (VG_SHELL_OUTPUT and VG_TERM_OUTPUT have no defaults).
-[[ -z "$VG_SHELL_MODE" ]] && VG_SHELL_MODE="$VG_SHELL_MODE_DEFAULT"
-[[ -z "$VG_EXECUTABLE" ]] && VG_EXECUTABLE="$VG_SHELL_MODE"
-[[ -z "$VG_DISPLAY" ]] && VG_DISPLAY="$VG_DISPLAY_DEFAULT"
-[[ -z "$VG_SHOW_MAX" ]] && VG_SHOW_MAX="$VG_SHOW_MAX_DEFAULT"
-[[ -z "$VG_SORT_STYLE" ]] && VG_SORT_STYLE="$VG_SORT_STYLE_DEFAULT"
-[[ -z "$VG_DIR_ORDER" ]] && VG_DIR_ORDER="$VG_DIR_ORDER_DEFAULT"
-[[ -z "$VG_FONT_SIZE_MODIFIER" ]] && VG_FONT_SIZE_MODIFIER="$VG_FONT_SIZE_MODIFIER_DEFAULT"
+	exec vgseer $VGSEER_OPTS
 
-if [[ "$VG_SHELL_MODE" = bash ]]; then
-	# The bash initialization requires a file.
-	VG_SHELL_INIT="$VG_DIR/init-viewglob.bashrc"
 else
-	# The zsh initialization just requires a directory.
-	VG_SHELL_INIT="$VG_DIR"
-fi
+	# First check for an existing vgd.  If there is one, connect to it.
+	if $VGPING $HOST $PORT ; then
+		exec vgseer $VGSEER_OPTS
+	fi
 
-# The glob-expand flags are not reprocessed by seer.
-VG_EXPAND_COMMAND="$VG_DIR/glob-expand"
-if [[ "$VG_DIR_ORDER" = descending ]]
-	then VG_EXPAND_COMMAND="$VG_EXPAND_COMMAND -d"
-elif [[ "$VG_DIR_ORDER" = ascending ]]
-	then VG_EXPAND_COMMAND="$VG_EXPAND_COMMAND -a"
-elif [[ "$VG_DIR_ORDER" = ascending-pwd-first ]]
-	then VG_EXPAND_COMMAND="$VG_EXPAND_COMMAND -p"
+	# We'll have to setup a new vgd, then exec.
+	if vgd $VGD_OPTS ; then
+		exec vgseer $VGSEER_OPTS
+	fi
 fi
-VG_EXPAND_COMMAND="$VG_EXPAND_COMMAND --"
-
-# Exec seer.
-exec "$VG_DIR"/seer -c "$VG_SHELL_MODE" -e "$VG_EXECUTABLE"     \
-                    -f "$VG_CONFIG_FILE"                        \
-                    -o "$VG_SHELL_OUTPUT" -O "$VG_TERM_OUTPUT"  \
-                    -d "$VG_DISPLAY" $VG_DISPLAY_OPTS           \
-                    -n "$VG_SHOW_MAX" -s "$VG_SORT_STYLE"       \
-                    -z "$VG_FONT_SIZE_MODIFIER"                 \
-                    -i "$VG_SHELL_INIT"                         \
-                    -x "$VG_EXPAND_COMMAND"
 

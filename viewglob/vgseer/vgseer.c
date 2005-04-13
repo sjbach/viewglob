@@ -352,7 +352,7 @@ static void parse_args(gint argc, gchar** argv, struct options* opts) {
 				break;
 
 			case 'c':
-				opts->shell = string_to_shell_status(optarg);
+				opts->shell = string_to_shell_type(optarg);
 				break;
 
 			case 't':

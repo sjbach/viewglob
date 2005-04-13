@@ -1,8 +1,7 @@
 AUTOMAKE_OPTIONS = gnu
 AM_CFLAGS = -Wall -g
 
-#SUBDIRS = shell vgd vgdisplay vgping vgseer vgexpand
-SUBDIRS = common vgseer vgd vgdisplay vgexpand shell 
+SUBDIRS = common vgseer vgd vgdisplay vgexpand vgping shell 
 man_MANS = viewglob.1 vgseer.1 vgd.1
 
 viewglob.1:

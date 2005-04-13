@@ -1,3 +1,10 @@
+2005-04-12 22:46  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* vgping/Makefile.am, vgping.c: added
+	* Makefile.am, configure.ac: changes for vgping
+	* viewglob.in: make functional for new package interface
+	* vgd.c, vgseer.c: small bug fixes
+
 2005-04-12 20:58  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* vgd.1.in: elaborating on setting colours
