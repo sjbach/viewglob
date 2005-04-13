@@ -6,13 +6,21 @@ vgseer \- Viewglob shell overseer.
 .RI [ options ]
 
 .SH DESCRIPTION
-\fIvgseer\fP creates a Viewglob-supervised interactive shell and opens up an Internet-domain socket connection to a listening \fIvgd\fP process.  It maintains a snapshot of the relevant parts of its local filesystem and tracks the user's command line and other information, which is communicated to vgd.
+\fIvgseer\fP creates a Viewglob-supervised interactive shell and opens up an Internet-domain socket connection to a listening
+.BR vgd (1)
+process.  It maintains a snapshot of the relevant parts of its local filesystem and tracks the user's command line and other information, which is communicated to vgd.
 .PP
-In basic usage, you can run vgseer with no arguments and it will connect to a local vgd on the default port.  If that's all you want to do, though, you may as well just use the \fIviewglob\fP wrapper script.
+In basic usage, you can run vgseer with no arguments and it will connect to a local vgd on the default port.  If that's all you want to do, though, you may as well just use the 
+.BR viewglob (1)
+wrapper script.
 .PP
 If you've connected to a remote machine with telnet or ssh and would like Viewglob tracking for that shell+terminal, you can do so by calling vgseer and passing it the host/port of your local vgd.  Obviously this requires vgseer to be installed on the remote machine.
 .PP
-\fIvgseer\fP is compatible with any recent version of \fIbash\fP or \fIzsh\fP and doesn't assume any particular shell configuration.
+\fIvgseer\fP is compatible with any recent version of
+.BR bash (1)
+or
+.BR zsh (1)
+and doesn't assume any particular shell configuration.
 
 .SH OPTIONS
 This program follows the usual GNU command line syntax, with long options starting with two dashes.  A summary is included below.

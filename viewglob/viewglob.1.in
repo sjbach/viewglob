@@ -1,70 +1,54 @@
 .TH VIEWGLOB 1 "@RELEASE_DATE@" "" "Viewglob Manual"
 .SH NAME
-viewglob, gviewglob \- shell add\-on for windowing environments.
+viewglob \- convenience interface wrapper for the Viewglob package
 .SH SYNOPSIS
 .B viewglob
 .RI [ options ]
-.br
-.B gviewglob
-.RI [ options ]
 
 .SH DESCRIPTION
-\fIViewglob\fP is a utility which supervises your shell activity and tracks file selections and globs in a display showing the layout of relevant directories.  The display is written in GTK+, so \fIViewglob\fP requires that the shell be run in an X terminal (e.g. \fIxterm\fP, \fIrxvt\fP, etc.).
+\fIViewglob\fP supervises interactive shell activity and tracks file selections and globs in a display showing the contents of relevant directories.  The display is written in GTK+, so Viewglob requires that its shells be run in X terminals (e.g. \fIxterm\fP, \fIrxvt\fP, etc.).
 .PP
-\fIViewglob\fP should be compatible with any recent version of \fIbash\fP or \fIzsh\fP, and doesn't assume any particular shell configuration.
-.PP
-Note: either name is equivalent for calling the program.
+The \fIviewglob\fP command is a convenience wrapper for two other programs in the Viewglob package which do the actual work,
+.BR vgseer (1)
+and
+.BR vgd (1).
+You will want to use these programs explicitly for things that are non-simple - the viewglob script doesn't spend much time trying to decipher ambiguous execution options.
 
 .SH OPTIONS
 This program follows the usual GNU command line syntax, with long options starting with two dashes.  A summary is included below.
 .TP
-.B \-c, \-\-shell\-mode=name
+.B \-h, \-\-host=<name>
+Connect a new vgseer process to a vgd process on the given host.  You should only specify this if you are not connecting to your local machine.
+.TP
+.B \-p, \-\-port=<number>
+Connect a new vgseer process to a vgd process on the given port.  If it is a local connection and there is no vgd active on the port, one will be started.  The default port for Viewglob is 16108 (1-GLOB).
+.TP
+.B \-c, \-\-shell\-mode=<name>
 Shell to be used.  \fIname\fP can be \*(lqbash\*(rq or \*(lqzsh\*(rq (default is bash).
 .TP
-.B \-d, \-\-display=path
-Use an alternate display program.
+.B \-t, \-\-disable\-star
+Disable the asterisk character which is usually at the beginning of a vgseer shell prompt.
 .TP
-.B \-f, \-\-config\-file=path
-Use an alternate config file (\fI~/.viewglobrc\fP is the default).
-.TP
-.B \-o, \-\-shell\-output=filename
-Copy a transcript of the shell's output to the given file.  Note that this keeps the terminal sequences intact, so a cat of the file will be a perfect repeat of the session.  Be careful, the file will grow quickly!
-.TP
-.B \-O, \-\-term\-output=filename
-Output a transcript of the terminal's input to the given file.  This is the stuff that you've typed, without any of the shell interpretation.
+.B \-d, \-\-display=<vgclassic|vgmini|[path]>
+Display program.  The Viewglob package comes with \fIvgclassic\fP and \fIvgmini\fP (the new display).  Though there aren't any other displays in existence at this point, one could be used by passing its path.  The default is vgmini.
 .TP
 .B \-s, \-\-sort\-style=<windows|ls>
-Sort files with dirs first (Windows) or purely by name (ls).  ls mode is the default.
+In the display, sort files with directories first (Windows) or purely by name (ls).  ls mode is the default.
 .TP
 .B \-r, \-\-dir\-order=<descending|ascending|ascending\-pwd\-first>
-List directories in descending order (the default), ascending (last referenced directory has the top listing), or ascending with the current directory always first.
-.TP
-.B \-n, \-\-show\-max=number
-Maximum number of files to show in the display for each directory.  A [Results Truncated] indicator will show if the max has been reached.  Note that you can always force show all files with the context menu.  If \-\-show\-max is passed 0, there is no limit.
+In the display, list directories in descending order (the default), ascending (last referenced directory has the top listing), or ascending with the current directory always first.
 .TP
 .B \-z, \-\-font\-size\-modifier=<+/\-##>
 Increase or decrease the base font size in the display by the given number.  E.g. \*(lq\-z +2\*(rq increases the window manager's default by 2, while \*(lq\-z \-2\*(rq decreases the default by 2.
 .TP
 .B \-b, \-\-disable\-icons
-Don't show file type icons in the display.
+Don't show file type icons in the display, just names.
 .TP
-.B \-t, \-\-disable\-star
-Disable the asterisk icon at the beginning of your shell prompt when in a Viewglob\-supervised shell.
-.TP
-.B \-m, \-\-disable\-smart\-insert
-File and directory names from the display are always inserted to the terminal escaped and without space padding.
-.TP
-.B \-w, \-\-show\-hidden
-Never hide hidden files (ha).
-.TP
-.B \-e, \-\-executable=path
-Use the given executable as the shell instead of its first reference in the path.  Note that if this isn't a version of the shell chosen with \-\-shell\-mode, it won't do you much good, and could be harmful.
-.TP
-.B \-h, \-\-help
+.B \-H, \-\-help
 Show summary of options.
 .TP
 .B \-V, \-\-version
-Show the version of the program.
+Show the version of the package.
 
 .SH USAGE
 When you start Viewglob, you'll be presented with your familiar prompt and a new window showing the file layout of the current directory.  As you begin to type a command, the display window will highlight to show potential filename completions (dull highlight) and file selections and globs/expansions (vibrant highlight).  Also, as you reference other directories (e.g. \fI../\fP or \fI/usr/local/\fP), their layouts will appear as well.
@@ -73,43 +57,62 @@ At the bottom of the display window is a textbox with your command line.  This i
 .PP
 With a few exceptions, any text you type into the display is passed to the terminal as input.  So if you wished, you could use the display as your interface to the shell \-\- this actually works quite well if you're doing a lot of file management.  Arrow keys, Page Up, Page Down, Home, and End are interpreted by the display and not passed to the terminal.
 .PP
-\fBNavigation\fP
+\fBNavigation and File Masking\fP
 .RS 4
 You can navigate the display from the terminal by pressing C\-g (Ctrl\-G) followed by a direction character.  They are:
 .LP
 .RS
 .PD 0
-.TP 18n
+.TP 21n
 Up:
-k, p, or <Up Arrow>
+C-k, C-p, or <Up Arrow>
 .TP
 Down:
-j, n, or <Down Arrow>
+C-j, C-n, or <Down Arrow>
 .TP
 Page Up:
-b, u, or <PgUp>
+C-b, C-u, or <Page Up>
 .TP
 Page Down:
-f, d, or <PgDown>
-.TP
-Toggle on/off:
-<SPACE>
-.TP
-Refocus windows:
-<TAB> or <ENTER>
+C-f, C-d, or <Page Down>
 .PD
 .RE
 .LP
-Their C\- counterparts also work.  To enter a real C\-g to the shell, type it twice.  If the display is killed or closed through the window manager (e.g. you clicked the little \*(lqx\*(rq icon), it's only been toggled off.  To get it back, type C\-g <SPACE> in the terminal.
+To enter a real C\-g to the shell, type it twice.  Navigation commands can be chained together - for example, typing C-g C-f C-f C-k will page down twice and then move up once.  The chain is broken when a non-navigation character is typed.
 .LP
-To disable Viewglob functionality (i.e. close the display and stop tracking the command line, etc.), you can type C\-g q.  Once Viewglob has been disabled in this manner, it can't be re\-enabled without exiting.
+There are four other Viewglob commands.  After typing C-g:
 .LP
-The refocus shortcut will send a quick request to the window manager to activate both the display and terminal in sequence, with the result that both will be above any other windows and one of them will have the focus (but which one is determined by the WM).  Note that this may not work for WMs which are lazy on the EWMH specification.
+.RS
+.PD 0
+.TP 21n
+Set or clear mask:
+<ENTER>
+.TP
+Toggle on/off:
+C-<SPACE>
+.TP
+Raise window:
+<TAB>
+.TP
+Disable:
+C-q
+.PD
+.RE
+.LP
+Toggling will close the display if it's active or open it if not.
+.LP
+Raising will bring either the terminal window or the display to the front of the screen (whichever one isn't active).  If the display did not automatically update to the current shell after a window shuffle (i.e. it's showing the environment of a different shell), this will also knock it back to sense.
+.LP
+Disabling Viewglob functionality disconnects the terminal from vgd and turns vgseer off, resulting in an almost regular shell.  There is no way to re-enable Viewglob in a shell which has been disabled.
+.LP
+File name masking is a way to control the number and type of files shown in the display.  The default mask is "*", which shows all non-hidden files.  To show ALL files, an appropriate mask would be ".* *".  To show only C source files, the mask could be "*.[ch]" or "*.c *.h".  To just display directory file types, the mask would be "*/".
+.LP
+A mask can be set with the key sequence C-g [mask] <ENTER>.  The mask string will print in the display as it's being typed.  Typing a non-printable character (such as <ESC> or C-c) while creating a new mask will cancel it.  The mask can be set back to the default "*" with a simple C-g <ENTER>.
 .RE
 .PP
 \fBFile/Directory Name Insertion\fP
 .RS 4
-The name of any file or directory can be passed to the terminal by double left\-clicking.  If shift is held, the full path of the file or directory is passed.  By default Viewglob is in \*(lq\fIsmart\-insert\fP\*(rq mode, which means it inserts the names or paths the way it thinks you want to (but may be wrong sometimes \-\- it's \*(lqsmart\*(rq as defined by Microsoft).  \fISmart\-insert\fP works as follows:
+The name of any file or directory can be passed to the terminal by double left\-clicking.  If shift is held, the full path of the file or directory is passed.  Insertion works as follows:
 .LP
 .RS 4
 If you are currently at the command line (i.e. the shell has control of the terminal):
@@ -142,8 +145,6 @@ Note that insertion of file names works pretty much the same as just pasting tex
 .PP
 \fBDisplay Peculiarities\fP
 .RS 4
-If the number of files in a shown directory is above the given max, Viewglob will truncate the results (with an indicator).  You can force Viewglob to display the contents of the whole directory by right\-clicking the heading for the listing and choosing \*(lqShow all files\*(rq.  By default hidden files are not shown, but you can view them using the same mechanism.
-.LP
 Directories referenced in several different ways will always be interpreted as the same directory if they're on the same device and have the same inode (i.e. they are indeed the same).  Therefore these three names are equivalent to Viewglob (and a trailing slash does not differentiate a directory from one without a trailing slash):
 .IP
 /usr/local/lib/
@@ -158,33 +159,15 @@ Since people generally don't type such things as /usr/local/../local/lib, this s
 .RE
 
 .SH FILES
-.I ~/.viewglobrc
+.I ~/viewglob/vgseer.conf
+.br
+.I ~/viewglob/vgd.conf
 .IP
-If present, this file specifies a default configuration for Viewglob.  The file syntax is:
-.IP
-<\fIlong_option_name\fP> [ <\fIwhitespace\fP> <\fIvalue\fP> ]
-.IP
-So, to always use zsh, disable the asterisk at the prompt, use a display limit of 700, show hidden files, and use Windows\-style sorting, the file should contain:
-.IP
-.RS
-.PD 0
-.TP 15n
-shell\-mode
-zsh
-.TP
-disable\-star
-.TP
-show\-max
-700
-.TP
-show\-hidden
-.TP
-sort\-style
-windows
-.PD
-.RE
-.IP
-The configuration file has a lower priority than options specified on the command line, and can be disregarded completely with \-f.
+If present, these file specify a default configuration for Viewglob.  See the manuals for
+.BR vgseer (1)
+and
+.BR vgd (1)
+for more information.
 
 .SH NOTES
 First of all, when I say below \*(lqsuch\-and\-such feature of bash/zsh doesn't work in Viewglob\*(rq, I just mean that the display will not show expansion information for that feature.  The functionality of both shells is UNCHANGED by running Viewglob.  Anyhow.
@@ -219,28 +202,13 @@ For more information, please visit:
 .IP
 \fIhttp://viewglob.sourceforge.net/\fP
 
-.SH "ENVIRONMENT VARIABLES"
-.TP
-.SM HOME
-The location of the default configuration file.
-.TP
-.SM LS_COLORS
-Used by the display as described in
-.BR dir_colors (5).
-.TP
-If you encounter an issue where certain filenames do not show in the display and you are using an encoding other than UTF-8, you may want to read about the other GLib environment variables:
-.IP
-\fIhttp://developer.gnome.org/doc/API/2.0/glib/glib-running.html\fP
-.TP
-For example, for iso8859-1, run:
-.IP
-\fBG_FILENAME_ENCODING=ISO-8859-1 viewglob\fP
-
 .SH BUGS
 .PP
 Command line tracking seems to be pretty good for general use, but is far from perfect.
 .PP
 Resizing the terminal window after you've typed a multi\-line command will often cause Viewglob's command line to become temporarily out of sync with the true command line, though it tries really hard to keep up.  No big deal if this happens \-\- Viewglob should be in sync by the start of the next command.
+.PP
+Tabbed terminal programs confuse Viewglob.
 .PP
 And there are certainly others.  If you spot any bugs (and they aren't explained by \fBNOTES\fP above), send me a message, okay?  Ideas and code contributions are also very welcome.
 .SH AUTHORS

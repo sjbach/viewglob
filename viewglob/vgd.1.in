@@ -6,11 +6,13 @@ vgd \- Viewglob daemon.
 .RI [ options ]
 
 .SH DESCRIPTION
-\fIvgd\fP acts as a mediator between any number of \fIvgseer\fP processes and a single Viewglob display process.  It keeps track of the active terminal and passes information from the corresponding vgseer (if there is one) to the display.
+\fIvgd\fP acts as a mediator between any number of
+.BR vgseer (1)
+processes and a single Viewglob display process.  It keeps track of the active terminal and passes information from the corresponding vgseer (if there is one) to the display.
 .PP
 While vgseer can be used on a remote machine using ssh or telnet, vgd is only useful if it's running on the same X server as the user (meaning, in most cases, locally).
 .PP
-vgd uses the syslog interface for error reporting.
+After startup, vgd uses the syslog interface for error reporting.
 
 .SH OPTIONS
 This program follows the usual GNU command line syntax, with long options starting with two dashes.  A summary is included below.
@@ -82,6 +84,11 @@ Show summary of options.
 .B \-V, \-\-version
 Show the version of the program.
 
+.SH NOTES
+vgd keeps track of the active terminal by querying the X server.  This doesn't work great for tabbed terminals such as gnome-terminal and konsole, because they share an X window.  With these, you will need to wake up vgd when you shuffle around.  If you switch to a shell and the display doesn't automatically update, send it the refocus command C-g <TAB>.
+.PP
+By default vgmini is in jump/resize mode, which means it'll move to be near the active terminal and change its dimensions to try to match.  Some window managers just don't deal with this well and the resizing can get wacky.  If you're seeing this behaviour, you can disable jump/resize mode or switch to a different window manager.
+
 .SH FILES
 .I ~/.viewglob/vgd.conf
 .IP
@@ -107,6 +114,20 @@ font-size-modifier
 .RE
 .IP
 Configuration file options can be overridden on the command line.
+
+.SH "ENVIRONMENT VARIABLES"
+.TP
+.SM LS_COLORS
+Used by the display as described in
+.BR dir_colors (5).
+.TP
+If you encounter an issue where certain filenames do not show in the display and you are using an encoding other than UTF-8, you may want to read about the GLib environment variables:
+.IP
+\fIhttp://developer.gnome.org/doc/API/2.0/glib/glib-running.html\fP
+.TP
+For example, for iso8859-1, run:
+.IP
+\fBG_FILENAME_ENCODING=ISO-8859-1 vgd\fP
 
 .SH AUTHORS
 Stephen Bach <sjbach@users.sourceforge.net>

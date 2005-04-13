@@ -6,6 +6,7 @@ Critical:
 - vgd: make work in konsole and gnome-terminal
 - vgdisplays: shift click filename puts full path
 - vgmini: refocusing jump_resizes display
+- vgd, vgdisplays: option to disable jumping
 
 End:
 - make: autoscan

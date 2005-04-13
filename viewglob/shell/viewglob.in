@@ -16,6 +16,8 @@
 # along with Viewglob; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+set -x
+
 SCRIPT_NAME="${0##*/}"
 VG_LIB_DIR="@pkglibdir@"
 VGPING="$VG_LIB_DIR/vgping"
@@ -23,6 +25,7 @@ VGPING="$VG_LIB_DIR/vgping"
 # Execution configuration
 VGSEER_ONLY=
 VGSEER_OPTS=
+VGSEER_EXEC=vgseer
 VGD_OPTS=
 
 # vgping needs a default.
@@ -111,6 +114,10 @@ if [[ "$VG_VIEWGLOB_ACTIVE" = yep ]]
 	then vg_error "This shell is already being monitored" 2
 elif [[ -z "$DISPLAY" ]]
 	then VGSEER_ONLY=yep
+elif [[ -z "$TERM" ]] || [[ "$TERM" = dumb ]]
+	# There's no terminal associated with the shell, but an X display is
+	# present, so make a new xterm.
+	then VGSEER_EXEC="xterm -e $VGSEER_EXEC"
 fi
 
 # This is an excellent script to replace bash's getopts with one which allows
@@ -191,17 +198,17 @@ if [ "$VGSEER_ONLY" = yep ]; then
 		vg_error "Couldn't handshake with a vgd at ${HOST}:${PORT}" 6
 	fi
 
-	exec vgseer $VGSEER_OPTS
+	exec $VGSEER_EXEC $VGSEER_OPTS
 
 else
 	# First check for an existing vgd.  If there is one, connect to it.
 	if $VGPING $HOST $PORT ; then
-		exec vgseer $VGSEER_OPTS
+		exec $VGSEER_EXEC $VGSEER_OPTS
 	fi
 
 	# We'll have to setup a new vgd, then exec.
 	if vgd $VGD_OPTS ; then
-		exec vgseer $VGSEER_OPTS
+		exec $VGSEER_EXEC $VGSEER_OPTS
 	fi
 fi
 
