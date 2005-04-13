@@ -50,9 +50,27 @@ Increase or decrease the base font size in the display by the given number.  E.g
 .B \-\-white=<colour>
 .br
 .RS
-Define the colours used for interpreting LS_COLORS as you would in an .Xdefaults file.  This means <colour> can be a name such as \*(lqDarkSlateGray\*(rq or a hex specification like #RRGGBB.  There are also other forms: see
+Define the colours used for interpreting LS_COLORS as you would in an .Xdefaults file.  This means <colour> can be a name such as \*(lqDarkSlateGray\*(rq or a hex specification like #RRGGBB (quoted).  There are also other forms: see
 .BR XParseColor (3)
-for more information.
+for more information.  The defaults are easy to read on a light coloured background, but probably not suitable for a dark background.  For that case, these should be a good starting point (add to vgd.conf):
+.IP
+.RS
+black     #000000
+.br
+red       #c11125
+.br
+green     #50881e
+.br
+yellow    #c4b400
+.br
+blue      #1662a2
+.br
+magenta   #ef709a
+.br
+cyan      #2ca3a4
+.br
+white     #ffffff
+.RE
 .RE
 .TP
 .B \-b, \-\-disable\-icons

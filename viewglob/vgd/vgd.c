@@ -133,13 +133,8 @@ gint main(gint argc, gchar** argv) {
 		exit(EXIT_FAILURE);
 
 	/* Turn into a daemon. */
+	// TODO: include option to disable daemoning.
 	daemonize();
-
-	/* Use syslog for warnings and errors now that we're a daemon */
-	g_log_set_handler(NULL,
-			G_LOG_LEVEL_WARNING | G_LOG_LEVEL_CRITICAL | G_LOG_LEVEL_MESSAGE |
-			G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION, syslogging, NULL);
-	openlog_wrapped(g_get_prgname());
 
 	poll_loop(&s);
 
@@ -902,6 +897,12 @@ static gboolean daemonize(void) {
 	open("/dev/null", O_RDONLY);
 	open("/dev/null", O_RDWR);
 	open("/dev/null", O_RDWR);
+
+	/* Use syslog for warnings and errors now that we're a daemon. */
+	g_log_set_handler(NULL,
+			G_LOG_LEVEL_WARNING | G_LOG_LEVEL_CRITICAL | G_LOG_LEVEL_MESSAGE |
+			G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION, syslogging, NULL);
+	openlog_wrapped(g_get_prgname());
 
 	return TRUE;
 }

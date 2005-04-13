@@ -32,8 +32,6 @@
 #include <gdk/gdk.h>
 #include <math.h>
 
-#define STREQ(a, b) (strcmp ((a), (b)) == 0)
-
 /* Null is a valid character in a color indicator (think about Epson
    printers, for example) so we have to use a length/buffer string
    type.  */
@@ -64,34 +62,32 @@ static void parse_codes(struct bin_str* s, TermTextAttr* attr);
 static PangoAttrList* create_pango_list(TermTextAttr* tta, gint size_modifier);
 
 /* Terminal colours map to the following. */
-static struct color_mapping {
-	guint16 r;
-	guint16 g;
-	guint16 b;
-} map[] = {
+
+static GdkColor map[] = {
 	/* These work best on a light background */
-	{ 0x0000, 0x0000, 0x0000 }, /* TCC_NONE (not used) */
-	{ 0x0000, 0x0000, 0x0000 }, /* TCC_BLACK */
-	{ 0xc1c1, 0x1111, 0x2525 }, /* TCC_RED */
-	{ 0x5050, 0x8888, 0x1e1e }, /* TCC_GREEN */
-	{ 0xc4c4, 0xb4b4, 0x0000 }, /* TCC_YELLOW */
-	{ 0x1616, 0x6262, 0xa2a2 }, /* TCC_BLUE */
-	{ 0xefef, 0x7070, 0x9a9a }, /* TCC_MAGENTA */
-	{ 0x2c2c, 0xa3a3, 0xa4a4 }, /* TCC_CYAN */
-	{ 0xffff, 0xffff, 0xffff }, /* TCC_WHITE */
+	{ 0, 0x0000, 0x0000, 0x0000 }, /* TCC_NONE (not used) */
+	{ 0, 0x0000, 0x0000, 0x0000 }, /* TCC_BLACK */
+	{ 0, 0xc1c1, 0x1111, 0x2525 }, /* TCC_RED */
+	{ 0, 0x5050, 0x8888, 0x1e1e }, /* TCC_GREEN */
+	{ 0, 0xc4c4, 0xb4b4, 0x0000 }, /* TCC_YELLOW */
+	{ 0, 0x1616, 0x6262, 0xa2a2 }, /* TCC_BLUE */
+	{ 0, 0xefef, 0x7070, 0x9a9a }, /* TCC_MAGENTA */
+	{ 0, 0x2c2c, 0xa3a3, 0xa4a4 }, /* TCC_CYAN */
+	{ 0, 0xffff, 0xffff, 0xffff }, /* TCC_WHITE */
 #if 0
 	/* These work best on a black background */
-	{ 0x0000, 0x0000, 0x0000 }, /* TCC_NONE (not used) */
-	{ 0x0000, 0x0000, 0x0000 }, /* TCC_BLACK */
-	{ 0x9e9e, 0x1818, 0x2828 }, /* TCC_RED */
-	{ 0xaeae, 0xcece, 0x9191 }, /* TCC_GREEN */
-	{ 0xffff, 0xf7f7, 0x9696 }, /* TCC_YELLOW */
-	{ 0x4141, 0x8686, 0xbebe }, /* TCC_BLUE */
-	{ 0x9696, 0x3c3c, 0x5959 }, /* TCC_MAGENTA */
-	{ 0x7171, 0xbebe, 0xbebe }, /* TCC_CYAN */
-	{ 0xffff, 0xffff, 0xffff }, /* TCC_WHITE */
+	{ 0, 0x0000, 0x0000, 0x0000 }, /* TCC_NONE (not used) */
+	{ 0, 0x0000, 0x0000, 0x0000 }, /* TCC_BLACK */
+	{ 0, 0x9e9e, 0x1818, 0x2828 }, /* TCC_RED */
+	{ 0, 0xaeae, 0xcece, 0x9191 }, /* TCC_GREEN */
+	{ 0, 0xffff, 0xf7f7, 0x9696 }, /* TCC_YELLOW */
+	{ 0, 0x4141, 0x8686, 0xbebe }, /* TCC_BLUE */
+	{ 0, 0x9696, 0x3c3c, 0x5959 }, /* TCC_MAGENTA */
+	{ 0, 0x7171, 0xbebe, 0xbebe }, /* TCC_CYAN */
+	{ 0, 0xffff, 0xffff, 0xffff }, /* TCC_WHITE */
 #endif
 };
+
 
 /* Buffer for color sequences */
 static char *color_buf;
@@ -728,9 +724,9 @@ static PangoAttrList* create_pango_list(TermTextAttr* tta, gint size_modifier) {
 	/* Background colour */
 	if (tta->bg > TCC_NONE && tta->bg <= TCC_WHITE) {
 		p_attr = pango_attr_background_new(
-				map[tta->bg].r,
-				map[tta->bg].g,
-				map[tta->bg].b);
+				map[tta->bg].red,
+				map[tta->bg].green,
+				map[tta->bg].blue);
 		p_attr->start_index = 0;
 		p_attr->end_index = G_MAXINT;
 		pango_attr_list_insert(p_list, p_attr);
@@ -795,13 +791,16 @@ void label_set_attributes(gchar* name, FileType type, GtkLabel* label) {
 
 	/* Foreground colour */
 	if (tta->fg > TCC_NONE && tta->fg <= TCC_WHITE) {
-		GdkColor color;
-		color.red = map[tta->fg].r;
-		color.green = map[tta->fg].g;
-		color.blue = map[tta->fg].b;
-
-		gtk_widget_modify_fg(GTK_WIDGET(label), GTK_STATE_NORMAL, &color);
+		gtk_widget_modify_fg(
+				GTK_WIDGET(label), GTK_STATE_NORMAL,&map[tta->fg]);
 		/*gtk_widget_modify_fg(GTK_WIDGET(label), GTK_STATE_ACTIVE, &color);*/
 	}
+}
+
+
+void set_color(enum term_color_code code, GdkColor* color) {
+	map[code].red = color->red;
+	map[code].green = color->green;
+	map[code].blue = color->blue;
 }
 

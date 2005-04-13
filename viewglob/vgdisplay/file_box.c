@@ -237,7 +237,7 @@ void file_box_set_icon(FileType type, GdkPixbuf* icon) {
 
 
 /* Set the size of the FItem font (and the size of the file type icons). */
-void file_box_set_sizing(gint modifier) {
+void file_box_set_sizing(gint modifier, gboolean use_icons) {
 
 	g_return_if_fail(modifier <= 10);   /* Constrain between -10 and 10. */
 	g_return_if_fail(modifier >= -10);
@@ -263,7 +263,8 @@ void file_box_set_sizing(gint modifier) {
 	}
 
 	/* (Re)set the icons with the new sizing. */
-	initialize_icons(test_string->str);
+	if (use_icons)
+		initialize_icons(test_string->str);
 
 	/* Parse LS_COLORS. */
 	parse_ls_colors(font_size_modifier);

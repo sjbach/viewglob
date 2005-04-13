@@ -44,6 +44,13 @@ enum glob_read_state {
 };
 
 
+struct prefs {
+	/* Options. */
+	gboolean show_icons;
+	gint font_size_modifier;
+};
+
+
 void set_icons(void);
 void write_xwindow_id(GtkWidget* gtk_window);
 gboolean resize_jump(GtkWidget* gtk_window, gchar* term_win_str);
@@ -54,6 +61,8 @@ gboolean window_key_press_event(GtkWidget* window, GdkEventKey* event,
 		gpointer data);
 gboolean window_delete_event(GtkWidget* widget, GdkEvent* event,
 		gpointer data);
+void prefs_init(struct prefs* v);
+void parse_args(int argc, char** argv, struct prefs* v);
 
 G_END_DECLS
 

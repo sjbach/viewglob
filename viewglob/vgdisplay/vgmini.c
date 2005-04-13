@@ -87,6 +87,10 @@ gint main(gint argc, char** argv) {
 			G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION, syslogging, NULL);
 	openlog_wrapped(g_get_prgname());
 
+	struct prefs v;
+	prefs_init(&v);
+	parse_args(argc, argv, &v);
+
 	struct vgmini vg;
 	vg.term_win = g_string_new(NULL);
 	vg.dcs = NULL;
@@ -94,8 +98,8 @@ gint main(gint argc, char** argv) {
 	vg.width_change = 0;
 
 	/* vgmini keeps sizes a little smaller than vgclassic. */
-	file_box_set_sizing(-1);
-	dircont_set_sizing(-1);
+	file_box_set_sizing(v.font_size_modifier - 1, v.show_icons);
+	dircont_set_sizing(v.font_size_modifier - 1);
 
 	/* Toplevel window. */
 	vg.window = gtk_window_new(GTK_WINDOW_TOPLEVEL);

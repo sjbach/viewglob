@@ -31,19 +31,9 @@
 #include <string.h>       /* For strcmp. */
 #include <unistd.h>       /* For getopt. */
 
-struct prefs {
-	/* Options. */
-	gboolean show_icons;
-	gint font_size_modifier;
-};
-
 /* Prototypes. */
 static gboolean receive_data(GIOChannel* source, GIOCondition condition,
 		gpointer data);
-
-static gboolean parse_args(int argc, char** argv, struct prefs* v);
-static void report_version(void);
-
 static void process_glob_data(gchar* buf, gsize bytes, Exhibit* e);
 
 static gboolean window_configure_event(GtkWidget* window,
@@ -246,43 +236,6 @@ static gboolean window_configure_event(GtkWidget* window,
 }
 
 
-static gboolean parse_args(int argc, char** argv, struct prefs* v) {
-	gboolean in_loop = TRUE;
-
-	opterr = 0;
-	while (in_loop) {
-		switch (getopt(argc, argv, "bf:vVz:")) {
-			case -1:
-				in_loop = FALSE;
-				break;
-			case '?':
-				gtk_main_quit();
-				break;
-			case 'b':
-				/* No icons. */
-				v->show_icons = FALSE;
-				break;
-			case 'v':
-			case 'V':
-				report_version();
-				return FALSE;
-				break;
-			case 'z':
-				v->font_size_modifier = CLAMP(atoi(optarg), -10, 10);
-				break;
-		}
-	}
-	return TRUE;
-}
-
-
-static void report_version(void) {
-	g_print("vgclassic %s\n", VERSION);
-	g_print("Released %s\n", VG_RELEASE_DATE);
-	return;
-}
-
-
 gint main(gint argc, gchar **argv) {
 
 	gtk_init(&argc, &argv);
@@ -309,13 +262,11 @@ gint main(gint argc, gchar **argv) {
 	e.dls = NULL;
 	
 	/* Option defaults. */
-	v.show_icons = TRUE;
-	v.font_size_modifier = 0;
-	if (!parse_args(argc, argv, &v))
-		return 0;
+	prefs_init(&v);
+	parse_args(argc, argv, &v);
 
 	/* Set the label font sizes. */
-	file_box_set_sizing(v.font_size_modifier);
+	file_box_set_sizing(v.font_size_modifier, v.show_icons);
 	dlisting_set_sizing(v.font_size_modifier);
 
 	/* Create window. */

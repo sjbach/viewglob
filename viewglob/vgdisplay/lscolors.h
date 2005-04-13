@@ -54,6 +54,7 @@ struct _TermTextAttr {
 
 void parse_ls_colors(gint size_modifier);
 void label_set_attributes(gchar* name, FileType type, GtkLabel* label);
+void set_color(enum term_color_code code, GdkColor* color);
 
 #endif /* !LSCOLORS_H */
 

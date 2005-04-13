@@ -810,8 +810,6 @@ void dircont_set_optimal_width(DirCont* dc, gint width) {
 /* Set the new mask text and update the given DirCont (which is probably the
    active DirCont). */
 void dircont_set_mask_string(DirCont* dc, const gchar* mask_str) {
-	g_return_if_fail(dc != NULL);
-	g_return_if_fail(IS_DIRCONT(dc));
 	g_return_if_fail(mask_str != NULL);
 
 	gchar* mask_utf8;
@@ -835,7 +833,6 @@ void dircont_set_mask_string(DirCont* dc, const gchar* mask_str) {
 	pango_layout_set_markup(big_mask_layout, markup, -1);
 	g_free(markup);
 
-
 	/* Small mask layout (when directory name is long) */
 	markup = g_strconcat(
 			count_tag_open->str, "<b>",
@@ -845,6 +842,9 @@ void dircont_set_mask_string(DirCont* dc, const gchar* mask_str) {
 	g_free(markup);
 
 	g_free(mask_utf8);
+
+	if (dc)
+		dircont_repaint_header(dc);
 }
 
 

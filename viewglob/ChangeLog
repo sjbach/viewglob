@@ -1,3 +1,15 @@
+2005-04-12 20:58  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* vgd.1.in: elaborating on setting colours
+	* vgd.c: set syslog in daemonize()
+	* dircont.c: small bugfix
+	* display-common.c, display-common.h, file_box.c, file_box.h,
+	  lscolors.c, lscolors.h, vgclassic.c, vgmini.c:
+	  - Added argument parsing.
+	  - LS_COLORS can now be set.
+	  - Fixed icon disable option.
+	* vgseer.c: don't start if vgseer is already active in the shell
+
 2005-04-12 19:34  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* vgd.1, vgseer.1, viewglob.1: removed

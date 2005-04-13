@@ -79,7 +79,7 @@ void        file_box_begin_read(FileBox* fbox);
 void        file_box_flush(FileBox* fbox);
 
 void        file_box_set_icon(FileType type, GdkPixbuf* icon);
-void        file_box_set_sizing(gint modifier);
+void        file_box_set_sizing(gint modifier, gboolean use_icons);
 
 
 G_END_DECLS

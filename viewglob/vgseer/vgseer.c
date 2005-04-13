@@ -180,6 +180,11 @@ gint main(gint argc, gchar** argv) {
 
 	clean_opts(&opts);
 
+	if (getenv("VG_VIEWGLOB_ACTIVE")) {
+		g_message("Viewglob is already active in this shell.");
+		clean_fail(NULL);
+	}
+
 	/* Initialize the shell and display structs. */
 	child_init(&u.shell);
 	child_init(&u.sandbox);

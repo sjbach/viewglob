@@ -20,6 +20,9 @@
 #include "x11-stuff.h"
 #include "display-common.h"
 #include "param-io.h"
+#include "fgetopt.h"
+#include "lscolors.h"
+
 #include <gdk/gdkx.h>
 #include <gdk/gdkkeysyms.h>
 
@@ -28,6 +31,111 @@ static gboolean get_win_geometry(Display* Xdisplay, Window win, gint* x,
 		gint* y, guint* w, guint* h);
 static void get_decorations(GdkWindow* gdk_win, gint* left, gint* right,
 		gint* top, gint* bottom);
+static void report_version(void);
+
+
+void prefs_init(struct prefs* v) {
+	v->show_icons = TRUE;
+	v->font_size_modifier = 0;
+}
+
+
+void parse_args(int argc, char** argv, struct prefs* v) {
+	gboolean in_loop = TRUE;
+
+	struct option long_options[] = {
+		{ "font-size-modifier", 1, NULL, 'z' },
+		{ "black", 1, NULL, '1' },
+		{ "red", 1, NULL, '2' },
+		{ "green", 1, NULL, '3' },
+		{ "yellow", 1, NULL, '4' },
+		{ "blue", 1, NULL, '5' },
+		{ "magenta", 1, NULL, '6' },
+		{ "cyan", 1, NULL, '7' },
+		{ "white", 1, NULL, '8' },
+		{ "disable-icons", 0, NULL, 'b' },
+		{ "version", 0, NULL, 'V' },
+	};
+
+	GdkColor color_temp;
+
+	optind = 0;
+	while (in_loop) {
+		switch (getopt_long(argc, argv, "z:bvV", long_options, NULL)) {
+
+			case -1:
+				in_loop = FALSE;
+				break;
+
+			/* Font size modifier */
+			case 'z':
+				v->font_size_modifier = CLAMP(atoi(optarg), -10, 10);
+				break;
+
+			/* Disable icons */
+			case 'b':
+				v->show_icons = FALSE;
+				break;
+
+			/* Colours */
+			case '1':
+				if (gdk_color_parse(optarg, &color_temp))
+					set_color(TCC_BLACK, &color_temp);
+				break;
+			case '2':
+				if (gdk_color_parse(optarg, &color_temp))
+					set_color(TCC_RED, &color_temp);
+				break;
+			case '3':
+				if (gdk_color_parse(optarg, &color_temp))
+					set_color(TCC_GREEN, &color_temp);
+				break;
+			case '4':
+				if (gdk_color_parse(optarg, &color_temp))
+					set_color(TCC_YELLOW, &color_temp);
+				break;
+			case '5':
+				if (gdk_color_parse(optarg, &color_temp))
+					set_color(TCC_BLUE, &color_temp);
+				break;
+			case '6':
+				if (gdk_color_parse(optarg, &color_temp))
+					set_color(TCC_MAGENTA, &color_temp);
+				break;
+			case '7':
+				if (gdk_color_parse(optarg, &color_temp))
+					set_color(TCC_CYAN, &color_temp);
+				break;
+			case '8':
+				if (gdk_color_parse(optarg, &color_temp))
+					set_color(TCC_WHITE, &color_temp);
+				break;
+
+			case 'v':
+			case 'V':
+				report_version();
+				break;
+	
+			case ':':
+				g_critical("Option missing argument");
+				exit(EXIT_FAILURE);
+				break;
+
+			case '?':
+			default:
+				g_critical("Unknown option provided");
+				exit(EXIT_FAILURE);
+				break;
+		}
+	}
+}
+
+
+static void report_version(void) {
+	g_print("%s %s\n", g_get_prgname(), VERSION);
+	g_print("Released %s\n", VG_RELEASE_DATE);
+	exit(EXIT_SUCCESS);
+}
 
 
 /* Set the application icons. */
