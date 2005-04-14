@@ -9,6 +9,7 @@ Critical:
 - vgd, vgdisplays: option to disable jumping
 - make: viewglob.in should not be packaged?
 - make: move ptytty.c back to vgseer/
+- make: don't need sed
 
 End:
 - make: autoscan
