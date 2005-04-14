@@ -594,8 +594,12 @@ static Directory* make_new_dir(gchar* dir_name, dev_t dev_id, ino_t inode) {
 	new_dir->file_count = entry_count;
 	new_dir->hidden_count = entry_count;
 
+#ifdef CLOSEDIR_VOID
+	closedir(dirp);
+#else
 	if (closedir(dirp) == -1)
 		g_warning("Could not close directory: %s", g_strerror(errno));
+#endif
 
 	return new_dir;
 }

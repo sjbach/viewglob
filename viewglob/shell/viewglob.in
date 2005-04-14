@@ -16,8 +16,6 @@
 # along with Viewglob; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-set -x
-
 SCRIPT_NAME="${0##*/}"
 VG_LIB_DIR="@pkglibdir@"
 VGPING="$VG_LIB_DIR/vgping"

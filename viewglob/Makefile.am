@@ -1,8 +1,12 @@
 AUTOMAKE_OPTIONS = gnu
-AM_CFLAGS = -Wall -g
 
-SUBDIRS = common vgseer vgd vgdisplay vgexpand vgping shell 
-man_MANS = viewglob.1 vgseer.1 vgd.1
+if FULL_BUILD
+	SUBDIRS_FULL = vgd vgdisplay vgping
+	MANS_FULL = vgd.1
+endif
+
+SUBDIRS = common vgseer vgexpand shell $(SUBDIRS_FULL)
+man_MANS = vgseer.1 viewglob.1 $(MANS_FULL)
 
 viewglob.1:
 	rm -f viewglob.1.tmp

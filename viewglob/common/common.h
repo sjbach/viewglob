@@ -30,20 +30,23 @@
 #ifndef COMMON_H
 #define COMMON_H
 
-#if HAVE_CONFIG_H
+#ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif
 
 #include <sys/types.h>
 #include <unistd.h>
 #include <stdlib.h>
+
 #include <glib.h>
 
-#if HAVE_ERRNO_H
-#  include <errno.h>
-#endif
+#include <errno.h>
 #ifndef errno
 extern int errno;
+#endif
+
+#ifndef HAVE_PTRDIFF_T
+typedef ptrdiff_t int;
 #endif
 
 #ifndef EXIT_SUCCESS

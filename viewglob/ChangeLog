@@ -1,3 +1,22 @@
+2005-04-14 18:22  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* bootstrap: only continue if previous step was successful
+	* Makefile.am: failed attempt at conditional build
+	* configure.ac:
+	  - More correct checking for headers and functions
+	  - First part of vgseer-only build implemented
+	  - Link against socket libraries if necessary
+	  - Don't need sed's path
+	* child.c, common.h, hardened-io.c, x11-stuff.c, vgexpand.c, vgseer.c:
+	  Miscellaneous portability changes.
+	* ptytty.c: no more warnings when using GNU getpt()
+	* ptytty.h: don't include common.h!
+	* tcp-connect.c, tcp-listen.c:
+	  Fallback to simpler implementation if there is no getaddrinfo().
+	* vgd/Makefile.am, vgping/Makefile.am, vgseer/Makefile.am:
+	  Link against socket libraries if required
+
+
 2005-04-13 17:24  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* vgd.1.in, vgseer.1.in, viewglob.1.in: further documentation

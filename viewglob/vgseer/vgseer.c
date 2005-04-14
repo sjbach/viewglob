@@ -49,9 +49,7 @@
 #  define WIFEXITED(stat_val) (((stat_val) & 255) == 0)
 #endif
 
-#if HAVE_TERMIOS_H
-# include <termios.h>
-#endif
+#include <termios.h>
 
 #if GWINSZ_IN_SYS_IOCTL
 # include <sys/ioctl.h>
@@ -91,9 +89,9 @@ struct options {
 
 
 /* Signal stuff. */
-static void     sigwinch_handler(gint signum);
 static gboolean handle_signals(void);
-static void     handler(gint signum);
+static RETSIGTYPE sigwinch_handler(gint signum);
+static RETSIGTYPE handler(gint signum);
 static void     clean_fail(struct child* new_lamb);
 static gsize    strlen_safe(const gchar* string);
 
@@ -1251,12 +1249,12 @@ static void clean_fail(struct child* new_lamb) {
 
 
 /* Handler for the SIGWINCH signal. */
-void sigwinch_handler(gint signum) {
+static RETSIGTYPE sigwinch_handler(gint signum) {
 	term_size_changed = TRUE;
 }
 
 
-static void handler(gint signum) {
+static RETSIGTYPE handler(gint signum) {
 
 	const gchar* string = g_strsignal(signum);
 

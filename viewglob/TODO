@@ -7,6 +7,8 @@ Critical:
 - vgdisplays: shift click filename puts full path
 - vgmini: refocusing jump_resizes display
 - vgd, vgdisplays: option to disable jumping
+- make: viewglob.in should not be packaged?
+- make: move ptytty.c back to vgseer/
 
 End:
 - make: autoscan
@@ -14,6 +16,7 @@ End:
 - remove '[Exiting viewglob]'
 
 Non-critical:
+- use strchr instead of strstr
 - vgd: refocus activates the window which isn't activated instead of just
   bringing to front
 - vgseer: sanitize mask better

@@ -39,8 +39,11 @@
 
 
 int tcp_listen(const char* host, const char* serv) {
-	int				listenfd, n;
-	const int		on = 1;
+	int listenfd;
+	const int on = 1;
+
+#ifdef HAVE_GETADDRINFO
+	int				n;
 	struct addrinfo	hints, *res, *ressave;
 
 	(void) memset(&hints, 0, sizeof(struct addrinfo));
@@ -85,6 +88,39 @@ int tcp_listen(const char* host, const char* serv) {
 
 	freeaddrinfo(ressave);
 
-	return(listenfd);
+#else
+	struct sockaddr_in sin;
+
+	int port = atoi(serv);
+
+	listenfd = socket(AF_INET, SOCK_STREAM, 0);
+	if (listenfd < 0) {
+		g_critical("Could not create socket: %s", g_strerror(errno));
+		return -1;
+	}
+
+	if (setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR,
+				&on, sizeof(on)) == -1) {
+		g_critical("Could not set socket options: %s", g_strerror(errno));
+		return -1;
+	}
+
+	(void) memset(&sin, 0, sizeof(sin));
+	sin.sin_family = AF_INET;
+	sin.sin_addr.s_addr = INADDR_ANY;
+	sin.sin_port = htons(port);
+
+	if (bind(listenfd, (struct sockaddr*) &sin, sizeof(sin)) == -1) {
+		g_critical("Could not bind socket: %s", g_strerror(errno));
+		return -1;
+	}
+
+	if (listen(listenfd, SOMAXCONN) == -1) {
+		g_critical("Could not listen on socket: %s", g_strerror(errno));
+		return -1;
+	}
+#endif
+
+	return listenfd;
 }
 

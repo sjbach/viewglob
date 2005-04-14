@@ -37,7 +37,10 @@
 #include "tcp-connect.h"
 
 int tcp_connect(const char *host, const char *serv) {
-	int				sockfd, n;
+	int sockfd;
+
+#ifdef HAVE_GETADDRINFO
+	int				n;
 	struct addrinfo	hints, *res, *ressave;
 
 	(void) memset(&hints, 0, sizeof(struct addrinfo));
@@ -69,6 +72,56 @@ int tcp_connect(const char *host, const char *serv) {
 	}
 
 	freeaddrinfo(ressave);
+
+#else
+	struct sockaddr_in servaddr;
+	struct in_addr** pptr;
+	struct in_addr* inetaddrp[2];
+	struct in_addr inetaddr;
+	struct hostent* hp;
+
+	int port = atoi(serv);
+
+	if ((hp = gethostbyname(host)) == NULL) {
+		if (inet_aton(host, &inetaddr) == 0) {
+			g_critical("Could not convert hostname: %s",
+					g_strerror(errno));
+			return -1;
+		}
+		else {
+			inetaddrp[0] = &inetaddr;
+			inetaddrp[1] = NULL;
+			pptr = inetaddrp;
+		}
+	}
+	else
+		pptr = (struct in_addr**) hp->h_addr_list;
+
+	for ( ; *pptr != NULL; pptr++) {
+		sockfd = socket(AF_INET, SOCK_STREAM, 0);
+		if (sockfd < 0) {
+			g_critical("Could not create socket: %s", g_strerror(errno));
+			return -1;
+		}
+
+		memset(&servaddr, 0, sizeof(servaddr));
+		servaddr.sin_family = AF_INET;
+		servaddr.sin_port = htons(port);
+		memcpy(&servaddr.sin_addr, *pptr, sizeof(struct in_addr));
+
+		if (connect(sockfd, (struct sockaddr*) &servaddr,
+					sizeof(servaddr)) == 0)
+			break;   /* success */
+
+		g_warning("Connection error: %s", g_strerror(errno));
+		(void) close(sockfd);
+	}
+	
+	if (*pptr == NULL) {
+		g_critical("Unable to connect.");
+		return -1;
+	}
+#endif
 
 	return(sockfd);
 }

@@ -27,6 +27,13 @@
  * Try to be self-contained except for the above autoconfig'd defines
  */
 
+/* Include POSIX and XPG declarations */
+#if defined(HAVE_GETPT) && defined(PTYS_ARE_GETPT)
+#  ifndef _GNU_SOURCE
+#    define _GNU_SOURCE
+#  endif
+#endif
+
 #include <stdio.h>
 #ifdef HAVE_STDLIB_H
 # include <stdlib.h>
@@ -220,7 +227,11 @@ rxvt_control_tty(int fd_tty, const char *ttydev)
 # if defined(HAVE_SETPGID)
     setpgid(0, 0);
 # elif defined(HAVE_SETPGRP)
+#  ifdef SETPGRP_VOID
+    stepgrp();
+#  else
     setpgrp(0, 0);
+#  endif
 # endif
 /* ---------------------------------------- */
 # ifdef TIOCNOTTY
@@ -285,7 +296,13 @@ rxvt_control_tty(int fd_tty, const char *ttydev)
 	return -1;		/* fatal */
     close(fd);
 /* ---------------------------------------- */
-    D_TTY((stderr, "rxvt_control_tty(): tcgetpgrp(): %d  getpgrp(): %d", tcgetpgrp(fd_tty), getpgrp()));
+    D_TTY((stderr, "rxvt_control_tty(): tcgetpgrp(): %d  getpgrp(): %d", tcgetpgrp(fd_tty),
+# ifdef GETPGRP_VOID
+				getpgrp()
+# else
+				getpgrp(0)
+# endif
+				));
 /* ---------------------------------------- */
 #endif				/* ! __QNX__ */
     return 0;

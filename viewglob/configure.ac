@@ -6,17 +6,38 @@ RELEASE_DATE="March 17, 2005"
 
 AC_DEFINE_UNQUOTED([VG_RELEASE_DATE], ["$RELEASE_DATE"] , [Date of release])
 
+CFLAGS="$CFLAGS -Wall"
+if test x"$USE_MAINTAINER_MODE" = xyes; then
+	CFLAGS="$CFLAGS -g3"
+fi
+
+dnl Optionally build only vgseer (and the other programs it needs).
+VGSEER_ONLY=
+AC_ARG_ENABLE(vgseer-only,
+	[AC_HELP_STRING(
+		[--enable-vgseer-only],
+		[Only build and install the client side of Viewglob])],
+	[VGSEER_ONLY=yep], [VGSEER_ONLY=nope])
+AM_CONDITIONAL([FULL_BUILD], [test "$VGSEER_ONLY" = nope])
+
 dnl Checks for programs.
 AC_PROG_CC
 AC_PROG_INSTALL
-AC_PROG_LN_S
 
 dnl Checks for header files.
 AC_HEADER_STDC
 AC_HEADER_DIRENT
 AC_HEADER_SYS_WAIT
 AC_HEADER_TIOCGWINSZ
-AC_CHECK_HEADERS([fcntl.h errno.h stdlib.h string.h sys/ioctl.h termios.h unistd.h stdlib.h])
+AC_HEADER_TIME
+AC_CHECK_HEADERS([sys/time.h time.h sys/select.h])
+AC_CHECK_HEADERS([ \
+	fnmatch.h \
+	fcntl.h    errno.h       stdlib.h      \
+	string.h   sys/ioctl.h   termios.h     \
+	unistd.h   stdlib.h      arpa/inet.h   \
+	netdb.h    netinet/in.h  sys/socket.h],,
+	AC_MSG_ERROR([Required header missing!]))
 
 dnl Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
@@ -24,41 +45,53 @@ AC_C_INLINE
 AC_TYPE_SIZE_T
 AC_TYPE_MODE_T
 AC_TYPE_PID_T
+AC_TYPE_SIGNAL
+AC_CHECK_TYPES([ptrdiff_t],,,)
 
-dnl Checks for library functions.
+dnl Checks for functions.
 AC_FUNC_CLOSEDIR_VOID
 AC_PROG_GCC_TRADITIONAL
-AC_CHECK_FUNCS([dup2 getcwd memchr memmove memset mkfifo pathconf select strchr grantpt unlockpt setsid setpgid setpgrp isastream])
+AC_CHECK_FUNCS([ \
+ 	stat     lstat \
+	dup2     getcwd    memmove    \
+	memset   pathconf  select     \
+	strchr   setsid    socket     \
+	bind     listen    accept     \
+	connect  setsockopt],,
+	AC_MSG_ERROR([Required function missing!]))
 
-dnl Seer now uses some Xlib for focusing the display.
-AC_PATH_XTRA
+dnl Determine whether to use getaddrinfo or gethostbyname and inet_aton.
+AC_CHECK_FUNCS([getaddrinfo],,
+	[AC_CHECK_FUNCS([gethostbyname inet_aton],,
+		[AC_MSG_ERROR([Socket interface is incomplete!])])])
 
-dnl The display requires GTK+ 2.4.0.
-AM_PATH_GTK_2_0(2.4.0)
-AM_PATH_GLIB_2_0(2.2.0)
+dnl Determine necessary libraries for sockets.
+ETR_SOCKET_NSL
+TYPE_SOCKLEN_T
+
+AM_PATH_GLIB_2_0(2.2.0,,
+	AC_MSG_ERROR(GLib 2.2.0+ is required to build Viewglob))
 
 dnl Test for bash.
 AC_PATH_PROG(BASH_FULL_PATH, bash, nope)
 if test "x$BASH_FULL_PATH" = xnope; then
-	AC_MSG_ERROR([viewglob requires bash])
+	AC_MSG_ERROR([Viewglob requires bash])
 fi
 AC_SUBST(BASH_FULL_PATH)
 
 dnl Test for sed.
-AC_PATH_PROG(SED_FULL_PATH, sed, nope)
-if test "x$SED_FULL_PATH" = xnope; then
-	AC_MSG_ERROR([viewglob requires sed])
+AC_CHECK_PROGS(SED,[sed],no)
+if test  "$SED" = "no"; then
+	AC_MSG_ERROR([Viewglob installation requires sed])
 fi
 
-dnl Output release info so the shell scripts can get 'em.
-AC_SUBST(PACKAGE_NAME)
-AC_SUBST(PACKAGE_VERSION)
-AC_SUBST(RELEASE_DATE)
-
-
 dnl =====================================================================
-dnl The following is for pty stuff, and is taken from rxvt 2.7.10.
+dnl The following is for pty stuff and is taken from rxvt 2.7.10.
 dnl =====================================================================
+
+AC_CHECK_FUNCS([setpgid setpgrp isastream getpt grantpt unlockpt])
+AC_FUNC_GETPGRP
+AC_FUNC_SETPGRP
 
 AC_CACHE_CHECK(for getpt, rxvt_cv_func_getpt,
 [AC_TRY_LINK([#define _GNU_SOURCE
@@ -148,7 +181,32 @@ dnl =====================================================================
 dnl End of pty stuff.
 dnl =====================================================================
 
+dnl Output release stuff so the shell scripts can get to it.
+AC_SUBST(PACKAGE_NAME)
+AC_SUBST(PACKAGE_VERSION)
+AC_SUBST(RELEASE_DATE)
 
-AC_CONFIG_FILES([Makefile vgseer/Makefile vgd/Makefile vgdisplay/Makefile vgexpand/Makefile vgping/Makefile shell/Makefile common/Makefile])
+if test "$VGSEER_ONLY" = nope; then
+
+	dnl This stuff is specific to vgd and the displays.
+
+	AC_CHECK_HEADERS([syslog.h],,
+		AC_MSG_ERROR([Required header missing!]))
+	AC_CHECK_FUNCS([strtoul],,
+		AC_MSG_ERROR([Required function missing!]))
+
+	dnl For advanced Xlib stuff
+	AC_PATH_XTRA
+
+	dnl The displays require GTK+ 2.4.0.
+	AM_PATH_GTK_2_0(2.4.0,,
+		AC_MSG_ERROR(GTK+ 2.4.0+ is required to build Viewglob))
+fi
+
+AC_CONFIG_FILES([ \
+	Makefile vgseer/Makefile vgd/Makefile \
+	vgdisplay/Makefile vgexpand/Makefile vgping/Makefile \
+	shell/Makefile common/Makefile])
+
 AC_OUTPUT
 

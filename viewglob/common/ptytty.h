@@ -22,8 +22,6 @@
 #ifndef PTYTTY_H
 #define PTYTTY_H
 
-#include "common.h"
-
 int rxvt_get_pty(int *fd_tty, const char **ttydev);
 int rxvt_get_tty(const char *ttydev);
 int rxvt_control_tty(int fd_tty, const char *ttydev);
