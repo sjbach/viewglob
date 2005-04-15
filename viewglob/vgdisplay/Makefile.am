@@ -1,27 +1,65 @@
-LDADD = @GTK_LIBS@ @GLIB_LIBS@
-AM_CPPFLAGS = @GTK_CFLAGS@ @GLIB_CFLAGS@
-COMMON = ../common
-INCLUDES = -I$(COMMON)
+COMMON_DIR = $(top_srcdir)/common
+AM_CPPFLAGS = -DVG_LIB_DIR="\"$(pkglibdir)\"" -I$(COMMON_DIR) \
+	@GLIB_CFLAGS@ @X_CFLAGS@ @GTK_CFLAGS@
+LDADD = \
+	@GLIB_LIBS@ \
+	@X_PRE_LIBS@ @X_LIBS@ -lX11 @X_EXTRA_LIBS@ \
+	@GTK_LIBS@
 
 pkglib_PROGRAMS = vgclassic vgmini
-vgclassic_SOURCES = vgclassic.c exhibit.c dlisting.c wrap_box.c file_box.c \
-                    lscolors.c $(COMMON)/param-io.c $(COMMON)/hardened-io.c \
-		    display-common.c $(COMMON)/x11-stuff.c  \
-		    $(COMMON)/syslogging.c
-vgmini_SOURCES = vgmini.c wrap_box.c file_box.c lscolors.c dircont.c \
-                 $(COMMON)/param-io.c $(COMMON)/hardened-io.c  \
-		 display-common.c $(COMMON)/x11-stuff.c $(COMMON)/syslogging.c
+
+vgclassic_SOURCES = \
+	vgclassic.c \
+	exhibit.c \
+	dlisting.c \
+	wrap_box.c \
+	file_box.c \
+	lscolors.c \
+	display-common.c \
+	$(COMMON_DIR)/param-io.c \
+	$(COMMON_DIR)/hardened-io.c \
+	$(COMMON_DIR)/x11-stuff.c  \
+	$(COMMON_DIR)/syslogging.c
+
+
+vgmini_SOURCES = \
+	vgmini.c \
+	wrap_box.c \
+	file_box.c \
+	lscolors.c \
+	dircont.c \
+	display-common.c \
+	$(COMMON_DIR)/param-io.c \
+	$(COMMON_DIR)/hardened-io.c \
+	$(COMMON_DIR)/x11-stuff.c \
+	$(COMMON_DIR)/syslogging.c
 
 CLEANFILES = app_icons.tmp file_icons.tmp
 
-noinst_HEADERS = exhibit.h dlisting.h wrap_box.h file_box.h \
-                 lscolors.h dircont.h display-common.h \
-		 app_icons.h file_icons.h
+noinst_HEADERS = \
+	exhibit.h \
+	dlisting.h  \
+	wrap_box.h \
+	file_box.h \
+	lscolors.h \
+	dircont.h \
+	display-common.h \
+	app_icons.h \
+	file_icons.h
 		 
-EXTRA_DIST = icon_16x16.png icon_24x24.png icon_32x32.png icon_36x36.png \
-             gnome-fs-regular.png gnome-fs-directory.png gnome-fs-fifo.png \
-             gnome-dev-symlink.png gnome-fs-blockdev.png gnome-fs-chardev.png \
-             gnome-fs-socket.png gnome-fs-executable.png
+EXTRA_DIST = \
+	icon_16x16.png \
+	icon_24x24.png \
+	icon_32x32.png \
+	icon_36x36.png \
+	gnome-fs-regular.png \
+	gnome-fs-directory.png \
+	gnome-fs-fifo.png \
+	gnome-dev-symlink.png \
+	gnome-fs-blockdev.png \
+	gnome-fs-chardev.png \
+	gnome-fs-socket.png \
+	gnome-fs-executable.png
 
 app_icons.h:
 	rm -f app_icons.tmp app_icons.h

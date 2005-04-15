@@ -1,3 +1,9 @@
+2005-04-15 17:35  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* Makefile.am, etc.:
+	- Made conditional build work.
+	- Aesthetic changes.
+
 2005-04-14 18:22  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* bootstrap: only continue if previous step was successful

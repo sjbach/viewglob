@@ -1,8 +1,8 @@
 AUTOMAKE_OPTIONS = gnu
 
 if FULL_BUILD
-	SUBDIRS_FULL = vgd vgdisplay vgping
-	MANS_FULL = vgd.1
+  SUBDIRS_FULL = vgd vgdisplay vgping
+  MANS_FULL = vgd.1
 endif
 
 SUBDIRS = common vgseer vgexpand shell $(SUBDIRS_FULL)
@@ -28,13 +28,4 @@ vgd.1:
 
 EXTRA_DIST = COPYING2 HACKING $(man_MANS)
 CLEAN_FILES = viewglob.1.tmp vgseer.1.tmp vgd.1.tmp
-
-# Also put the manpage under the name gviewglob.
-#install-data-hook:
-#	cd $(DESTDIR)$(mandir)/man1 && \
-#	rm -f gviewglob.1 && \
-#	$(LN_S) viewglob.1 gviewglob.1
-#
-#uninstall-local:
-#	rm -f $(DESTDIR)$(mandir)/man1/gviewglob.1
 

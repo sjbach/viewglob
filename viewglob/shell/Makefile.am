@@ -34,9 +34,20 @@ init-viewglob.bashrc:
 	mv init-viewglob.bashrc.tmp init-viewglob.bashrc
 
 
-CLEANFILES = viewglob init-viewglob.bashrc init-viewglob.bashrc.tmp \
-             .zshrc init-viewglob.zshrc.tmp getopt.sh
-EXTRA_DIST = init-viewglob.bashrc.in init-viewglob.bashrc \
-             init-viewglob.zshrc.in .zshrc \
-             viewglob.in getopt.sh.in conf-to-args.sh
+CLEANFILES = \
+	viewglob \
+	init-viewglob.bashrc \
+	init-viewglob.bashrc.tmp \
+	.zshrc \
+	init-viewglob.zshrc.tmp \
+	getopt.sh
+
+EXTRA_DIST = \
+	init-viewglob.bashrc.in \
+	init-viewglob.bashrc \
+	init-viewglob.zshrc.in \
+	.zshrc \
+	viewglob.in \
+	getopt.sh.in \
+	conf-to-args.sh
 
