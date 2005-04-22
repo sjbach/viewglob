@@ -78,7 +78,6 @@ struct vgseer_client {
 
 void state_init(struct state* s);
 void vgseer_client_init(struct vgseer_client* v);
-gchar* win_to_str(Window win);
 static void poll_loop(struct state* s);
 static void die(struct state* s, gint result);
 static gint setup_polling(struct state* s, fd_set* set);
@@ -132,6 +131,8 @@ gint main(gint argc, gchar** argv) {
 	if ( (s.listen_fd = tcp_listen(NULL, s.port)) == -1)
 		exit(EXIT_FAILURE);
 
+	(void) chdir("/");
+
 	/* Turn into a daemon. */
 	// TODO: include option to disable daemoning.
 	daemonize();
@@ -143,6 +144,9 @@ gint main(gint argc, gchar** argv) {
 
 
 static void parse_args(gint argc, gchar** argv, struct state* s) {
+	g_return_if_fail(argv != NULL);
+	g_return_if_fail(s != NULL);
+
 	gboolean in_loop = TRUE;
 
 	struct option long_options[] = {
@@ -327,14 +331,13 @@ static void usage(void) {
 
 
 static void report_version(void) {
-	printf("vgd %s\n", VERSION);
+	printf("%s %s\n", g_get_prgname(), VERSION);
 	printf("Released %s\n", VG_RELEASE_DATE);
 	exit(EXIT_SUCCESS);
 }
 
 
 static void poll_loop(struct state* s) {
-
 	g_return_if_fail(s != NULL);
 
 	GList* iter;
@@ -389,7 +392,6 @@ static void poll_loop(struct state* s) {
 
 
 static void check_active_window(struct state* s) {
-
 	g_return_if_fail(s != NULL);
 
 	Window new_active_win = get_active_window(s->Xdisplay);
@@ -408,20 +410,6 @@ static void check_active_window(struct state* s) {
 			}
 		}
 	}
-}
-
-
-/* Converts win to a string (statically allocated memory) */
-gchar* win_to_str(Window win) {
-	g_return_val_if_fail(win != 0, "0");
-
-	static GString* win_str = NULL;
-
-	if (!win_str)
-		win_str = g_string_new(NULL);
-
-	g_string_printf(win_str, "%lu", win);
-	return win_str->str;
 }
 
 
@@ -570,8 +558,8 @@ static void process_client(struct state* s, struct vgseer_client* v) {
 					s->active = v;
 					context_switch(s, v);
 				}
-				if (child_running(&s->display))
-					refocus(s->Xdisplay, v->win, s->display_win);
+				else
+					update_display(s, v, P_WIN_ID, win_to_str(v->win));
 			}
 			else if (STREQ(value, "toggle")) {
 				if (child_running(&s->display))
@@ -611,6 +599,9 @@ static void process_client(struct state* s, struct vgseer_client* v) {
 
 static void update_display(struct state* s, struct vgseer_client* v,
 		enum parameter param, gchar* value) {
+	g_return_if_fail(s != NULL);
+	g_return_if_fail(v != NULL);
+	g_return_if_fail(value != NULL);
 
 	if (s->active != v || !child_running(&s->display))
 		return;
@@ -624,7 +615,6 @@ static void update_display(struct state* s, struct vgseer_client* v,
 
 /* Disconnect the client and free its resources. */
 static void drop_client(struct state* s, struct vgseer_client* v) {
-
 	g_return_if_fail(s != NULL);
 	g_return_if_fail(v != NULL);
 
@@ -664,7 +654,6 @@ static void drop_client(struct state* s, struct vgseer_client* v) {
 
 /* Accept a new client. */
 static void new_client(struct state* s) {
-
 	g_return_if_fail(s != NULL);
 
 	gint new_fd;
@@ -710,7 +699,6 @@ static void new_client(struct state* s) {
 
 
 static void new_ping_client(gint ping_fd) {
-
 	g_return_if_fail(ping_fd >= 0);
 
 	g_message("(%d) Client is pinging", ping_fd);
@@ -722,14 +710,13 @@ static void new_ping_client(gint ping_fd) {
 
 
 static void new_vgseer_client(struct state* s, gint client_fd) {
-
 	g_return_if_fail(s != NULL);
 	g_return_if_fail(client_fd >= 0);
 
 	enum parameter param;
 	gchar* value;
-	struct vgseer_client* v;
 
+	struct vgseer_client* v;
 	gchar* term_title = NULL;
 
 	g_message("(%d) Client is a vgseer", client_fd);
@@ -740,6 +727,7 @@ static void new_vgseer_client(struct state* s, gint client_fd) {
 	/* Version */
 	if (!get_param(client_fd, &param, &value) || param != P_VERSION)
 		goto out_of_sync;
+	// TODO: check_version()
 	if (STREQ(VERSION, value)) {
 		value = "OK";
 		if (!put_param(client_fd, P_STATUS, value))
@@ -770,6 +758,7 @@ static void new_vgseer_client(struct state* s, gint client_fd) {
 		goto out_of_sync;
 
 	/* Find the client's terminal window. */
+	// FIXME: accept client even if can't find window.
 	if ( (v->win = get_xid_from_title(s->Xdisplay, term_title)) == 0) {
 		g_warning("(%d) Couldn't locate client's window", client_fd);
 		goto reject;
@@ -813,14 +802,12 @@ reject:
 
 /* Set the fd_set for all clients, the display, and the listen fd. */
 static gint setup_polling(struct state* s, fd_set* set) {
-
 	g_return_val_if_fail(s != NULL, 0);
 	g_return_val_if_fail(set != NULL, 0);
 
 	gint max_fd;
 	GList* iter;
 	struct vgseer_client* v;
-
 
 	/* Setup polling for the accept socket. */
 	FD_ZERO(set);
@@ -891,8 +878,6 @@ static gboolean daemonize(void) {
 		_exit(EXIT_SUCCESS);  /* Child 1 terminates. */
 
 	/* Child 2 continues... */
-
-	(void) chdir("/");   /* Change working directory. */
 
 	/* Redirect stdin, stdout, and stderr to /dev/null. */
 	(void) close(STDIN_FILENO);

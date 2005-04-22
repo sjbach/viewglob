@@ -1,9 +1,4 @@
 /*
-	Copyright (C) 2003 Tomas Styblo
-	From wmctrl:
-	A command line tool to interact with an EWMH/NetWM compatible X Window
-	Manager.
-
 	Copyright (C) 2004, 2005 Stephen Bach
 	This file is part of the Viewglob package.
 
@@ -22,25 +17,20 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#ifndef X11_STUFF_H
-#define X11_STUFF_H
+
+#ifndef JUMP_RESIZE_H
+#define JUMP_RESIZE_H
 
 #include "common.h"
-#include <X11/Xlib.h>
+#include <gtk/gtk.h>
 
 G_BEGIN_DECLS
 
 
-void refocus(Display* disp, Window w1, Window w2);
-Window get_xid_from_title(Display* disp, char* title);
-Window get_active_window(Display* disp);
-void focus_window(Display* disp, Window win, gboolean switch_desktop);
-gboolean is_visible(Display* disp, Window win);
-gchar* win_to_str(Window win);
-Window str_to_win(gchar* string);
+gboolean jump_and_resize(GtkWidget* gtk_window, gchar* term_win_str);
 
 
 G_END_DECLS
 
-#endif /* !X11_STUFF_H */
+#endif
 

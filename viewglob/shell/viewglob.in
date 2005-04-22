@@ -82,7 +82,13 @@ vg_test_shell_mode() {
 vg_test_display() {
 	if [ ! "$1" ]
 		then vg_error "No display program specified" 1
-	elif [ ! -x "$1" ]
+	elif [ "$1" = vgmini ] || [ "$1" = vgclassic ]
+		then vg_disp="$VG_LIB_DIR/$1"
+	else
+		vg_disp="$1"
+	fi
+
+	if [ ! -x "$vg_disp" ]
 		then vg_error "$1 is not present or not executable" 1
 	fi
 }

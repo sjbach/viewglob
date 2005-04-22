@@ -11,10 +11,10 @@ pkglib_PROGRAMS = vgclassic vgmini
 vgclassic_SOURCES = \
 	vgclassic.c \
 	exhibit.c \
-	dlisting.c \
 	wrap_box.c \
 	file_box.c \
 	lscolors.c \
+	dlisting.c \
 	display-common.c \
 	$(COMMON_DIR)/param-io.c \
 	$(COMMON_DIR)/hardened-io.c \
@@ -29,6 +29,7 @@ vgmini_SOURCES = \
 	lscolors.c \
 	dircont.c \
 	display-common.c \
+	jump-resize.c \
 	$(COMMON_DIR)/param-io.c \
 	$(COMMON_DIR)/hardened-io.c \
 	$(COMMON_DIR)/x11-stuff.c \
@@ -44,6 +45,7 @@ noinst_HEADERS = \
 	lscolors.h \
 	dircont.h \
 	display-common.h \
+	jump-resize.h \
 	app_icons.h \
 	file_icons.h
 		 

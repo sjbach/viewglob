@@ -1,6 +1,5 @@
 COMMON_DIR = $(top_srcdir)/common
 
-
 bin_PROGRAMS = vgseer
 
 vgseer_CPPFLAGS = @GLIB_CFLAGS@ -DVG_LIB_DIR="\"$(pkglibdir)\"" -I$(COMMON_DIR)

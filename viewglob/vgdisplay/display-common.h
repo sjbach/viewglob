@@ -21,9 +21,6 @@
 #ifndef DISPLAY_COMMON_H
 #define DISPLAY_COMMON_H
 
-
-#include "config.h"
-
 #include "common.h"
 #include "file-types.h"
 #include <gtk/gtk.h>
@@ -53,7 +50,6 @@ struct prefs {
 
 void set_icons(void);
 void write_xwindow_id(GtkWidget* gtk_window);
-gboolean resize_jump(GtkWidget* gtk_window, gchar* term_win_str);
 gchar* up_to_delimiter(gchar** ptr, char c);
 FileSelection map_selection_state(gchar c);
 FileType map_file_type(gchar c);
@@ -63,6 +59,7 @@ gboolean window_delete_event(GtkWidget* widget, GdkEvent* event,
 		gpointer data);
 void prefs_init(struct prefs* v);
 void parse_args(int argc, char** argv, struct prefs* v);
+void refocus_wrapped(GtkWidget* display_win_gtk, gchar* term_win_str);
 
 G_END_DECLS
 

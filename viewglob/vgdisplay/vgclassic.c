@@ -64,7 +64,7 @@ static gboolean receive_data(GIOChannel* source, GIOCondition condition,
 				break;
 
 			case P_WIN_ID:
-				/* This display doesn't use the window id. */
+				refocus_wrapped(e->window, value);
 				break;
 
 			case P_MASK:

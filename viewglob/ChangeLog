@@ -1,3 +1,12 @@
+2005-04-22 13:15  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* vgseer.1.in: text changes
+	* viewglob.in: use VG_LIB_DIR when checking displays
+	* jump-resize.c, jump-resize.h: added
+	* x11-stuff.c, x11-stuff.h, vgd.c, display-common.c, display-common.h,
+	  vgclassic.c, vgmini.c:
+	  Tweaking window focusing/jump-resizing.
+
 2005-04-15 17:35  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* Makefile.am, etc.:

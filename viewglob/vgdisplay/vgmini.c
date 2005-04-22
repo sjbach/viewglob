@@ -19,6 +19,7 @@
 
 #include "common.h"
 #include "display-common.h"
+#include "jump-resize.h"
 #include "dircont.h"
 #include "file_box.h"
 #include "param-io.h"
@@ -39,7 +40,8 @@ struct vgmini {
 
 	GtkWidget* vbox;
 
-	GString* term_win;
+	gboolean jump_resize;
+//	GString* term_win;
 };
 
 
@@ -92,10 +94,11 @@ gint main(gint argc, char** argv) {
 	parse_args(argc, argv, &v);
 
 	struct vgmini vg;
-	vg.term_win = g_string_new(NULL);
+//	vg.term_win = g_string_new(NULL);
 	vg.dcs = NULL;
 	vg.active = NULL;
 	vg.width_change = 0;
+	vg.jump_resize = TRUE;	// TODO: add --jump-resize thing
 
 	/* vgmini keeps sizes a little smaller than vgclassic. */
 	file_box_set_sizing(v.font_size_modifier - 1, v.show_icons);
@@ -178,11 +181,9 @@ static gboolean receive_data(GIOChannel* source, GIOCondition condition,
 				break;
 
 			case P_WIN_ID:
-				/* This display doesn't use the window id. */
-				if (!STREQ(vg->term_win->str, value)) {
-					if (resize_jump(vg->window, value))
-						vg->term_win = g_string_assign(vg->term_win, value);
-				}
+				if (vg->jump_resize)
+					jump_and_resize(vg->window, value);
+				refocus_wrapped(vg->window, value);
 				break;
 
 			case P_MASK:

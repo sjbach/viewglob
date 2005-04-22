@@ -596,23 +596,29 @@ static gboolean header_expose_event(GtkWidget* header, GdkEventExpose* event,
 	static GdkPixbuf* active_grad = NULL;
 //	static GdkPixbuf* pwd_grad = NULL;
 
+
+	GdkGC* name_gc;
+	GdkGC* counts_gc;
+
 	GdkGC* fg_gc = header->style->fg_gc[GTK_WIDGET_STATE(header)];
 	GdkGC* bg_gc = header->style->bg_gc[GTK_WIDGET_STATE(header)];
-
-//  GdkGC *fg_gc[5];
- // GdkGC *bg_gc[5];
-  GdkGC *light_gc = header->style->light_gc[GTK_WIDGET_STATE(header)];
-  GdkGC *dark_gc = header->style->dark_gc[GTK_WIDGET_STATE(header)];
-  GdkGC *mid_gc = header->style->mid_gc[GTK_WIDGET_STATE(header)];
-  GdkGC *text_gc = header->style->text_gc[GTK_WIDGET_STATE(header)];
-  GdkGC *base_gc = header->style->base_gc[GTK_WIDGET_STATE(header)];
-  GdkGC *text_aa_gc = header->style->text_aa_gc[GTK_WIDGET_STATE(header)];
+	GdkGC *light_gc = header->style->light_gc[GTK_WIDGET_STATE(header)];
+	GdkGC *dark_gc = header->style->dark_gc[GTK_WIDGET_STATE(header)];
+	GdkGC *mid_gc = header->style->mid_gc[GTK_WIDGET_STATE(header)];
+//	GdkGC *text_gc = header->style->text_gc[GTK_WIDGET_STATE(header)];
+//	GdkGC *base_gc = header->style->base_gc[GTK_WIDGET_STATE(header)];
+	GdkGC *text_gc = header->style->light_gc[GTK_STATE_ACTIVE];
+	GdkGC *base_gc = header->style->dark_gc[GTK_STATE_ACTIVE];
+	GdkGC *text_aa_gc = header->style->text_aa_gc[GTK_WIDGET_STATE(header)];
 
 	gint name_width, name_height, counts_width, counts_height;
 	pango_layout_get_pixel_size(dc->name_layout, &name_width, &name_height);
 	pango_layout_get_pixel_size(dc->counts_layout, &counts_width, &counts_height);
 
 	if (dc->is_active) {
+
+		name_gc = fg_gc;
+		counts_gc = fg_gc;
 
 		if (!active_grad || gdk_pixbuf_get_width(active_grad) !=
 				header->allocation.width) {
@@ -657,6 +663,9 @@ static gboolean header_expose_event(GtkWidget* header, GdkEventExpose* event,
 //	}
 	else {
 		if (dc->is_highlighted) {
+
+			name_gc = base_gc;
+			counts_gc = base_gc ;
 	
 		GdkPixbuf* highlight_grad = create_gradient(
 					&header->style->bg[GTK_STATE_ACTIVE],
@@ -664,20 +673,21 @@ static gboolean header_expose_event(GtkWidget* header, GdkEventExpose* event,
 					header->allocation.width,
 					header->allocation.height, FALSE);
 
-		gdk_draw_pixbuf(
-				header->window,
-				bg_gc,
-				highlight_grad,
-				0, 0, 0, 0,
-				header->allocation.width, header->allocation.height,
-				GDK_RGB_DITHER_NONE, 0, 0);
+//		gdk_draw_pixbuf(
+//				header->window,
+//				bg_gc,
+//				highlight_grad,
+//				0, 0, 0, 0,
+//				header->allocation.width, header->allocation.height,
+//				GDK_RGB_DITHER_NONE, 0, 0);
 
-//			gdk_draw_rectangle(
-//					header->window,
-//					dark_gc,
-//					TRUE,
-//					0, 0,
-//					header->allocation.width,
+			gdk_draw_rectangle(
+					header->window,
+					header->style->mid_gc[GTK_STATE_ACTIVE],
+					TRUE,
+					0, 0,
+					header->allocation.width,
+					header->allocation.height);
 //					name_height);
 //			gdk_draw_rectangle(
 //					header->window,
@@ -689,9 +699,14 @@ static gboolean header_expose_event(GtkWidget* header, GdkEventExpose* event,
 
 		}
 		else {
+
+			name_gc = text_gc;
+			counts_gc = fg_gc;
+
 			gdk_draw_rectangle(
 					header->window,
-					bg_gc,
+//					bg_gc,
+					dark_gc,
 					TRUE,
 					0, 0,
 //					header->allocation.width, name_height);
@@ -724,14 +739,18 @@ static gboolean header_expose_event(GtkWidget* header, GdkEventExpose* event,
 	/* Draw name */
 	gdk_draw_layout(
 			header->window,
-			fg_gc,
+//			fg_gc,
+//			text_gc,
+			name_gc,
 			DIR_NAME_SPACER, 0,
 			dc->name_layout);
 
 	/* Draw file counts */
 	gdk_draw_layout(
 			header->window,
-			text_gc,
+//			fg_gc,
+//			text_gc,
+			counts_gc,
 			COUNT_SPACER, name_height,
 			dc->counts_layout);
 

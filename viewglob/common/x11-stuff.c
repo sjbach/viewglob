@@ -55,35 +55,39 @@ static gboolean client_msg(Display* disp, Window win, gchar* msg,
 
 
 void refocus(Display* disp, Window w1, Window w2) {
-
 	g_return_if_fail(disp != NULL);
 
 	Window active_window;
-	gint revert_to_return;
+	gint dummy;
 
-	XGetInputFocus(disp, &active_window, &revert_to_return);
+	XGetInputFocus(disp, &active_window, &dummy);
 
 	/* Refocus the window which isn't focused.  Or, if neither
 	   are focused (?), focus both. */
-	if (active_window == w1 && w2 != 0)
-		focus_window(disp, w2, FALSE);
-	else if (active_window == w2 && w1 != 0)
-		focus_window(disp, w1, FALSE);
-	else if (w1 != 0 && w2 != 0) {
-		focus_window(disp, w2, FALSE);
-		focus_window(disp, w1, FALSE);
+	if (active_window == w1) {
+		if (w2 != 0 && is_visible(disp, w2))
+			focus_window(disp, w2, FALSE);
+	}
+	else if (active_window == w2) {
+		if (w1 != 0 && is_visible(disp, w1))
+			focus_window(disp, w1, FALSE);
+	}
+	else {
+		if (w1 != 0 && is_visible(disp, w1))
+			focus_window(disp, w1, FALSE);
+		if (w2 != 0 && is_visible(disp, w2))
+			focus_window(disp, w2, FALSE);
 	}
 }
 
 
 Window get_active_window(Display* disp) {
-	
 	g_return_val_if_fail(disp != NULL, 0);
 	
 	Window active_window;
-	gint revert_to_return;
+	gint dummy;
 
-	XGetInputFocus(disp, &active_window, &revert_to_return);
+	XGetInputFocus(disp, &active_window, &dummy);
 	
 	return active_window;
 }
@@ -112,6 +116,24 @@ void focus_window(Display* disp, Window win, gboolean switch_desktop) {
 	/*client_msg(disp, win, "_NET_ACTIVE_WINDOW", 0, 0, 0, 0, 0);*/
 	client_msg(disp, win, "_NET_ACTIVE_WINDOW", 2, time(NULL), 0, 0, 0);
 	XMapRaised(disp, win);
+}
+
+
+/* Check to see if the given window is visible. */
+gboolean is_visible(Display* disp, Window win) {
+
+	if (win == 0)
+		return FALSE;
+
+	XWindowAttributes xwa;
+	if (!XGetWindowAttributes(disp, win, &xwa)) {
+		g_warning("Could not get X window attributes");
+		return FALSE;
+	}
+	else if (xwa.map_state != IsViewable)
+		return FALSE;
+
+	return TRUE;
 }
 
 
@@ -231,7 +253,7 @@ static Window* get_client_list (Display* disp, gulong* size) {
 }
 
 
-static gchar* get_window_title (Display *disp, Window win) {
+static gchar* get_window_title(Display *disp, Window win) {
 	gchar* title_utf8;
 	gchar* wm_name;
 	gchar* net_wm_name;
@@ -251,5 +273,35 @@ static gchar* get_window_title (Display *disp, Window win) {
 	g_free(net_wm_name);
 	
 	return title_utf8;
+}
+
+
+/* Converts win to a string (statically allocated memory) */
+gchar* win_to_str(Window win) {
+	g_return_val_if_fail(win != 0, "0");
+
+	static GString* win_str = NULL;
+
+	if (!win_str)
+		win_str = g_string_new(NULL);
+
+	g_string_printf(win_str, "%lu", win);
+	return win_str->str;
+}
+
+
+Window str_to_win(gchar* string) {
+	g_return_val_if_fail(string != NULL, 0);
+
+	Window win;
+
+	win = strtoul(string, NULL, 10);
+
+	if (win == ULONG_MAX) {
+		g_warning("str_to_win(): conversion out of bounds: %s", string);
+		win = 0;
+	}
+
+	return win;
 }
 
