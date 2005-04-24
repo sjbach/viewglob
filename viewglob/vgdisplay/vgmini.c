@@ -208,7 +208,7 @@ static gboolean receive_data(GIOChannel* source, GIOCondition condition,
 				break;
 
 			case P_DEVELOPING_MASK:
-				//FIXME
+				dircont_set_dev_mask_string(vg->active, value);
 				break;
 
 			case P_STATUS:

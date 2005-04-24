@@ -1,3 +1,10 @@
+2005-04-24 15:35  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* dircont.c, dircont.h, vgmini.c:
+	  - Display developing mask.
+	  - Colour scheme chosen (but needs work).
+	* vgseer.c: always send the mask for now, even if not changed
+
 2005-04-24 13:00  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* README.ms, vgd.1.in, vgseer.1.in, viewglob.1.in:

@@ -90,6 +90,7 @@ GtkWidget* dircont_new(void);
 void dircont_destroy(DirCont* dc);
 void dircont_set_optimal_width(DirCont* dc, gint width);
 void dircont_set_mask_string(DirCont* dc, const gchar* mask_str);
+void dircont_set_dev_mask_string(DirCont* dc, const gchar* mask_str);
 void dircont_set_name(DirCont* dc, const gchar* name);
 void dircont_set_counts(DirCont* dc,
 		const gchar* selected, const gchar* total, const gchar* hidden);

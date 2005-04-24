@@ -66,6 +66,7 @@ static gint header_height = 0;
 
 static PangoLayout* big_mask_layout = NULL;
 static PangoLayout* small_mask_layout = NULL;
+static PangoLayout* dev_mask_layout = NULL;
 static GString* dir_tag_open = NULL;
 static GString* dir_tag_close = NULL;
 static GString* count_tag_open = NULL;
@@ -594,7 +595,7 @@ static gboolean header_expose_event(GtkWidget* header, GdkEventExpose* event,
 		DirCont* dc) {
 
 	static GdkPixbuf* active_grad = NULL;
-//	static GdkPixbuf* pwd_grad = NULL;
+	static GdkPixbuf* highlight_grad = NULL;
 
 
 	GdkGC* name_gc;
@@ -602,24 +603,26 @@ static gboolean header_expose_event(GtkWidget* header, GdkEventExpose* event,
 
 	GdkGC* fg_gc = header->style->fg_gc[GTK_WIDGET_STATE(header)];
 	GdkGC* bg_gc = header->style->bg_gc[GTK_WIDGET_STATE(header)];
-	GdkGC *light_gc = header->style->light_gc[GTK_WIDGET_STATE(header)];
-	GdkGC *dark_gc = header->style->dark_gc[GTK_WIDGET_STATE(header)];
-	GdkGC *mid_gc = header->style->mid_gc[GTK_WIDGET_STATE(header)];
-//	GdkGC *text_gc = header->style->text_gc[GTK_WIDGET_STATE(header)];
-//	GdkGC *base_gc = header->style->base_gc[GTK_WIDGET_STATE(header)];
-	GdkGC *text_gc = header->style->light_gc[GTK_STATE_ACTIVE];
-	GdkGC *base_gc = header->style->dark_gc[GTK_STATE_ACTIVE];
-	GdkGC *text_aa_gc = header->style->text_aa_gc[GTK_WIDGET_STATE(header)];
+//	GdkGC* light_gc = header->style->light_gc[GTK_WIDGET_STATE(header)];
+//	GdkGC* dark_gc = header->style->dark_gc[GTK_WIDGET_STATE(header)];
+//	GdkGC* mid_gc = header->style->mid_gc[GTK_WIDGET_STATE(header)];
+//	GdkGC* text_gc = header->style->text_gc[GTK_WIDGET_STATE(header)];
+//	GdkGC* base_gc = header->style->base_gc[GTK_WIDGET_STATE(header)];
+//	GdkGC* text_aa_gc = header->style->text_aa_gc[GTK_WIDGET_STATE(header)];
 
 	gint name_width, name_height, counts_width, counts_height;
-	pango_layout_get_pixel_size(dc->name_layout, &name_width, &name_height);
-	pango_layout_get_pixel_size(dc->counts_layout, &counts_width, &counts_height);
+
+	pango_layout_get_pixel_size(dc->name_layout,
+			&name_width, &name_height);
+	pango_layout_get_pixel_size(dc->counts_layout,
+			&counts_width, &counts_height);
 
 	if (dc->is_active) {
 
 		name_gc = fg_gc;
 		counts_gc = fg_gc;
 
+		/* Remake the gradient if necessary. */
 		if (!active_grad || gdk_pixbuf_get_width(active_grad) !=
 				header->allocation.width) {
 			if (active_grad)
@@ -639,89 +642,43 @@ static gboolean header_expose_event(GtkWidget* header, GdkEventExpose* event,
 				header->allocation.width, header->allocation.height,
 				GDK_RGB_DITHER_NONE, 0, 0);
 	}
-//	else if (dc->is_pwd) {
-
-//		if (!pwd_grad || gdk_pixbuf_get_width(pwd_grad) !=
-//				header->allocation.width) {
-//			if (pwd_grad)
-//				g_object_unref(pwd_grad);
-//			pwd_grad = create_gradient(
-//					&header->style->dark[GTK_STATE_ACTIVE],
-//					&header->style->bg[GTK_STATE_ACTIVE],
-//					header->allocation.width,
-//					header->allocation.height, FALSE);
-//		}
-//
-//		gdk_draw_pixbuf(
-//				header->window,
-//				bg_gc,
-//				pwd_grad,
-//				0, 0, 0, 0,
-//				header->allocation.width, header->allocation.height,
-//				GDK_RGB_DITHER_NONE, 0, 0);
-
-//	}
 	else {
 		if (dc->is_highlighted) {
 
-			name_gc = base_gc;
-			counts_gc = base_gc ;
-	
-		GdkPixbuf* highlight_grad = create_gradient(
-					&header->style->bg[GTK_STATE_ACTIVE],
-					&header->style->base[GTK_STATE_ACTIVE],
-					header->allocation.width,
-					header->allocation.height, FALSE);
+			name_gc = fg_gc;
+			counts_gc = fg_gc;
 
-//		gdk_draw_pixbuf(
-//				header->window,
-//				bg_gc,
-//				highlight_grad,
-//				0, 0, 0, 0,
-//				header->allocation.width, header->allocation.height,
-//				GDK_RGB_DITHER_NONE, 0, 0);
+			/* Remake the gradient if necessary. */
+			if (!highlight_grad || gdk_pixbuf_get_width(highlight_grad) !=
+					header->allocation.width) {
+				if (highlight_grad)
+					g_object_unref(highlight_grad);
+				highlight_grad = create_gradient(
+							&header->style->dark[GTK_STATE_ACTIVE],
+							&header->style->bg[GTK_STATE_ACTIVE],
+							header->allocation.width,
+							header->allocation.height, FALSE);
+			}
 
-			gdk_draw_rectangle(
+			gdk_draw_pixbuf(
 					header->window,
-					header->style->mid_gc[GTK_STATE_ACTIVE],
-					TRUE,
-					0, 0,
-					header->allocation.width,
-					header->allocation.height);
-//					name_height);
-//			gdk_draw_rectangle(
-//					header->window,
-//					base_gc,
-//					TRUE,
-//					0, name_height,
-//					header->allocation.width,
-//					header->allocation.height - name_height);
-
+					bg_gc,
+					highlight_grad,
+					0, 0, 0, 0,
+					header->allocation.width, header->allocation.height,
+					GDK_RGB_DITHER_NONE, 0, 0);
 		}
 		else {
 
-			name_gc = text_gc;
+			name_gc = fg_gc;
 			counts_gc = fg_gc;
 
 			gdk_draw_rectangle(
 					header->window,
-//					bg_gc,
-					dark_gc,
+					bg_gc,
 					TRUE,
 					0, 0,
-//					header->allocation.width, name_height);
 					header->allocation.width, header->allocation.height);
-//					COUNT_SPACER + header->allocation.width + 3,
-//					name_height);
-			gdk_draw_rectangle(
-					header->window,
-					base_gc,
-					TRUE,
-//					0, name_height,
-					COUNT_SPACER - 3, name_height,
-					counts_width + 6,
-//					header->allocation.width,
-					header->allocation.height - name_height);
 		}
 	}
 
@@ -735,12 +692,31 @@ static gboolean header_expose_event(GtkWidget* header, GdkEventExpose* event,
 				header->allocation.width, 1);
 	}
 
+//	if (dc->is_pwd) {
+//
+//		gdk_draw_layout(
+//				header->window,
+//				counts_gc,
+//				3, name_height,
+//				dc->counts_layout);
+//
+//		GdkPoint points[] = {
+//			{ DIR_NAME_SPACER, name_height },
+//			{ DIR_NAME_SPACER, name_height + counts_height - 2 },
+//			{ DIR_NAME_SPACER + COUNT_SPACER/2, name_height + counts_height/2 },
+//		};
+//
+//		gdk_draw_polygon(
+//				header->window,
+//				fg_gc,
+//				TRUE,
+//				points,
+//				3);
+//	}
 
 	/* Draw name */
 	gdk_draw_layout(
 			header->window,
-//			fg_gc,
-//			text_gc,
 			name_gc,
 			DIR_NAME_SPACER, 0,
 			dc->name_layout);
@@ -748,16 +724,16 @@ static gboolean header_expose_event(GtkWidget* header, GdkEventExpose* event,
 	/* Draw file counts */
 	gdk_draw_layout(
 			header->window,
-//			fg_gc,
-//			text_gc,
 			counts_gc,
 			COUNT_SPACER, name_height,
 			dc->counts_layout);
 
 
-	/* If this is the active dc, show the mask as well. */
+	/* If this is the active dc, show the masks as well. */
 	if (dc->is_active) {
-		gint mask_width;
+		gint mask_width, mask_height;
+
+		/* Current mask. */
 		pango_layout_get_pixel_size(big_mask_layout, &mask_width, NULL);
 
 		if (3*DIR_NAME_SPACER + name_width + mask_width <
@@ -772,7 +748,6 @@ static gboolean header_expose_event(GtkWidget* header, GdkEventExpose* event,
 		}
 		else if (small_mask_layout) {
 			/* Use the small mask layout. */
-
 			pango_layout_get_pixel_size(small_mask_layout, &mask_width, NULL);
 			gdk_draw_layout(
 					header->window,
@@ -780,6 +755,28 @@ static gboolean header_expose_event(GtkWidget* header, GdkEventExpose* event,
 					header->allocation.width - mask_width - COUNT_SPACER,
 					name_height,
 					small_mask_layout);
+		}
+
+		/* Developing mask. */
+		pango_layout_get_pixel_size(dev_mask_layout,
+				&mask_width, &mask_height);
+
+		if (mask_height && mask_width
+				&& mask_height <= header->allocation.height) {
+			gdk_draw_rectangle(
+					header->window,
+					fg_gc,
+					TRUE,
+					(header->allocation.width - mask_width)/2 - 2,
+					(header->allocation.height - mask_height)/2,
+					mask_width + 4, mask_height);
+			
+			gdk_draw_layout(
+					header->window,
+					bg_gc,
+					(header->allocation.width - mask_width)/2,
+					(header->allocation.height - mask_height)/2,
+					dev_mask_layout);
 		}
 	}
 
@@ -831,7 +828,8 @@ void dircont_set_optimal_width(DirCont* dc, gint width) {
 void dircont_set_mask_string(DirCont* dc, const gchar* mask_str) {
 	g_return_if_fail(mask_str != NULL);
 
-	gchar* mask_utf8;
+	gchar* utf8;
+	gchar* escaped;
 	gchar* markup;
 
 	/* Initialize the layouts if necessary. */
@@ -842,12 +840,13 @@ void dircont_set_mask_string(DirCont* dc, const gchar* mask_str) {
 		gtk_widget_destroy(area);
 	}
 
-	mask_utf8 = g_filename_to_utf8(mask_str, -1, NULL, NULL, NULL);
+	utf8 = g_filename_to_utf8(mask_str, -1, NULL, NULL, NULL);
+	escaped = g_markup_escape_text(utf8, -1);
 
 	/* Big mask layout (when directory name is short) */
 	markup = g_strconcat(
 			dir_tag_open->str, "<small><b>",
-			mask_utf8,
+			escaped,
 			"</b></small>", dir_tag_close->str, NULL);
 	pango_layout_set_markup(big_mask_layout, markup, -1);
 	g_free(markup);
@@ -855,12 +854,47 @@ void dircont_set_mask_string(DirCont* dc, const gchar* mask_str) {
 	/* Small mask layout (when directory name is long) */
 	markup = g_strconcat(
 			count_tag_open->str, "<b>",
-			"Mask: ", mask_utf8,
+			"Mask: ", escaped,
 			"</b>", count_tag_close->str, NULL);
 	pango_layout_set_markup(small_mask_layout, markup, -1);
 	g_free(markup);
 
-	g_free(mask_utf8);
+	g_free(escaped);
+	g_free(utf8);
+
+	if (dc)
+		dircont_repaint_header(dc);
+}
+
+
+/* Set the new developing mask text and update the given DirCont (which is
+   probably the active DirCont). */
+void dircont_set_dev_mask_string(DirCont* dc, const gchar* dev_mask_str) {
+	g_return_if_fail(dev_mask_str != NULL);
+
+	gchar* utf8;
+	gchar* escaped;
+	gchar* markup;
+
+	/* Initialize the layout and colour attribute list if necessary. */
+	if (!dev_mask_layout) {
+		GtkWidget* area = gtk_drawing_area_new();
+		dev_mask_layout = gtk_widget_create_pango_layout(area, NULL);
+		gtk_widget_destroy(area);
+	}
+
+	utf8 = g_filename_to_utf8(dev_mask_str, -1, NULL, NULL, NULL);
+	escaped = g_markup_escape_text(utf8, -1);
+
+	markup = g_strconcat(
+			dir_tag_open->str, "<big><b>",
+			escaped,
+			"</b></big>", dir_tag_close->str, NULL);
+	pango_layout_set_markup(dev_mask_layout, markup, -1);
+
+	g_free(markup);
+	g_free(escaped);
+	g_free(utf8);
 
 	if (dc)
 		dircont_repaint_header(dc);

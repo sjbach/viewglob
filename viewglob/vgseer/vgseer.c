@@ -1047,10 +1047,10 @@ static void call_vgexpand(struct user_state* u, struct vgd_stuff* vgd) {
 	put_param_wrapped(vgd->fd, P_CMD, cmd_sane);
 	
 	/* Only send the mask if it's changed. */
-	if (!STREQ(mask_prev->str, mask_sane)) {
+	/*if (!STREQ(mask_prev->str, mask_sane)) {*/
 		put_param_wrapped(vgd->fd, P_MASK, mask_sane);
-		mask_prev = g_string_assign(mask_prev, mask_sane);
-	}
+	/*	mask_prev = g_string_assign(mask_prev, mask_sane);*/
+	/*}*/
 
 	g_free(expand_command);
 	g_free(mask_sane);

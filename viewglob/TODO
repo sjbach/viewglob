@@ -1,7 +1,5 @@
 
 Critical:
-- vgmini: developing mask
-- vgmini: header colours
 - doc: konsole and gnome-terminal
 - make: viewglob.in should not be packaged?
 - cygwin
