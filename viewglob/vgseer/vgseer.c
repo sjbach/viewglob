@@ -419,7 +419,7 @@ static void report_version(void) {
 
 static void usage(void) {
 	g_print("usage: vgseer [-h <host>] [-p <port>] [-c <shell mode>]\n");
-	g_print("              [-e <shell executable>] [-t]\n\n");
+	g_print("              [-e <shell executable>] [-t <on/off>]\n\n");
 
 	g_print("-h, --host            Host to connect to.            "
 			"(default: localhost)\n");

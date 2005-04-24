@@ -14,7 +14,7 @@ In basic usage, you can run vgseer with no arguments and it will connect to a lo
 .BR viewglob (1)
 wrapper script.
 .PP
-If you've connected to a remote machine with telnet or ssh and would like Viewglob tracking for that shell+terminal, you can do so by calling vgseer and passing it the host/port of your local vgd.  Obviously this requires vgseer to be installed on the remote machine.  NB: the communication with vgd is done over a separate socket.  If you want this information encrypted, you'll need to setup separate ssh tunneling for it.
+If you've connected to a remote machine with telnet or ssh and would like Viewglob tracking for that shell+terminal, you can do so by calling vgseer and passing it the host/port of your local vgd.  Obviously this requires vgseer to be installed on the remote machine.  NB: the communication with vgd is done over a separate socket.  If you want this information encrypted, you'll need to setup additional ssh tunneling for it.
 .PP
 \fIvgseer\fP is compatible with any recent version of
 .BR bash (1)
@@ -63,7 +63,8 @@ So, to always use zsh, disable the asterisk at the prompt, and always connect to
 shell\-mode
 zsh
 .TP
-disable\-star
+shell\-star
+off
 .TP
 host
 juniper

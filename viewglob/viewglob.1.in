@@ -13,6 +13,8 @@ The \fIviewglob\fP command is a convenience wrapper for two other programs in th
 and
 .BR vgd (1).
 You will want to use those programs directly to do things that are non-simple.
+.PP
+General information about using Viewglob can be found on this manpage under \fBUSAGE\fP.
 
 .SH OPTIONS
 This program follows the usual GNU command line syntax, with long options starting with two dashes.  A summary is included below.
@@ -57,6 +59,8 @@ At the bottom of the display is the command line.  This is what Viewglob is actu
 .PP
 With a few exceptions, any text you type into the display is passed to the terminal as input.  So if you wished, you could use the display as your interface to the shell \-\- this actually works quite well if you're doing a lot of file management.  Arrow keys, Page Up, Page Down, Home, and End are interpreted by the display and not passed to the terminal.
 .PP
+If you start other Viewglob-supervised shells, they will share the display if they connect to the same vgd process (default).  Whichever terminal is currently active (i.e. has window focus or is being typed in) will have its environment shown.
+
 \fBDisplay Navigation\fP
 .RS 4
 You can navigate the display from the terminal by pressing C\-g (Ctrl\-G) followed by a direction character.  They are:
@@ -80,7 +84,12 @@ C-f, C-d, or <Page Down>
 .LP
 To enter a real C\-g to the shell, type it twice.  Navigation commands can be chained together - for example, typing C-g C-f C-f C-k will page down twice and then move up once.  The chain is broken when a non-navigation character is typed.
 .LP
-There are four other Viewglob commands.  After typing C-g:
+In \fIvgmini\fP, the default display, Up and Down are used to switch between viewable direcories, while Page Up and Page Down are used to navigation the currently viewed directory.
+.RE
+.PP
+\fBCommands\fP
+.RS 4
+There are four Viewglob commands in addition to the display navigation.  After typing C-g:
 .LP
 .RS
 .PD 0
@@ -91,7 +100,7 @@ Set or clear mask:
 Toggle on/off:
 C-<SPACE>
 .TP
-Raise window:
+Refocus window:
 <TAB>
 .TP
 Disable:
@@ -99,11 +108,28 @@ C-q
 .PD
 .RE
 .LP
-Toggling will close the display if it's active or open it if not.
+\fIToggling\fP will close the display if it's active or open it if not.  It's completely safe to open and close the display multiple times.
 .LP
-Raising will bring either the terminal window or the display to the front of the screen (whichever one isn't active).  If the display did not automatically update to the current shell after a window shuffle (i.e. it's showing the environment of a different shell), this will also knock it back to sense.
+The behaviour of the \fIrefocus\fP command is affected by the following:
+.RS
+.PD 0
+.TP 3n
+-
+The display program used.
+.TP
+-
+The vgd execution options.
+.TP
+-
+The location of the display in relation to the active terminal.
+.PD
+.RE
 .LP
-Disabling Viewglob functionality disconnects the terminal from vgd and turns vgseer off, resulting in an almost regular shell.  There is no way to re-enable Viewglob in a shell which has been disabled.
+Generally it tries to ensure that both the terminal and the display are viewable at the same time, and if they already are, it switches the focus between the display and the active terminal (sort-of like an internal Alt-<TAB>).
+.LP
+If the display did not automatically update to the current shell after a window shuffle (i.e. it's showing the environment of a different shell), refocusing will wake it up.  This is often necessary for tabbed terminals like \fIgnome\-terminal\fP and \fIkonsole\fP.
+.LP
+\fIDisabling\fP Viewglob functionality disconnects the terminal from vgd and turns vgseer off, resulting in an almost regular shell.  There is no way to re-enable Viewglob in a shell which has been disabled.
 .RE
 .PP
 \fBFilename Masking\fP

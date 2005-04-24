@@ -1,3 +1,11 @@
+2005-04-24 17:28  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* README.ms, vgd.1.in, vgseer.1.in, viewglob.1.in:
+	  Documentation updates.
+	* viewglob.in, vgd.c, vgseer.c:
+	  - Adding --daemon option.
+	  - Fixing usages.
+
 2005-04-24 15:35  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* dircont.c, dircont.h, vgmini.c:

@@ -8,9 +8,9 @@ vgd \- Viewglob daemon.
 .SH DESCRIPTION
 \fIvgd\fP acts as a mediator between any number of
 .BR vgseer (1)
-processes and a single Viewglob display process.  It keeps track of the active terminal and passes information from the corresponding vgseer (if there is one) to the display.
+processes and a single Viewglob display process (which it controls).  It keeps track of the active terminal and passes information from the corresponding vgseer (if there is one) to the display.
 .PP
-While vgseer can be used on a remote machine using ssh or telnet, vgd is only useful if it's running on the same X server as the user (meaning, in most cases, locally).
+While vgseer can be used on a remote machine using ssh or telnet, it only makes sense for vgd to be running on the same X server as the user (meaning, in most cases, locally).
 .PP
 After startup, vgd uses the syslog interface for error reporting if running as a daemon.
 
@@ -20,11 +20,14 @@ This program follows the usual GNU command line syntax, with long options starti
 .B \-p, \-\-port=<number>
 Listen on the given port.  The default is 16108 (1-GLOB).
 .TP
+.B \-P, \-\-persistent=<on/off>
+Keep vgd around even after all vgseers have disconnected.  It will sit and listen for new connections instead of exiting.  Persistence is off by default.
+.TP
+.B \-D, \-\-daemon=<on/off>
+Run vgd as a daemon (it relinquishes its terminal).  vgd runs as a daemon by default.
+.TP
 .B \-d, \-\-display=<vgclassic|vgmini|[path]>
 Display program.  The Viewglob package comes with \fIvgclassic\fP and \fIvgmini\fP (the new display).  Though there aren't any other displays in existence at this point, one could be used by passing its path.  The default is vgmini.
-.TP
-.B \-P, \-\-persistent
-Keep vgd around even after all vgseers have disconnected.  It will sit and listen for new connections instead of exiting.
 .TP
 .B \-s, \-\-sort\-style=<windows|ls>
 In the display, sort files with directories first (Windows) or purely by name (ls).  ls mode is the default.

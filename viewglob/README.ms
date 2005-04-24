@@ -12,17 +12,15 @@ Stephen Bach <sjbach@users.sourceforge.net>
 .
 .Sh INTRODUCTION
 .LP
-\fIViewglob\fP is a utility designed to add a kind of visualization to Bash and Zsh when used in windowing environments.  It has two parts:
+\fIViewglob\fP is a filesystem visualization add-on for Bash and Zsh when used in windowing environments.  It has three communicating parts:
 .RS
-.IP 1.
-A tool that sits inconspicuously as a layer between a shell and its X terminal, keeping track of the user's current directory and command line.
-.IP 2. 
-A GTK+ display which shows the layouts of pwd and other directories as they are referenced.
+.IP vgseer:
+Supervises an interactive shell and keeps track of command line and environment changes.
+.IP vgd:
+Mediates information exchange between any number of vgseer processes (local or remote) and a Viewglob display.
+.IP "the display:"
+Lists the contents of directories relevant to the currently active shell, highlighting file selections and potential name completions.
 .RE
-.LP
-The display updates dynamically to highlight selected files and potential name completions, including from shell expansions and globs - hence the name.
-.LP
-It can also be used as a surrogate terminal, where keystrokes typed into the display are passed to the shell.  Likewise, files and directories can be double-clicked to insert their names and/or paths into the terminal.
 .LP
 The website is here:
 .IP
@@ -41,7 +39,7 @@ The Viewglob display was sometimes forgetting to convert filenames from their lo
 .
 .Sh INSTALLATION
 .LP
-For a full install, it's a simple ./configure && make && sudo make install.  If you only wish to install the shell client portion, say for a server without X which you only access through ssh, add the following flag:
+For a full install, it's a simple ./configure && make && sudo make install.  If you only wish to install the shell client portion, say for a server without X which you only access through ssh, use the following flag:
 .IP
  ./configure --enable-vgseer-only
 .LP
@@ -53,8 +51,10 @@ Tested on:
 .Vs
 FreeBSD 4.10 with GTK+ 2.4.3
 GNU/Linux (various) with GTK+ 2.4+
-Mac OS X 10.3.5 with fink unstable providing GTK+ 2.4.9 (Viewglob 0.9)
+Cygwin with GTK+ 2.4.6
 .Ve
+Previous versions of Viewglob were said to run on Mac OS X 10.3.5 (with fink unstable providing GTK+ 2.4), but it has not been tested for this release.
+.LP
 The program has been built with portability in mind, so it should (ha) run on most POSIX-compliant systems with minimal fuss.  I happily accept patches for portability issues.
 .
 .Sh REQUIREMENTS

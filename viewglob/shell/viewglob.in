@@ -220,7 +220,7 @@ else
 	fi
 
 	# We'll have to setup a new vgd, then exec.
-	if vgd $VGD_OPTS ; then
+	if vgd $VGD_OPTS --daemon=on ; then
 		exec $VGSEER_EXEC $VGSEER_OPTS
 	fi
 fi

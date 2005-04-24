@@ -54,6 +54,7 @@ struct state {
 
 	Display*              Xdisplay;
 	gboolean              persistent;
+	gboolean              daemon;
 	GString*              vgexpand_opts;
 
 	gchar*                port;
@@ -134,8 +135,8 @@ gint main(gint argc, gchar** argv) {
 	(void) chdir("/");
 
 	/* Turn into a daemon. */
-	// TODO: include option to disable daemoning.
-	daemonize();
+	if (s.daemon)
+		daemonize();
 
 	poll_loop(&s);
 
@@ -153,6 +154,7 @@ static void parse_args(gint argc, gchar** argv, struct state* s) {
 		{ "port", 1, NULL, 'p' },
 		{ "display", 1, NULL, 'd' },
 		{ "persistent", 2, NULL, 'P' },
+		{ "daemon", 2, NULL, 'D' },
 		{ "sort-style", 1, NULL, 's' },
 		{ "dir-order", 1, NULL, 'r' },
 		{ "font-size-modifier", 1, NULL, 'z' },
@@ -174,7 +176,7 @@ static void parse_args(gint argc, gchar** argv, struct state* s) {
 	optind = 0;
 	while (in_loop) {
 		switch (fgetopt_long(argc, argv,
-					"p:d:P::s:r:z:i::j::HV", long_options, NULL)) {
+					"p:d:D::P::s:r:z:i::j::HV", long_options, NULL)) {
 			case -1:
 				in_loop = FALSE;
 				break;
@@ -204,6 +206,14 @@ static void parse_args(gint argc, gchar** argv, struct state* s) {
 					s->persistent = TRUE;
 				else if (STREQ(optarg, "off"))
 					s->persistent = FALSE;
+				break;
+
+			/* Daemon */
+			case 'D':
+				if (!optarg || STREQ(optarg, "on"))
+					s->daemon = TRUE;
+				else if (STREQ(optarg, "off"))
+					s->daemon = FALSE;
 				break;
 
 			/* Sort style */
@@ -311,13 +321,17 @@ static void parse_args(gint argc, gchar** argv, struct state* s) {
 
 
 static void usage(void) {
-	g_print("usage: vgd  [-p <port>] [-P] [-d <display>] [-s <sort style>]\n");
-	g_print("            [-r <dir order>] [-z <font size modifier>] "
-			"[-b <on/off>]\n");
-	g_print("            [-j <on/off>] [--<colour> <colour string>]\n\n");
+	g_print("usage: vgd  [-p <port>] [-P <on/off>] [-D <on/off>] [-d <display>]\n");
+	g_print("            [-s <sort style>] [-r <dir order>] [-z <font size modifier>]\n");
+	g_print("            [-b <on/off>] [-j <on/off>] [--<colour> <colour string>]\n\n");
 
 	g_print("-p, --port                     "
 			"Listen on this port.      (default: 16108)\n");
+	g_print("-P, --persistent               "
+			"Hang around.              (default: off)\n");
+	g_print("-D, --daemon                   "
+			"Run as a daemon.          (default: on)\n\n");
+
 	g_print("-d, --display                  "
 			"Display program.          (default: vgmini)\n");
 	g_print("-s, --sort-style               "
@@ -915,6 +929,7 @@ static gboolean daemonize(void) {
 void state_init(struct state* s) {
 	s->clients = NULL;
 	s->persistent = FALSE;
+	s->daemon = TRUE;
 
 	child_init(&s->display);
 	s->display.exec_name = g_strdup(VG_LIB_DIR "/vgmini");
