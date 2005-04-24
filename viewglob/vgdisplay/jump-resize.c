@@ -44,7 +44,8 @@ gboolean jump_and_resize(GtkWidget* gtk_window, gchar* term_win_str) {
 	Window me_win = GDK_WINDOW_XID(gdk_win);
 	Display* Xdisplay = GDK_DRAWABLE_XDISPLAY(gdk_win);
 
-	if (!is_visible(Xdisplay, me_win))
+	/*if (term_win == 0 || !is_visible(Xdisplay, me_win))*/
+	if (term_win == 0)
 		return FALSE;
 	
 	gint left, right, top, bottom;
@@ -118,9 +119,14 @@ gboolean jump_and_resize(GtkWidget* gtk_window, gchar* term_win_str) {
 		}
 	}
 
+	gulong* term_desktop = get_desktop(Xdisplay, term_win);
+	gulong* me_desktop = get_desktop(Xdisplay, me_win);
+
 	/* Determine if the new position is different from the old position. */
 	gboolean changed = me_x + left != old_x
-		|| me_y + top != old_y || me_w != old_w || me_h != old_h;
+		|| me_y + top != old_y || me_w != old_w || me_h != old_h
+		|| (term_desktop != NULL && me_desktop != NULL
+			&& *me_desktop != *term_desktop);
 
 #if 0
 	/* Moving without resizing: */
@@ -144,10 +150,15 @@ gboolean jump_and_resize(GtkWidget* gtk_window, gchar* term_win_str) {
 	}
 #endif
 
-	if (move && changed)
+	if (move && changed) {
 		gdk_window_move_resize(gdk_win, me_x, me_y, me_w, me_h);
+		(void) window_to_desktop (Xdisplay, me_win, *term_desktop);
+	}
 
-	return TRUE;
+	g_free(term_desktop);
+	g_free(me_desktop);
+
+	return move && changed;
 }
 
 

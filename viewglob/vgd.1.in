@@ -12,7 +12,7 @@ processes and a single Viewglob display process.  It keeps track of the active t
 .PP
 While vgseer can be used on a remote machine using ssh or telnet, vgd is only useful if it's running on the same X server as the user (meaning, in most cases, locally).
 .PP
-After startup, vgd uses the syslog interface for error reporting.
+After startup, vgd uses the syslog interface for error reporting if running as a daemon.
 
 .SH OPTIONS
 This program follows the usual GNU command line syntax, with long options starting with two dashes.  A summary is included below.
@@ -31,6 +31,12 @@ In the display, sort files with directories first (Windows) or purely by name (l
 .TP
 .B \-r, \-\-dir\-order=<descending|ascending|ascending\-pwd\-first>
 In the display, list directories in descending order (the default), ascending (last referenced directory has the top listing), or ascending with the current directory always first.
+.TP
+.B \-i, \-\-file\-icons=<on/off>
+Show or hide the file type icons in the display.
+.TP
+.B \-j, \-\-jump\-resize=<on/off>
+Enable or disable the automatic moving+resizing feature of vgmini.
 .TP
 .B \-z, \-\-font\-size\-modifier=<+/\-##>
 Increase or decrease the base font size in the display by the given number.  E.g. \*(lq\-z +2\*(rq increases the window manager's default by 2, while \*(lq\-z \-2\*(rq decreases the default by 2.
@@ -52,7 +58,7 @@ Increase or decrease the base font size in the display by the given number.  E.g
 .B \-\-white=<colour>
 .br
 .RS
-Define the colours used for interpreting LS_COLORS as you would in an .Xdefaults file.  This means <colour> can be a name such as \*(lqDarkSlateGray\*(rq or a hex specification like #RRGGBB (quoted).  There are also other forms: see
+Define the colours used for interpreting LS_COLORS as you would in an .Xdefaults file.  This means <colour> can be a name such as \*(lqDarkSlateGray\*(rq or a hex specification like #RRGGBB (quoted on the command line).  There are also other forms: see
 .BR XParseColor (3)
 for more information.  The defaults are easy to read on a light coloured background, but probably not suitable for a dark background.  For that case, these should be a good starting point (add to vgd.conf):
 .IP
@@ -75,9 +81,6 @@ white     #ffffff
 .RE
 .RE
 .TP
-.B \-b, \-\-disable\-icons
-Don't show file type icons in the display, just names.
-.TP
 .B \-h, \-\-help
 Show summary of options.
 .TP
@@ -87,7 +90,7 @@ Show the version of the program.
 .SH NOTES
 vgd keeps track of the active terminal by querying the X server.  This doesn't work great for tabbed terminals such as gnome-terminal and konsole, because they share an X window.  With these, you will need to wake up vgd when you shuffle around.  If you switch to a shell and the display doesn't automatically update, send it the refocus command C-g <TAB>.
 .PP
-By default vgmini is in jump/resize mode, which means it'll move to be near the active terminal and change its dimensions to try to match.  Some window managers just don't deal with this well and the resizing can get wacky.  If you're seeing this behaviour, you can disable jump/resize mode or switch to a different window manager.
+By default vgmini is in jump/resize mode, which means it'll move to be near the active terminal and change its dimensions to try to match.  Some window managers just don't deal with this well and the resizing can get wacky.  If you're seeing this behaviour, you can disable jump/resize mode (or switch to a different window manager).
 
 .SH FILES
 .I ~/.viewglob/vgd.conf

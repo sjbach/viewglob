@@ -1,22 +1,20 @@
 
 Critical:
-- vgclassic: mask and developing mask
-- make: option to build only vgseer/vgexpand (and thus no GTK requirement)
-- vgmini: statuses
-- vgd: make work in konsole and gnome-terminal
-- vgdisplays: shift click filename puts full path
-- vgmini: refocusing jump_resizes display
-- vgd, vgdisplays: option to disable jumping
+- vgmini: developing mask
+- vgmini: header colours
+- doc: konsole and gnome-terminal
 - make: viewglob.in should not be packaged?
-- make: move ptytty.c back to vgseer/
-- make: don't need sed
+- cygwin
 
 End:
-- make: autoscan
 - vgseer: close stderr in user shell
 - remove '[Exiting viewglob]'
 
 Non-critical:
+- vgclassic: mask and developing mask
+- vgdisplays: shift click filename puts full path
+- vgmini: statuses
+- make: don't need sed
 - use strchr instead of strstr
 - vgd: refocus activates the window which isn't activated instead of just
   bringing to front

@@ -56,7 +56,10 @@ static gboolean receive_data(GIOChannel* source, GIOCondition condition,
 		switch (param) {
 
 			case P_ORDER:
-				exhibit_do_order(e, value);
+				if (STREQ(value, "refocus"))
+					refocus_wrapped(e->window, e->term_win->str);
+				else
+					exhibit_do_order(e, value);
 				break;
 
 			case P_CMD:
@@ -64,7 +67,10 @@ static gboolean receive_data(GIOChannel* source, GIOCondition condition,
 				break;
 
 			case P_WIN_ID:
-				refocus_wrapped(e->window, value);
+				if (!STREQ(e->term_win->str, value)) {
+					raise_wrapped(e->window, value);
+					e->term_win = g_string_assign(e->term_win, value);
+				}
 				break;
 
 			case P_MASK:
@@ -260,6 +266,7 @@ gint main(gint argc, gchar **argv) {
 	/* This is pretty central -- it gets passed around a lot. */
 	Exhibit	e;
 	e.dls = NULL;
+	e.term_win = g_string_new(NULL);
 	
 	/* Option defaults. */
 	prefs_init(&v);

@@ -34,8 +34,8 @@ Connect to a vgd process through the given port.  The default is 16108 (1-GLOB).
 .B \-c, \-\-shell\-mode=<name>
 Shell to be used.  \fIname\fP can be \*(lqbash\*(rq or \*(lqzsh\*(rq (default is bash).
 .TP
-.B \-t, \-\-disable\-star
-Disable the asterisk character which is usually at the beginning of a vgseer shell prompt.
+.B \-t, \-\-shell\-star=<on/off>
+Show or hide the asterisk character which is usually at the beginning of a vgseer shell prompt.
 .TP
 .B \-e, \-\-executable=<path>
 Use the given executable as the shell instead of its first reference in the path.  Note that if this isn't a version of the shell chosen with \-\-shell\-mode, you won't get very far.

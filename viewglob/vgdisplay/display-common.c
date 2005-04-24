@@ -17,21 +17,24 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
+#include "common.h"
+#include "string.h"
 #include "x11-stuff.h"
 #include "display-common.h"
 #include "param-io.h"
-#include "fgetopt.h"
 #include "lscolors.h"
 
 #include <gdk/gdkx.h>
 #include <gdk/gdkkeysyms.h>
 
+#include "fgetopt.h"
 
 static void report_version(void);
 
 
 void prefs_init(struct prefs* v) {
 	v->show_icons = TRUE;
+	v->jump_resize = TRUE;
 	v->font_size_modifier = 0;
 }
 
@@ -49,7 +52,8 @@ void parse_args(int argc, char** argv, struct prefs* v) {
 		{ "magenta", 1, NULL, '6' },
 		{ "cyan", 1, NULL, '7' },
 		{ "white", 1, NULL, '8' },
-		{ "disable-icons", 0, NULL, 'b' },
+		{ "jump-resize", 2, NULL, 'j' },
+		{ "file-icons", 2, NULL, 'i' },
 		{ "version", 0, NULL, 'V' },
 	};
 
@@ -57,7 +61,7 @@ void parse_args(int argc, char** argv, struct prefs* v) {
 
 	optind = 0;
 	while (in_loop) {
-		switch (getopt_long(argc, argv, "z:bvV", long_options, NULL)) {
+		switch (fgetopt_long(argc, argv, "j::z:i::vV", long_options, NULL)) {
 
 			case -1:
 				in_loop = FALSE;
@@ -68,9 +72,20 @@ void parse_args(int argc, char** argv, struct prefs* v) {
 				v->font_size_modifier = CLAMP(atoi(optarg), -10, 10);
 				break;
 
-			/* Disable icons */
-			case 'b':
-				v->show_icons = FALSE;
+			/* Enable or disable icons */
+			case 'i':
+				if (!optarg || STREQ(optarg, "on"))
+					v->show_icons = TRUE;
+				else if (STREQ(optarg, "off"))
+					v->show_icons = FALSE;
+				break;
+
+			/* Enable or disable jump-resize */
+			case 'j':
+				if (!optarg || STREQ(optarg, "on"))
+					v->jump_resize = TRUE;
+				else if (STREQ(optarg, "off"))
+					v->jump_resize = FALSE;
 				break;
 
 			/* Colours */
@@ -113,14 +128,14 @@ void parse_args(int argc, char** argv, struct prefs* v) {
 				break;
 	
 			case ':':
-				g_critical("Option missing argument");
-				exit(EXIT_FAILURE);
+				g_warning("Option missing argument");
+				/*exit(EXIT_FAILURE);*/
 				break;
 
 			case '?':
 			default:
-				g_critical("Unknown option provided");
-				exit(EXIT_FAILURE);
+				g_warning("Unknown option provided");
+				/*exit(EXIT_FAILURE);*/
 				break;
 		}
 	}
@@ -188,6 +203,25 @@ void refocus_wrapped(GtkWidget* display_win_gtk, gchar* term_win_str) {
 	term_win = str_to_win(term_win_str);
 
 	refocus(Xdisplay, display_win, term_win);
+}
+
+
+void raise_wrapped(GtkWidget* display_win_gtk, gchar* term_win_str) {
+
+	Display* Xdisplay;
+	Window display_win, term_win;
+
+	Xdisplay = GDK_DRAWABLE_XDISPLAY(display_win_gtk->window);
+	display_win = GDK_WINDOW_XID(display_win_gtk->window);
+	term_win = str_to_win(term_win_str);
+
+	gulong* desktop = get_desktop(Xdisplay, term_win);
+
+	window_to_desktop(Xdisplay, display_win, *desktop);
+
+	/*raise_window(Xdisplay, display_win, term_win, TRUE);*/
+
+	g_free(desktop);
 }
 
 

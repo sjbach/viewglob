@@ -20,7 +20,8 @@ vgseer_SOURCES = \
 	$(COMMON_DIR)/shell.c \
 	$(COMMON_DIR)/tcp-connect.c \
 	$(COMMON_DIR)/logging.c \
-	$(COMMON_DIR)/conf-to-args.c
+	$(COMMON_DIR)/conf-to-args.c \
+	$(COMMON_DIR)/fgetopt.c
 
 noinst_HEADERS = \
 	cmdline.h \

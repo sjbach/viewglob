@@ -1,18 +1,18 @@
 .TH VIEWGLOB 1 "@RELEASE_DATE@" "" "Viewglob Manual"
 .SH NAME
-viewglob \- convenience interface wrapper for the Viewglob package
+viewglob \- convenience wrapper script for the Viewglob package
 .SH SYNOPSIS
 .B viewglob
 .RI [ options ]
 
 .SH DESCRIPTION
-\fIViewglob\fP supervises interactive shell activity and tracks file selections and globs in a display showing the contents of relevant directories.  The display is written in GTK+, so Viewglob requires that its shells be run in X terminals (e.g. \fIxterm\fP, \fIrxvt\fP, etc.).
+\fIViewglob\fP supervises interactive shell activity and tracks file selections and globs in a graphical display showing the contents of relevant directories.
 .PP
 The \fIviewglob\fP command is a convenience wrapper for two other programs in the Viewglob package which do the actual work,
 .BR vgseer (1)
 and
 .BR vgd (1).
-You will want to use these programs explicitly for things that are non-simple - the viewglob script doesn't spend much time trying to decipher ambiguous execution options.
+You will want to use those programs directly to do things that are non-simple.
 
 .SH OPTIONS
 This program follows the usual GNU command line syntax, with long options starting with two dashes.  A summary is included below.
@@ -26,10 +26,10 @@ Connect a new vgseer process to a vgd process on the given port.  If it is a loc
 .B \-c, \-\-shell\-mode=<name>
 Shell to be used.  \fIname\fP can be \*(lqbash\*(rq or \*(lqzsh\*(rq (default is bash).
 .TP
-.B \-t, \-\-disable\-star
-Disable the asterisk character which is usually at the beginning of a vgseer shell prompt.
+.B \-t, \-\-shell\-star=<on/off>
+Show or hide the asterisk character which is usually at the beginning of a vgseer shell prompt.
 .TP
-.B \-d, \-\-display=<vgclassic|vgmini|[path]>
+.B \-d, \-\-display=<vgmini|vgclassic|[path]>
 Display program.  The Viewglob package comes with \fIvgclassic\fP and \fIvgmini\fP (the new display).  Though there aren't any other displays in existence at this point, one could be used by passing its path.  The default is vgmini.
 .TP
 .B \-s, \-\-sort\-style=<windows|ls>
@@ -41,8 +41,8 @@ In the display, list directories in descending order (the default), ascending (l
 .B \-z, \-\-font\-size\-modifier=<+/\-##>
 Increase or decrease the base font size in the display by the given number.  E.g. \*(lq\-z +2\*(rq increases the window manager's default by 2, while \*(lq\-z \-2\*(rq decreases the default by 2.
 .TP
-.B \-b, \-\-disable\-icons
-Don't show file type icons in the display, just names.
+.B \-i, \-\-file\-icons=<on/off>
+Show or hide the file type icons in the display.
 .TP
 .B \-H, \-\-help
 Show summary of options.
@@ -53,11 +53,11 @@ Show the version of the package.
 .SH USAGE
 When you start Viewglob, you'll be presented with your familiar prompt and a new window showing the file layout of the current directory.  As you begin to type a command, the display window will highlight to show potential filename completions (dull highlight) and file selections and globs/expansions (vibrant highlight).  Also, as you reference other directories (e.g. \fI../\fP or \fI/usr/local/\fP), their layouts will appear as well.
 .PP
-At the bottom of the display window is a textbox with your command line.  This is what Viewglob is actually globbing on; if you find the display is not showing what you expected, check to make sure the display's command line is the same as the one in the shell, as they can be different (see \fBNOTES\fP below).
+At the bottom of the display is the command line.  This is what Viewglob is actually basing its results on; if you find the display is not showing what you expected, check to make sure the display's command line is the same as the one in the shell, as they can be different (see \fBNOTES\fP below).
 .PP
 With a few exceptions, any text you type into the display is passed to the terminal as input.  So if you wished, you could use the display as your interface to the shell \-\- this actually works quite well if you're doing a lot of file management.  Arrow keys, Page Up, Page Down, Home, and End are interpreted by the display and not passed to the terminal.
 .PP
-\fBNavigation and File Masking\fP
+\fBDisplay Navigation\fP
 .RS 4
 You can navigate the display from the terminal by pressing C\-g (Ctrl\-G) followed by a direction character.  They are:
 .LP
@@ -104,10 +104,15 @@ Toggling will close the display if it's active or open it if not.
 Raising will bring either the terminal window or the display to the front of the screen (whichever one isn't active).  If the display did not automatically update to the current shell after a window shuffle (i.e. it's showing the environment of a different shell), this will also knock it back to sense.
 .LP
 Disabling Viewglob functionality disconnects the terminal from vgd and turns vgseer off, resulting in an almost regular shell.  There is no way to re-enable Viewglob in a shell which has been disabled.
-.LP
-File name masking is a way to control the number and type of files shown in the display.  The default mask is "*", which shows all non-hidden files.  To show ALL files, an appropriate mask would be ".* *".  To show only C source files, the mask could be "*.[ch]" or "*.c *.h".  To just display directory file types, the mask would be "*/".
+.RE
+.PP
+\fBFilename Masking\fP
+.RS 4
+File masking is a way to control the number and type of files shown in the display.  The default mask is "*", which shows all non-hidden files.  To show ALL files, an appropriate mask would be ".* *".  To show only C source files, the mask could be "*.[ch]" or "*.c *.h".  To just display directory file types, the mask would be "*/".
 .LP
 A mask can be set with the key sequence C-g [mask] <ENTER>.  The mask string will print in the display as it's being typed.  Typing a non-printable character (such as <ESC> or C-c) while creating a new mask will cancel it.  The mask can be set back to the default "*" with a simple C-g <ENTER>.
+.LP
+File masking is done on the client level.  Therefore, when using Viewglob with a remote machine, a conservative file mask could improve response time a little.
 .RE
 .PP
 \fBFile/Directory Name Insertion\fP
@@ -138,24 +143,8 @@ The text is inserted as\-is, without any escaping or spacing.
 .PD
 .RE
 .LP
-If \fIsmart\-insert\fP has been disabled with the \-\-disable\-smart\-insert flag, the file/directory names/paths are always inserted escaped but without spacing.
-.LP
 Note that insertion of file names works pretty much the same as just pasting text into the terminal \-\- it's interpreted only as a series of keystrokes.  This means it's your responsibility to be sure that the shell is in a state cooperative to the reception of text.  For example, if you use vi\-mode in your shell, and you insert a file name while you're in command mode, the shell will receive the data as a series of commands \- probably not what you wanted to do.
 .RE
-.PP
-\fBDisplay Peculiarities\fP
-.RS 4
-Directories referenced in several different ways will always be interpreted as the same directory if they're on the same device and have the same inode (i.e. they are indeed the same).  Therefore these three names are equivalent to Viewglob (and a trailing slash does not differentiate a directory from one without a trailing slash):
-.IP
-/usr/local/lib/
-.br
-/usr/local/lib/./
-.br
-/usr/local/lib/../lib/
-.LP
-Note however that the name of the first reference will be the name that appears in the Viewglob display.  So if you refer to files in /usr/local/../local/lib and then /usr/local/lib on the same command line, Viewglob understands they are the same directory, but will use the less practical name /usr/local/../local/lib, since it appears first (and is just as valid as /usr/local/lib)
-.LP
-Since people generally don't type such things as /usr/local/../local/lib, this shouldn't be an issue.
 .RE
 
 .SH FILES

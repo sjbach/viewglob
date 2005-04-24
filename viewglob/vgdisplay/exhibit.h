@@ -45,6 +45,9 @@ struct _Exhibit {
 
 	/* The entry holding the command line. */
 	GtkWidget* cmdline;
+
+	/* The Window (in string form) of the active terminal. */
+	GString* term_win;
 };
 
 

@@ -36,8 +36,8 @@ shopt -s extglob
 vg_usage() {
 	cat >&2 << EOF
 usage: $SCRIPT_NAME [-h <host>] [-p <port>] [-c <shell mode>] [-d <display>]
-                [-s <sort style>] [-r <dir ordering] [-t] [-b]
-                [-z <font size modifier>]
+                [-s <sort style>] [-r <dir ordering] [-t <on/off>]
+                [-i <on/off>] [-z <font size modifier>]
 
 -h, --host                  Host to connect to.            (default: localhost)
 -p, --port                  Port to use or connect to.     (default: 16108)
@@ -46,8 +46,9 @@ usage: $SCRIPT_NAME [-h <host>] [-p <port>] [-c <shell mode>] [-d <display>]
 -s, --sort-style            Windows (dirs first) or ls.    (default: ls)
 -r, --dir-order             Directory list ordering.       (default: ascending)
 
--t, --disable-star          Don't show Viewglob terminal asterisk
--b, --disable-icons         Don't show file type icons.
+-t, --shell-star            Asterisk character at prompt.  (default: on)
+-i, --file-icons            File type icons in display.    (default: on)
+
 -z, --font-size-modifier    Increase/decrease display font size.
 
 -h, --help                  This usage.
@@ -113,6 +114,12 @@ vg_test_font_size_modifier() {
 	fi
 }
 
+vg_test_onoff() {
+	if [[ "$OPTARG" != on ]] && [[ "$OPTARG" != off ]]
+		then vg_error "Argument must be \"on\" or \"off\"" 1
+	fi
+}
+
 
 if [[ "$VG_VIEWGLOB_ACTIVE" = yep ]]
 	then vg_error "This shell is already being monitored" 2
@@ -131,7 +138,7 @@ fi
 . $VG_LIB_DIR/getopt.sh
 
 # Parse the options.
-while getoptex "h: p: b; c: d: r: s: t; H; v; V; z: host: port: shell-mode: display: font-size-modifier: sort-style: dir-order: disable-star; disable-icons; help; version;" "$@"
+while getoptex "h: p: i: c: d: r: s: t: H; v; V; z: host: port: shell-mode: display: font-size-modifier: sort-style: dir-order: shell-star: file-icons: help; version;" "$@"
 	do case "$OPTOPT" in
 
 		h|host)
@@ -146,8 +153,9 @@ while getoptex "h: p: b; c: d: r: s: t; H; v; V; z: host: port: shell-mode: disp
 			VGD_OPTS="$VGD_OPTS --port=$OPTARG"
 			;;
 
-		b|disable-icons)
-			VGD_OPTS="$VGD_OPTS --disable-icons"
+		i|file-icons)
+			vg_test_onoff "$OPTARG"
+			VGD_OPTS="$VGD_OPTS --file-icons $OPTARG"
 			;;
 
 		c|shell-mode)
@@ -171,8 +179,9 @@ while getoptex "h: p: b; c: d: r: s: t; H; v; V; z: host: port: shell-mode: disp
 			VGD_OPTS="$VGD_OPTS --dir-order=$OPTARG"
 			;;
 
-		t|disable-star)
-			VGSEER_OPTS="$VGSEER_OPTS --disable-star"
+		t|shell-star)
+			vg_test_onoff "$OPTARG"
+			VGSEER_OPTS="$VGSEER_OPTS --shell-star $OPTARG"
 			;;
 
 		z|font-size-modifier)

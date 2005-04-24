@@ -1,3 +1,14 @@
+2005-04-24 13:00  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* README.ms, vgd.1.in, vgseer.1.in, viewglob.1.in:
+	  Documentation updates.
+	* fgetopt.c, fgetopt.h, vgseer.c, vgd.c, viewglob.in,
+	  display-common.c:
+	  Change disabling options to be enabled and disabled.
+	* x11-stuff.c, x11-stuff.h, display-common.c, display-common.h,
+	  exhibit.h, jump-resize.c, vgclassic.c, vgmini.c:
+	  Lotsa tweaks to the refocusing/raising.
+
 2005-04-22 13:15  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* vgseer.1.in: text changes

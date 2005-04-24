@@ -18,7 +18,8 @@ vgd_SOURCES = \
 	$(COMMON_DIR)/x11-stuff.c \
 	$(COMMON_DIR)/logging.c \
 	$(COMMON_DIR)/syslogging.c \
-	$(COMMON_DIR)/conf-to-args.c
+	$(COMMON_DIR)/conf-to-args.c \
+	$(COMMON_DIR)/fgetopt.c
 
 noinst_HEADERS = tcp-listen.h
 

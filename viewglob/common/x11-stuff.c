@@ -53,31 +53,36 @@ static gchar* get_window_title (Display* disp, Window win);
 static gboolean client_msg(Display* disp, Window win, gchar* msg,
 		gulong data0, gulong data1, gulong data2, gulong data3, gulong data4);
 
-
+//XSetInputFocus
 void refocus(Display* disp, Window w1, Window w2) {
 	g_return_if_fail(disp != NULL);
 
+	if (w1 == 0 || w2 == 0)
+		return;
+
 	Window active_window;
 	gint dummy;
+	gulong* w1_desktop;
+	gulong* w2_desktop;
+
+	w1_desktop = get_desktop(disp, w1);
+	w2_desktop = get_desktop(disp, w2);
 
 	XGetInputFocus(disp, &active_window, &dummy);
 
 	/* Refocus the window which isn't focused.  Or, if neither
-	   are focused (?), focus both. */
-	if (active_window == w1) {
-		if (w2 != 0 && is_visible(disp, w2))
-			focus_window(disp, w2, FALSE);
-	}
-	else if (active_window == w2) {
-		if (w1 != 0 && is_visible(disp, w1))
-			focus_window(disp, w1, FALSE);
-	}
+	   are focused (?), raise one and focus the other. */
+	if (active_window == w1)
+		focus_window(disp, w2, *w1_desktop);
+	else if (active_window == w2)
+		focus_window(disp, w1, *w2_desktop);
 	else {
-		if (w1 != 0 && is_visible(disp, w1))
-			focus_window(disp, w1, FALSE);
-		if (w2 != 0 && is_visible(disp, w2))
-			focus_window(disp, w2, FALSE);
+		raise_window(disp, w1, w2, TRUE);
+		focus_window(disp, w2, *w2_desktop);
 	}
+
+	g_free(w1_desktop);
+	g_free(w2_desktop);
 }
 
 
@@ -93,28 +98,33 @@ Window get_active_window(Display* disp) {
 }
 
 
-void focus_window(Display* disp, Window win, gboolean switch_desktop) {
+void raise_window(Display* disp, Window win1, Window win2,
+		gboolean switch_desktop) {
 	gulong* desktop;
-	/* desktop ID */
-	if ((desktop = (gulong*)get_property(disp, win,
-			XA_CARDINAL, "_NET_WM_DESKTOP", NULL)) == NULL) {
-		if ((desktop = (gulong*)get_property(disp, win,
-				XA_CARDINAL, "_WIN_WORKSPACE", NULL)) == NULL) {
-			g_warning("Cannot find desktop ID of the window");
-		}
+
+	if (!win1 || !win2)
+		return;
+
+	desktop = get_desktop(disp, win2);
+
+	if (switch_desktop)
+		window_to_desktop(disp, win1, *desktop);
+
+	g_free(desktop);
+
+	XMapRaised(disp, win1);
+}
+
+
+void focus_window(Display* disp, Window win, gulong desktop) {
+
+	if (window_to_desktop(disp, win, desktop)) {
+		 /* 100 ms - make sure the WM has enough time to move the window,
+			before we activate it */
+		usleep(100000);
 	}
 
-	if (switch_desktop && desktop) {
-		if (client_msg(disp, DefaultRootWindow(disp), 
-					"_NET_CURRENT_DESKTOP", 
-					*desktop, 0, 0, 0, 0) != EXIT_SUCCESS) {
-			g_warning("Cannot switch desktop");
-		}
-		g_free(desktop);
-	}
-
-	/*client_msg(disp, win, "_NET_ACTIVE_WINDOW", 0, 0, 0, 0, 0);*/
-	client_msg(disp, win, "_NET_ACTIVE_WINDOW", 2, time(NULL), 0, 0, 0);
+	client_msg(disp, win, "_NET_ACTIVE_WINDOW", 0, 0, 0, 0, 0);
 	XMapRaised(disp, win);
 }
 
@@ -134,6 +144,62 @@ gboolean is_visible(Display* disp, Window win) {
 		return FALSE;
 
 	return TRUE;
+}
+
+
+gulong* get_desktop(Display* disp, Window win) {
+
+	gulong* desktop = NULL;
+
+	/* desktop ID */
+	if ((desktop = (gulong*)get_property(disp, win,
+			XA_CARDINAL, "_NET_WM_DESKTOP", NULL)) == NULL) {
+		desktop = (gulong*)get_property(disp, win,
+				XA_CARDINAL, "_WIN_WORKSPACE", NULL);
+	}
+
+	return desktop;
+}
+
+
+gulong* current_desktop(Display* disp) {
+    gulong *cur_desktop = NULL;
+
+	Window root = DefaultRootWindow(disp);
+
+	if (!(cur_desktop = (gulong*)get_property(disp, root,
+			XA_CARDINAL, "_NET_CURRENT_DESKTOP", NULL))) {
+		if (!(cur_desktop = (gulong*)get_property(disp, root,
+				XA_CARDINAL, "_WIN_WORKSPACE", NULL))) {
+			g_warning("Cannot get current desktop properties. "
+					"(_NET_CURRENT_DESKTOP or _WIN_WORKSPACE property)");
+		}
+	}
+
+	return cur_desktop;
+}
+
+
+gint window_to_desktop (Display *disp, Window win, gint desktop) {
+    gulong *cur_desktop = NULL;
+    Window root = DefaultRootWindow(disp);
+   
+    if (desktop == -1) {
+        if (! (cur_desktop = (gulong *)get_property(disp, root,
+                XA_CARDINAL, "_NET_CURRENT_DESKTOP", NULL))) {
+            if (! (cur_desktop = (gulong *)get_property(disp, root,
+                    XA_CARDINAL, "_WIN_WORKSPACE", NULL))) {
+                g_warning("Cannot get current desktop properties. "
+                      "(_NET_CURRENT_DESKTOP or _WIN_WORKSPACE property)");
+                return EXIT_FAILURE;
+            }
+        }
+        desktop = *cur_desktop;
+    }
+    g_free(cur_desktop);
+
+    return client_msg(disp, win, "_NET_WM_DESKTOP", (gulong)desktop,
+            0, 0, 0, 0);
 }
 
 

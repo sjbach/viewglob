@@ -325,7 +325,7 @@ static void parse_args(gint argc, gchar** argv, struct options* opts) {
 		{ "host", 1, NULL, 'h' },
 		{ "port", 1, NULL, 'p' },
 		{ "shell-mode", 1, NULL, 'c' },
-		{ "disable-star", 0, NULL, 't' },
+		{ "shell-star", 2, NULL, 't' },
 		{ "executable", 1, NULL, 'e' },
 		{ "help", 0, NULL, 'H' },
 		{ "version", 0, NULL, 'V' },
@@ -334,7 +334,8 @@ static void parse_args(gint argc, gchar** argv, struct options* opts) {
 
 	optind = 0;
 	while (in_loop) {
-		switch (getopt_long(argc, argv, "h:p:c:te:vVH", long_options, NULL)) {
+		switch (fgetopt_long(argc, argv,
+					"h:p:c:t::e:vVH", long_options, NULL)) {
 			case -1:
 				in_loop = FALSE;
 				break;
@@ -354,7 +355,10 @@ static void parse_args(gint argc, gchar** argv, struct options* opts) {
 				break;
 
 			case 't':
-				putenv_wrapped("VG_ASTERISK=");
+				if (!optarg || STREQ(optarg, "on"))
+					putenv_wrapped("VG_ASTERISK=yep");
+				else if (STREQ(optarg, "off"))
+					putenv_wrapped("VG_ASTERISK=");
 				break;
 
 			case 'e':
@@ -422,10 +426,11 @@ static void usage(void) {
 	g_print("-p, --port            vgd listen port on host.       "
 			"(default: 16108)\n");
 	g_print("-c, --shell-mode      Shell to use (bash or zsh).    "
-			"(default: bash)\n\n");
+			"(default: bash)\n");
+	g_print("-t, --shell-star      Little asterisk at prompt.     "
+			"(default: on)\n\n");
 
 	g_print("-e, --executable      Alternate shell executable.\n");
-	g_print("-t, --disable-star    Don't show the little asterisk.\n");
 	g_print("-H, --help            Display this usage.\n");
 	g_print("-V, --version         Print the version.\n");
 	exit(EXIT_SUCCESS);

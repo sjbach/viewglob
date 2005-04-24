@@ -40,8 +40,8 @@ struct vgmini {
 
 	GtkWidget* vbox;
 
+	GString* term_win;
 	gboolean jump_resize;
-//	GString* term_win;
 };
 
 
@@ -60,7 +60,7 @@ static void rearrange_and_show(struct vgmini* vg);
 static void update_dc(struct vgmini* vg, DirCont* dc, gboolean setting);
 static void activate_dc(struct vgmini* vg, gboolean next);
 
-static void do_order(struct vgmini* vg, const gchar* order);
+static void do_nav(struct vgmini* vg, const gchar* order);
 static void set_cmd(struct vgmini* vg, const gchar* string);
 
 static gboolean window_configure_event(GtkWidget* window,
@@ -89,20 +89,20 @@ gint main(gint argc, char** argv) {
 			G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION, syslogging, NULL);
 	openlog_wrapped(g_get_prgname());
 
-	struct prefs v;
-	prefs_init(&v);
-	parse_args(argc, argv, &v);
+	struct prefs prfs;
+	prefs_init(&prfs);
+	parse_args(argc, argv, &prfs);
 
 	struct vgmini vg;
-//	vg.term_win = g_string_new(NULL);
 	vg.dcs = NULL;
 	vg.active = NULL;
 	vg.width_change = 0;
-	vg.jump_resize = TRUE;	// TODO: add --jump-resize thing
+	vg.term_win = g_string_new(NULL);
+	vg.jump_resize = prfs.jump_resize;
 
 	/* vgmini keeps sizes a little smaller than vgclassic. */
-	file_box_set_sizing(v.font_size_modifier - 1, v.show_icons);
-	dircont_set_sizing(v.font_size_modifier - 1);
+	file_box_set_sizing(prfs.font_size_modifier - 1, prfs.show_icons);
+	dircont_set_sizing(prfs.font_size_modifier - 1);
 
 	/* Toplevel window. */
 	vg.window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
@@ -173,7 +173,16 @@ static gboolean receive_data(GIOChannel* source, GIOCondition condition,
 		switch (param) {
 
 			case P_ORDER:
-				do_order(vg, value);
+				if (STREQ(value, "refocus")) {
+					if (vg->jump_resize) {
+						if (!jump_and_resize(vg->window, vg->term_win->str))
+							refocus_wrapped(vg->window, vg->term_win->str);
+					}
+					else
+						refocus_wrapped(vg->window, vg->term_win->str);
+				}
+				else
+					do_nav(vg, value);
 				break;
 
 			case P_CMD:
@@ -181,9 +190,17 @@ static gboolean receive_data(GIOChannel* source, GIOCondition condition,
 				break;
 
 			case P_WIN_ID:
-				if (vg->jump_resize)
-					jump_and_resize(vg->window, value);
-				refocus_wrapped(vg->window, value);
+				if (!STREQ(vg->term_win->str, value)) {
+
+					if (vg->jump_resize) {
+						if (!jump_and_resize(vg->window, value))
+							raise_wrapped(vg->window, value);
+					}
+					else
+						raise_wrapped(vg->window, value);
+					
+					vg->term_win = g_string_assign(vg->term_win, value);
+				}
 				break;
 
 			case P_MASK:
@@ -516,7 +533,7 @@ static void update_dc(struct vgmini* vg, DirCont* dc, gboolean setting) {
 }
 
 
-static void do_order(struct vgmini* vg, const gchar* order) {
+static void do_nav(struct vgmini* vg, const gchar* order) {
 	if (STREQ(order, "pgup"))
 		dircont_nav(vg->active, DCN_PGUP);
 	else if (STREQ(order, "pgdown"))

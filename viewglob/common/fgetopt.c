@@ -33,7 +33,7 @@ int opterr = 1;
 int optopt = 0;
 static int newinv = 1;
 
-int getopt_long (
+int fgetopt_long (
     int argc, char *const argv[],
     const char *optstring,
     const struct option *longopts,
@@ -199,5 +199,8 @@ int getopt_long (
             return '?';
         }
     }
+
+	/* FIXME? */
+	return -1;
 }
 

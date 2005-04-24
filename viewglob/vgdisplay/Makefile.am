@@ -19,7 +19,8 @@ vgclassic_SOURCES = \
 	$(COMMON_DIR)/param-io.c \
 	$(COMMON_DIR)/hardened-io.c \
 	$(COMMON_DIR)/x11-stuff.c  \
-	$(COMMON_DIR)/syslogging.c
+	$(COMMON_DIR)/syslogging.c \
+	$(COMMON_DIR)/fgetopt.c
 
 
 vgmini_SOURCES = \
@@ -33,7 +34,8 @@ vgmini_SOURCES = \
 	$(COMMON_DIR)/param-io.c \
 	$(COMMON_DIR)/hardened-io.c \
 	$(COMMON_DIR)/x11-stuff.c \
-	$(COMMON_DIR)/syslogging.c
+	$(COMMON_DIR)/syslogging.c \
+	$(COMMON_DIR)/fgetopt.c
 
 CLEANFILES = app_icons.tmp file_icons.tmp
 

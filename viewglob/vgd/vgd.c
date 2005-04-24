@@ -152,7 +152,7 @@ static void parse_args(gint argc, gchar** argv, struct state* s) {
 	struct option long_options[] = {
 		{ "port", 1, NULL, 'p' },
 		{ "display", 1, NULL, 'd' },
-		{ "persistent", 0, NULL, 'P' },
+		{ "persistent", 2, NULL, 'P' },
 		{ "sort-style", 1, NULL, 's' },
 		{ "dir-order", 1, NULL, 'r' },
 		{ "font-size-modifier", 1, NULL, 'z' },
@@ -164,7 +164,8 @@ static void parse_args(gint argc, gchar** argv, struct state* s) {
 		{ "magenta", 1, NULL, '6' },
 		{ "cyan", 1, NULL, '7' },
 		{ "white", 1, NULL, '8' },
-		{ "disable-icons", 0, NULL, 'b' },
+		{ "file-icons", 2, NULL, 'i' },
+		{ "jump-resize", 2, NULL, 'j' },
 		{ "help", 0, NULL, 'H' },
 		{ "version", 0, NULL, 'V' },
 		{ 0, 0, 0, 0},
@@ -172,8 +173,8 @@ static void parse_args(gint argc, gchar** argv, struct state* s) {
 
 	optind = 0;
 	while (in_loop) {
-		switch (getopt_long(argc, argv,
-					"p:d:ps:r:z:bHV", long_options, NULL)) {
+		switch (fgetopt_long(argc, argv,
+					"p:d:P::s:r:z:i::j::HV", long_options, NULL)) {
 			case -1:
 				in_loop = FALSE;
 				break;
@@ -199,7 +200,10 @@ static void parse_args(gint argc, gchar** argv, struct state* s) {
 
 			/* Persistence */
 			case 'P':
-				s->persistent = TRUE;
+				if (!optarg || STREQ(optarg, "on"))
+					s->persistent = TRUE;
+				else if (STREQ(optarg, "off"))
+					s->persistent = FALSE;
 				break;
 
 			/* Sort style */
@@ -268,8 +272,18 @@ static void parse_args(gint argc, gchar** argv, struct state* s) {
 				args_add(&s->display.args, optarg);
 				break;
 
-			case 'b':
-				args_add(&s->display.args, "--disable-icons");
+			/* File type icons */
+			case 'i':
+				args_add(&s->display.args, "--file-icons");
+				if (optarg)
+					args_add(&s->display.args, optarg);
+				break;
+
+			/* Enable or disable jump-resize */
+			case 'j':
+				args_add(&s->display.args, "--jump-resize");
+				if (optarg)
+					args_add(&s->display.args, optarg);
 				break;
 
 			case 'H':
@@ -297,9 +311,10 @@ static void parse_args(gint argc, gchar** argv, struct state* s) {
 
 
 static void usage(void) {
-	g_print("usage: vgd  [-p <port>] [-P] [-d <display>] [-s <sort style>\n");
-	g_print("            [-r <dir order>] [-z <font size modifier>] [-b]\n");
-	g_print("            [--<colour> <colour string>]\n\n");
+	g_print("usage: vgd  [-p <port>] [-P] [-d <display>] [-s <sort style>]\n");
+	g_print("            [-r <dir order>] [-z <font size modifier>] "
+			"[-b <on/off>]\n");
+	g_print("            [-j <on/off>] [--<colour> <colour string>]\n\n");
 
 	g_print("-p, --port                     "
 			"Listen on this port.      (default: 16108)\n");
@@ -308,19 +323,21 @@ static void usage(void) {
 	g_print("-s, --sort-style               "
 			"Windows or ls.            (default: ls)\n");
 	g_print("-r, --dir-order                "
-			"Directory list ordering.  (default: ascending)\n\n");
+			"Directory list ordering.  (default: ascending)\n");
+	g_print("-b, --file-icons               "
+			"File type icons.          (default: on)\n");
+	g_print("-j, --jump-resize              "
+			"Automatic move/resize.    (default: on)\n\n");
 
 	g_print("-z, --font-size-modifier       "
-			"Increase/decrease display font size.\n");
-	g_print("-b, --disable-icons            "
-			"Do not show file type icons.\n\n");
+			"Increase/decrease display font size.\n\n");
 
 	g_print("--black, --red, --green        "
 			"LS_COLORS terminal colour interpretations.\n");
 	g_print("--yellow, --blue, --magenta    "
 			"These can be names or hex representations\n");
 	g_print("--magenta --cyan, --white      "
-			"such as #RRGGBB.\n\n");
+			"such as \"#RRGGBB\".\n\n");
 
 	g_print("-H, --help                     "
 			"Display this usage.\n");
@@ -559,7 +576,8 @@ static void process_client(struct state* s, struct vgseer_client* v) {
 					context_switch(s, v);
 				}
 				else
-					update_display(s, v, P_WIN_ID, win_to_str(v->win));
+					update_display(s, v, param, value);
+					//update_display(s, v, P_WIN_ID, win_to_str(v->win));
 			}
 			else if (STREQ(value, "toggle")) {
 				if (child_running(&s->display))
@@ -758,11 +776,8 @@ static void new_vgseer_client(struct state* s, gint client_fd) {
 		goto out_of_sync;
 
 	/* Find the client's terminal window. */
-	// FIXME: accept client even if can't find window.
-	if ( (v->win = get_xid_from_title(s->Xdisplay, term_title)) == 0) {
+	if ( (v->win = get_xid_from_title(s->Xdisplay, term_title)) == 0)
 		g_warning("(%d) Couldn't locate client's window", client_fd);
-		goto reject;
-	}
 
 	/* Finally, send over the vgexpand options. */
 	if (!put_param(client_fd, P_VGEXPAND_OPTS, s->vgexpand_opts->str))
