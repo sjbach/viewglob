@@ -41,7 +41,7 @@ Feedback is welcome!
 .
 .Sh NEW IN THIS RELEASE
 .LP
-Lots of work has been done to implement some of the most often requested features, resulting in a massive code overhall and completely different "under the hood" execution.  It's a large enough release that even if you've used Viewglob before, you'll probably have to glance through the manpages.
+Lots of work has been done to implement some of the most often requested features, resulting in a massive code overhaul and completely different "under the hood" execution.  It's a large enough release that even if you've used Viewglob before, you'll probably have to glance through the manpages.
 .LP
 Here's a short list of the biggest changes:
 .LP
