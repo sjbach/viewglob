@@ -232,7 +232,6 @@ gint main(gint argc, gchar** argv) {
 	gboolean ok;
 	ok =  child_terminate(&u.shell);
 	ok &= child_terminate(&u.sandbox);
-	g_print("[Exiting viewglob]\n");
 	return (ok ? EXIT_SUCCESS : EXIT_FAILURE);
 }
 
@@ -1247,7 +1246,6 @@ static void clean_fail(struct child* new_lamb) {
 		if (stored2)
 			(void) child_terminate(stored2);
 		(void) tc_restore();
-		printf("[Exiting Viewglob]\n");
 		_exit(EXIT_FAILURE);
 	}
 }

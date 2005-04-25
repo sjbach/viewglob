@@ -1,14 +1,9 @@
 
 Critical:
-- doc: konsole and gnome-terminal
 - make: viewglob.in should not be packaged?
-- cygwin
-
-End:
-- vgseer: close stderr in user shell
-- remove '[Exiting viewglob]'
 
 Non-critical:
+- cygwin
 - vgclassic: mask and developing mask
 - vgdisplays: shift click filename puts full path
 - vgmini: statuses

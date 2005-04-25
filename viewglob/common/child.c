@@ -23,6 +23,10 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
 #include <sys/wait.h>
 #ifndef WEXITSTATUS
 #  define WEXITSTATUS(stat_val) ((unsigned)(stat_val) >> 8)
@@ -30,7 +34,6 @@
 #ifndef WIFEXITED
 #  define WIFEXITED(stat_val) (((stat_val) & 255) == 0)
 #endif
-
 
 #ifdef HAVE_SYS_SELECT_H
 #  include <sys/select.h>
@@ -135,7 +138,11 @@ gboolean child_fork(struct child* c) {
 						g_strerror(errno));
 				goto child_fail;
 			}
-			//(void) close(STDERR_FILENO);
+
+			/* Close off stderr. */
+			(void) close(STDERR_FILENO);
+			(void) open ("/dev/null", O_RDWR);
+
 			(void) close(pfdout[0]); // FIXME check errors
 			(void) close(pfdout[1]);
 			(void) close(pfdin[0]);

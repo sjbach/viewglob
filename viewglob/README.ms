@@ -12,17 +12,23 @@ Stephen Bach <sjbach@users.sourceforge.net>
 .
 .Sh INTRODUCTION
 .LP
-\fIViewglob\fP is a filesystem visualization add-on for Bash and Zsh when used in windowing environments.  It has three communicating parts:
+\fIViewglob\fP is a filesystem visualization add-on for Bash and Zsh when used in windowing environments.  It controls a graphical display listing the contents of certain directories, with file selections, which are relevant to the active shell+terminal.  The display updates dynamically when the command line or environment of the current shell changes or when the user switches to a different terminal.  It can track multiple shells, local and remote.
+.LP
+The package has three communicating parts:
 .RS
-.IP vgseer:
+.IP "- vgseer, client:"
 Supervises an interactive shell and keeps track of command line and environment changes.
-.IP vgd:
+.IP "- vgd, server daemon:"
 Mediates information exchange between any number of vgseer processes (local or remote) and a Viewglob display.
-.IP "the display:"
-Lists the contents of directories relevant to the currently active shell, highlighting file selections and potential name completions.
+.IP "- vgmini and vgclassic, graphical displays:"
+List the contents of directories relevant to the currently active shell, highlighting file selections and potential name completions.
 .RE
 .LP
-The website is here:
+A convenience script "viewglob" is provided as a startup shortcut.
+.LP
+You can learn more about using this package in the manpages for viewglob(1), vgseer(1), and vgd(1).
+.LP
+The website for Viewglob is here:
 .IP
 http://viewglob.sourceforge.net
 .LP
@@ -35,11 +41,23 @@ Feedback is welcome!
 .
 .Sh NEW IN THIS RELEASE
 .LP
-The Viewglob display was sometimes forgetting to convert filenames from their locale encoding to the encoding which GLib uses, resulting in frequent annoying error messages for people not using UTF-8.  This has been fixed and some information about encodings has been added to the manual.
+Lots of work has been done to implement some of the most often requested features, resulting in a massive code overhall and completely different "under the hood" execution.  It's a large enough release that even if you've used Viewglob before, you'll probably have to glance through the manpages.
+.LP
+Here's a short list of the biggest changes:
+.LP
+.RS
+- Multiple terminal tracking for a single display
+.br
+- Viewglob tracking for remote shells (ssh, telnet)
+.br
+- A new display program (used by default)
+.br
+- Filename masking as a means to filter display results
+.RE
 .
 .Sh INSTALLATION
 .LP
-For a full install, it's a simple ./configure && make && sudo make install.  If you only wish to install the shell client portion, say for a server without X which you only access through ssh, use the following flag:
+For a full install, it's a simple ./configure && make && sudo make install.  If you only wish to install the shell client portion, say for a server without X or GTK+ which you only access through ssh, use the following flag:
 .IP
  ./configure --enable-vgseer-only
 .LP
@@ -51,7 +69,6 @@ Tested on:
 .Vs
 FreeBSD 4.10 with GTK+ 2.4.3
 GNU/Linux (various) with GTK+ 2.4+
-Cygwin with GTK+ 2.4.6
 .Ve
 Previous versions of Viewglob were said to run on Mac OS X 10.3.5 (with fink unstable providing GTK+ 2.4), but it has not been tested for this release.
 .LP

@@ -84,12 +84,12 @@ C-f, C-d, or <Page Down>
 .LP
 To enter a real C\-g to the shell, type it twice.  Navigation commands can be chained together - for example, typing C-g C-f C-f C-k will page down twice and then move up once.  The chain is broken when a non-navigation character is typed.
 .LP
-In \fIvgmini\fP, the default display, Up and Down are used to switch between viewable direcories, while Page Up and Page Down are used to navigation the currently viewed directory.
+In \fIvgmini\fP, the default display program, Up and Down are used to switch between viewable direcories, while Page Up and Page Down are used to navigation the currently viewed directory.
 .RE
 .PP
 \fBCommands\fP
 .RS 4
-There are four Viewglob commands in addition to the display navigation.  After typing C-g:
+There are four Viewglob commands in addition to display navigation.  After typing C-g:
 .LP
 .RS
 .PD 0
@@ -134,7 +134,7 @@ If the display did not automatically update to the current shell after a window 
 .PP
 \fBFilename Masking\fP
 .RS 4
-File masking is a way to control the number and type of files shown in the display.  The default mask is "*", which shows all non-hidden files.  To show ALL files, an appropriate mask would be ".* *".  To show only C source files, the mask could be "*.[ch]" or "*.c *.h".  To just display directory file types, the mask would be "*/".
+File masking is a way to control the number and types of files shown in the display.  The default mask is "*", which shows all non-hidden files.  To show ALL files, an appropriate mask would be ".* *".  To show only C source files, the mask could be "*.[ch]" or "*.c *.h".  To just display directory file types, the mask would be "*/".
 .LP
 A mask can be set with the key sequence C-g [mask] <ENTER>.  The mask string will print in the display as it's being typed.  Typing a non-printable character (such as <ESC> or C-c) while creating a new mask will cancel it.  The mask can be set back to the default "*" with a simple C-g <ENTER>.
 .LP

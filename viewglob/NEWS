@@ -1,3 +1,17 @@
+New in 2.0, released 2005-04-25:
+	Features:
+	  * Multiple terminal tracking.
+	  * Remote shell capability.
+	  * New display "vgmini".
+	  * Filename masking.
+	  * Navigation command chaining.
+	  * Settable LS_COLORS.
+	  * Client-only build for remote, non-X machines.
+
+	Bug fixes:
+	  * Lots of little stuff along the way.  There are probably many new
+	    bugs introduced in this release ;-)
+
 New in 1.1.1, released 2005-03-17:
 	Bug fixes:
 	  * There should no longer be display issues if using non-UTF-8
@@ -65,9 +79,9 @@ New in 0.9.1, released 2004-09-20:
 	* Miscellaneous bug fixes.
 
 New in 0.9, released 2004-09-09:
-	* Added support for zsh (please send bug reports!).
+	* Added support for zsh - please send bug reports!
 	* Added functionality to navigate the display from the terminal.
-	* Changed the appearance of restriced directories in the display.
+	* Changed the appearance of restricted directories in the display.
 	* Fixed bug involving transcript naming.
 	* Fixed bug involving directories with special characters.
 	* Removed "name" mode directory comparison (there's no good reason to
