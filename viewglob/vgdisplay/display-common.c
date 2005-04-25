@@ -202,6 +202,9 @@ void refocus_wrapped(GtkWidget* display_win_gtk, gchar* term_win_str) {
 	display_win = GDK_WINDOW_XID(display_win_gtk->window);
 	term_win = str_to_win(term_win_str);
 
+	if (display_win == 0 || term_win == 0)
+		return;
+
 	refocus(Xdisplay, display_win, term_win);
 }
 
@@ -214,6 +217,9 @@ void raise_wrapped(GtkWidget* display_win_gtk, gchar* term_win_str) {
 	Xdisplay = GDK_DRAWABLE_XDISPLAY(display_win_gtk->window);
 	display_win = GDK_WINDOW_XID(display_win_gtk->window);
 	term_win = str_to_win(term_win_str);
+
+	if (display_win == 0 || term_win == 0)
+		return;
 
 	gulong* desktop = get_desktop(Xdisplay, term_win);
 

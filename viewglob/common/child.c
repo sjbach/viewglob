@@ -175,10 +175,14 @@ gboolean child_terminate(struct child* c) {
 	gboolean ok = TRUE;
 
 	/* Close the pty to the sandbox shell (if valid). */
-	if (c->fd_in != -1)
+	if (c->fd_in != -1) {
 		(void) close(c->fd_in);
-	if (c->fd_out != -1)
+		c->fd_in = -1;
+	}
+	if (c->fd_out != -1) {
 		(void) close(c->fd_out);
+		c->fd_out = -1;
+	}
 
 	/* Terminate and wait the child's process. */
 	if (c->pid != -1) {
@@ -187,10 +191,11 @@ gboolean child_terminate(struct child* c) {
 		switch (kill(c->pid, SIGHUP)) {
 			case 0:
 				ok &= waitpid_wrapped(c->pid);
-				c->pid = -1;
 				break;
 			case -1:
-				if (errno != ESRCH) {
+				if (errno == ESRCH)
+					ok &= waitpid_wrapped(c->pid);
+				else {
 					g_critical("Could not terminate child: %s",
 							g_strerror(errno));
 					ok = FALSE;
@@ -200,6 +205,7 @@ gboolean child_terminate(struct child* c) {
 				g_return_val_if_reached(FALSE);
 				/*break;*/
 		}
+		c->pid = -1;
 	}
 
 	return ok;

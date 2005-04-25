@@ -344,7 +344,6 @@ static gchar* get_window_title(Display *disp, Window win) {
 
 /* Converts win to a string (statically allocated memory) */
 gchar* win_to_str(Window win) {
-	g_return_val_if_fail(win != 0, "0");
 
 	static GString* win_str = NULL;
 

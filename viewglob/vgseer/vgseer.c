@@ -49,10 +49,10 @@
 #  define WIFEXITED(stat_val) (((stat_val) & 255) == 0)
 #endif
 
-#include <termios.h>
+#include <sys/ioctl.h>
 
-#if GWINSZ_IN_SYS_IOCTL
-# include <sys/ioctl.h>
+#ifndef GWINSZ_IN_SYS_IOCTL
+#  include <termios.h>
 #endif
 
 

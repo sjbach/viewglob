@@ -1,3 +1,8 @@
+2005-04-25 00:58  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* child.c, x11-stuff.c, display-common.c, vgseer.c:
+	  Portability fixes.
+
 2005-04-24 17:28  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* README.ms, vgd.1.in, vgseer.1.in, viewglob.1.in:
