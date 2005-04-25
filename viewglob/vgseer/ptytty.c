@@ -34,6 +34,12 @@
 #  endif
 #endif
 
+#ifdef GETPGRP_VOID
+#  define GETPGRP getpgrp()
+#else
+#  define GETPGRP getpgrp(0)
+#endif
+
 #include <stdio.h>
 #ifdef HAVE_STDLIB_H
 # include <stdlib.h>
@@ -296,13 +302,7 @@ rxvt_control_tty(int fd_tty, const char *ttydev)
 	return -1;		/* fatal */
     close(fd);
 /* ---------------------------------------- */
-    D_TTY((stderr, "rxvt_control_tty(): tcgetpgrp(): %d  getpgrp(): %d", tcgetpgrp(fd_tty),
-# ifdef GETPGRP_VOID
-				getpgrp()
-# else
-				getpgrp(0)
-# endif
-				));
+    D_TTY((stderr, "rxvt_control_tty(): tcgetpgrp(): %d  getpgrp(): %d", tcgetpgrp(fd_tty), GETPGRP));
 /* ---------------------------------------- */
 #endif				/* ! __QNX__ */
     return 0;

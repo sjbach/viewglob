@@ -1,6 +1,7 @@
 2005-04-25 11:43  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* NEWS, README, README.ms, viewglob.1.in: documentation updates
+	* child.c, tcp-connect.c, ptytty.c: FreeBSD portability fixes
 	* configure.ac, child.c, vgseer.c:
 	  Final changes for release 2.0.
 

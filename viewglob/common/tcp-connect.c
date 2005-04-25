@@ -26,15 +26,15 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
+#include "common.h"
+#include "tcp-connect.h"
+
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
 
 #include <string.h>
-
-#include "common.h"
-#include "tcp-connect.h"
 
 int tcp_connect(const char *host, const char *serv) {
 	int sockfd;

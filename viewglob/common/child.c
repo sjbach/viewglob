@@ -27,6 +27,8 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#include <signal.h>
+
 #include <sys/wait.h>
 #ifndef WEXITSTATUS
 #  define WEXITSTATUS(stat_val) ((unsigned)(stat_val) >> 8)
