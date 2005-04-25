@@ -115,17 +115,17 @@ static void process_glob_data(gchar* buf, gsize bytes, Exhibit* e) {
 
 	enum glob_read_state rs;
 
-	gchar* string;
-	gchar* selected_count;
-	gchar* total_count;
-	gchar* hidden_count;
+	gchar* string = NULL;
+	gchar* selected_count = NULL;
+	gchar* total_count = NULL;
+	gchar* hidden_count = NULL;
 
-	static FileType type;
-	static FileSelection selection;
+	static FileType type = FT_REGULAR;
+	static FileSelection selection = FS_NO;
 
-	gint dir_rank;
-	gint file_rank;
-	DListing* dl;
+	gint dir_rank = -1;
+	gint file_rank = -1;
+	DListing* dl = NULL;
 
 	gchar* p;
 

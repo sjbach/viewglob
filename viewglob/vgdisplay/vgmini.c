@@ -245,17 +245,17 @@ static void process_glob_data(gchar* buf, gsize bytes, struct vgmini* vg) {
 
 	enum glob_read_state rs;
 
-	gchar* string;
-	gchar* selected;
-	gchar* total;
-	gchar* hidden;
+	gchar* string = NULL;
+	gchar* selected = NULL;
+	gchar* total = NULL;
+	gchar* hidden = NULL;
 
-	static FileType type;
-	static FileSelection selection;
+	static FileType type = FT_REGULAR;
+	static FileSelection selection = FS_NO;
 
-	gint dir_rank;
-	gint file_rank;
-	DirCont* dc;
+	gint dir_rank = -1;
+	gint file_rank = -1;
+	DirCont* dc = NULL;
 
 	gchar* p;
 
@@ -555,7 +555,7 @@ static void activate_dc(struct vgmini* vg, gboolean next) {
 	if (!vg->active)
 		return;
 
-	DirCont* new_active;
+	DirCont* new_active = NULL;
 	GSList* search;
 
 	gint rank = vg->active->rank;
