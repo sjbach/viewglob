@@ -18,7 +18,7 @@ vgseer_SOURCES = \
 	$(COMMON_DIR)/child.c \
 	$(COMMON_DIR)/param-io.c \
 	$(COMMON_DIR)/shell.c \
-	$(COMMON_DIR)/tcp-connect.c \
+	$(COMMON_DIR)/socket-connect.c \
 	$(COMMON_DIR)/logging.c \
 	$(COMMON_DIR)/conf-to-args.c \
 	$(COMMON_DIR)/fgetopt.c

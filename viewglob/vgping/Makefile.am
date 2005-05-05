@@ -8,5 +8,5 @@ vgping_SOURCES = \
 	vgping.c \
 	$(COMMON_DIR)/hardened-io.c \
 	$(COMMON_DIR)/param-io.c \
-	$(COMMON_DIR)/tcp-connect.c
+	$(COMMON_DIR)/socket-connect.c
 

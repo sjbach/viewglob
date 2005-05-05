@@ -29,6 +29,7 @@
 /* Sockets */
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <sys/un.h>
 #include <arpa/inet.h>
 
 #include "common.h"
@@ -58,7 +59,9 @@ struct state {
 	GString*              vgexpand_opts;
 
 	gchar*                port;
-	gint                  listen_fd;
+	gchar*                unix_sock_name;
+	gint                  port_fd;
+	gint                  unix_fd;
 };
 
 
@@ -82,7 +85,7 @@ void vgseer_client_init(struct vgseer_client* v);
 static void poll_loop(struct state* s);
 static void die(struct state* s, gint result);
 static gint setup_polling(struct state* s, fd_set* set);
-static void new_client(struct state* s);
+static void new_client(struct state* s, gint accept_fd);
 static void new_ping_client(gint ping_fd);
 static void new_vgseer_client(struct state* s, gint client_fd);
 static void process_client(struct state* s, struct vgseer_client* v);
@@ -92,6 +95,7 @@ static void context_switch(struct state* s, struct vgseer_client* v);
 static void check_active_window(struct state* s);
 static void update_display(struct state* s, struct vgseer_client* v,
 		enum parameter param, gchar* value);
+static gint unix_listen(struct state* s);
 static int daemonize(void);
 static void parse_args(gint argc, gchar** argv, struct state* s);
 static void report_version(void);
@@ -128,8 +132,10 @@ gint main(gint argc, gchar** argv) {
 		exit(EXIT_FAILURE);
 	}
 
-	/* Setup listening socket. */
-	if ( (s.listen_fd = tcp_listen(NULL, s.port)) == -1)
+	/* Setup listening sockets. */
+	if ( (s.port_fd = tcp_listen(NULL, s.port)) == -1)
+		exit(EXIT_FAILURE);
+	if ( (s.unix_fd = unix_listen(&s)) == -1)
 		exit(EXIT_FAILURE);
 
 	(void) chdir("/");
@@ -140,7 +146,74 @@ gint main(gint argc, gchar** argv) {
 
 	poll_loop(&s);
 
+	if (s.unix_sock_name)
+		(void) unlink(s.unix_sock_name);
 	return EXIT_SUCCESS;
+}
+
+
+static gint unix_listen(struct state* s) {
+
+	gint listenfd;
+
+	gchar* name;
+	gchar* home;
+	gchar* vgdir;
+
+	struct stat vgdir_stat;
+
+	struct sockaddr_un sun;
+
+	listenfd = socket(AF_LOCAL, SOCK_STREAM, 0);
+	if (listenfd < 0) {
+		g_critical("Could not create unix socket: %s", g_strerror(errno));
+		return -1;
+	}
+
+	if ((home = getenv("HOME")) == NULL) {
+		g_critical("User does not have a home!");
+		return -1;
+	}
+
+	/* Create the ~/.viewglob/ directory. */
+	vgdir = g_strconcat(home, "/.viewglob", NULL);
+	if (stat(vgdir, &vgdir_stat) == -1) {
+		if (mkdir(vgdir, 0700) == -1) {
+			g_critical("Could not create ~/.viewglob directory: %s",
+					g_strerror(errno));
+			return -1;
+		}
+	}
+	else if (!S_ISDIR(vgdir_stat.st_mode)) {
+		g_critical("~/.viewglob exists but is not a directory");
+		return -1;
+	}
+
+	name = g_strconcat(vgdir, "/.", s->port, NULL);
+	g_free(vgdir);
+
+	if (strlen(name) + 1 > sizeof(sun.sun_path)) {
+		g_critical("Path is too long for unix socket");
+		return -1;
+	}
+
+	(void) unlink(name);
+	(void) memset(&sun, 0, sizeof(sun));
+	sun.sun_family = AF_LOCAL;
+	strcpy(sun.sun_path, name);
+
+	if (bind(listenfd, (struct sockaddr*) &sun, sizeof(sun)) == -1) {
+		g_critical("Could not bind socket: %s", g_strerror(errno));
+		return -1;
+	}
+
+	if (listen(listenfd, SOMAXCONN) == -1) {
+		g_critical("Could not listen on socket: %s", g_strerror(errno));
+		return -1;
+	}
+
+	s->unix_sock_name = name;
+	return listenfd;
 }
 
 
@@ -391,8 +464,13 @@ static void poll_loop(struct state* s) {
 		}
 		else if (nready > 0) {
 
-			if (FD_ISSET(s->listen_fd, &rset)) {
-				new_client(s);
+			if (FD_ISSET(s->port_fd, &rset)) {
+				new_client(s, s->port_fd);
+				nready--;
+			}
+
+			if (nready && FD_ISSET(s->unix_fd, &rset)) {
+				new_client(s, s->unix_fd);
 				nready--;
 			}
 
@@ -591,7 +669,6 @@ static void process_client(struct state* s, struct vgseer_client* v) {
 				}
 				else
 					update_display(s, v, param, value);
-					//update_display(s, v, P_WIN_ID, win_to_str(v->win));
 			}
 			else if (STREQ(value, "toggle")) {
 				if (child_running(&s->display))
@@ -685,8 +762,9 @@ static void drop_client(struct state* s, struct vgseer_client* v) {
 
 
 /* Accept a new client. */
-static void new_client(struct state* s) {
+static void new_client(struct state* s, gint accept_fd) {
 	g_return_if_fail(s != NULL);
+	g_return_if_fail(accept_fd >= 0);
 
 	gint new_fd;
 	struct sockaddr_in sa;
@@ -698,7 +776,7 @@ static void new_client(struct state* s) {
 	/* Accept the new client. */
 	again:
 	sa_len = sizeof(sa);
-	if ( (new_fd = accept(s->listen_fd, (struct sockaddr*) &sa,
+	if ( (new_fd = accept(accept_fd, (struct sockaddr*) &sa,
 					&sa_len)) == -1) {
 		if (errno == EINTR)
 			goto again;
@@ -838,10 +916,11 @@ static gint setup_polling(struct state* s, fd_set* set) {
 	GList* iter;
 	struct vgseer_client* v;
 
-	/* Setup polling for the accept socket. */
+	/* Setup polling for the accept sockets. */
 	FD_ZERO(set);
-	FD_SET(s->listen_fd, set);
-	max_fd = s->listen_fd;
+	FD_SET(s->port_fd, set);
+	FD_SET(s->unix_fd, set);
+	max_fd = MAX(s->port_fd, s->unix_fd);
 
 	/* Setup polling for each vgseer client. */
 	for (iter = s->clients; iter; iter = g_list_next(iter)) {
@@ -878,6 +957,8 @@ static void die(struct state* s, gint result) {
 	if (child_running(&s->display))
 		(void) child_terminate(&s->display);
 
+	if (s->unix_sock_name)
+		(void) unlink(s->unix_sock_name);
 	exit(result);
 }
 
@@ -940,7 +1021,10 @@ void state_init(struct state* s) {
 	s->active = NULL;
 
 	s->port = g_strdup("16108");
-	s->listen_fd = -1;
+	s->port_fd = -1;
+
+	s->unix_sock_name = NULL;
+	s->unix_fd = -1;
 }
 
 

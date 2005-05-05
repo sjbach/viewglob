@@ -150,10 +150,8 @@ gboolean jump_and_resize(GtkWidget* gtk_window, gchar* term_win_str) {
 	}
 #endif
 
-	if (move && changed) {
+	if (move && changed)
 		gdk_window_move_resize(gdk_win, me_x, me_y, me_w, me_h);
-		(void) window_to_desktop (Xdisplay, me_win, *term_desktop);
-	}
 
 	g_free(term_desktop);
 	g_free(me_desktop);

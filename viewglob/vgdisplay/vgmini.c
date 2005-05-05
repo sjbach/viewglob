@@ -175,7 +175,9 @@ static gboolean receive_data(GIOChannel* source, GIOCondition condition,
 			case P_ORDER:
 				if (STREQ(value, "refocus")) {
 					if (vg->jump_resize) {
-						if (!jump_and_resize(vg->window, vg->term_win->str))
+						if (jump_and_resize(vg->window, vg->term_win->str))
+							raise_wrapped(vg->window, vg->term_win->str);
+						else
 							refocus_wrapped(vg->window, vg->term_win->str);
 					}
 					else
@@ -192,14 +194,17 @@ static gboolean receive_data(GIOChannel* source, GIOCondition condition,
 			case P_WIN_ID:
 				if (!STREQ(vg->term_win->str, value)) {
 
+					vg->term_win = g_string_assign(vg->term_win, value);
+
 					if (vg->jump_resize) {
-						if (!jump_and_resize(vg->window, value))
-							raise_wrapped(vg->window, value);
+						if (jump_and_resize(vg->window, vg->term_win->str))
+							raise_wrapped(vg->window, vg->term_win->str);
+						else
+							refocus_wrapped(vg->window, vg->term_win->str);
 					}
 					else
 						raise_wrapped(vg->window, value);
 					
-					vg->term_win = g_string_assign(vg->term_win, value);
 				}
 				break;
 

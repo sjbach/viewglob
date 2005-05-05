@@ -92,7 +92,7 @@ int fgetopt_long (
                         if (! op->has_arg && *end == '=')
                         {
                             g_warning("%s: option `--%s' doesn't"
-                                     " allow an argument\n",
+                                     " allow an argument",
                                      argv[0], op->name);
                             ret = '?';
                         }
@@ -109,7 +109,7 @@ int fgetopt_long (
                                          && op->has_arg == required_argument)
                                 {
                                     g_warning("%s: option `--%s' requires"
-                                        " an argument\n",
+                                        " an argument",
                                         argv[0], op->name);
                                     return '?';
                                 }
@@ -140,7 +140,7 @@ int fgetopt_long (
                         return ret;
                     }
                 }
-                g_warning("%s: unrecognized option `--%s'\n",
+                g_warning("%s: unrecognized option `--%s'",
                          argv[0], begin);
                 return '?';
             }
@@ -175,7 +175,7 @@ int fgetopt_long (
                 }
                 else if (optind + 1 >= argc)
                 {
-                    g_warning("%s: option requires an argument -- %c\n",
+                    g_warning("%s: option requires an argument -- %c",
                              argv[0], *op);
                     return '?';
                 }
@@ -194,7 +194,7 @@ int fgetopt_long (
         }
         else
         {
-            g_warning("%s: invalid option -- %c\n",
+            g_warning("%s: invalid option -- %c",
                      argv[0], argv[optind][nextchar - 1]);
             return '?';
         }

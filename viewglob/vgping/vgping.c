@@ -21,7 +21,7 @@
 
 #include "param-io.h"
 #include "hardened-io.h"
-#include "tcp-connect.h"
+#include "socket-connect.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -51,7 +51,14 @@ gint main(gint argc, char** argv) {
 		port = argv[2];
 	}
 
-	if ((fd = tcp_connect(host, port)) == -1)
+	/* If the "port"' contains '.', it's assumed to be a unix socket name
+	   rather than a port. */
+	if (strchr(port, '.'))
+		fd = unix_connect(port + 1);
+	else
+		fd = tcp_connect(host, port);
+	
+	if (fd == -1)
 		return EXIT_FAILURE;
 
 	if (!put_param(fd, P_PURPOSE, "vgping"))

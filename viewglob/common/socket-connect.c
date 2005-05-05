@@ -27,20 +27,61 @@
 */
 
 #include "common.h"
-#include "tcp-connect.h"
+#include "socket-connect.h"
 
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <sys/un.h>
 #include <arpa/inet.h>
 #include <netdb.h>
 
 #include <string.h>
 
-int tcp_connect(const char *host, const char *serv) {
-	int sockfd;
+gint unix_connect(const char* port) {
+	gint sockfd;
+	struct sockaddr_un servaddr;
+	gchar* home;
+	gchar* name;
+
+	if ((home = getenv("HOME")) == NULL) {
+		g_critical("User does not have a home!");
+		return -1;
+	}
+
+	name = g_strconcat(home, "/.viewglob/.", port, NULL);
+
+	if (strlen(name) + 1 > sizeof(servaddr.sun_path)) {
+		g_critical("Socket name too long");
+		return -1;
+	}
+
+	sockfd = socket(AF_LOCAL, SOCK_STREAM, 0);
+	if (sockfd < 0) {
+		g_critical("Could not create socket: %s", g_strerror(errno));
+		return -1;
+	}
+
+	memset(&servaddr, 0, sizeof(servaddr));
+	servaddr.sun_family = AF_LOCAL;
+	strcpy(servaddr.sun_path, name);
+	g_free(name);
+
+	if (connect(sockfd, (struct sockaddr*) &servaddr,
+				sizeof(servaddr)) == -1) {
+		g_critical("Connection error to %s: %s", servaddr.sun_path,
+				g_strerror(errno));
+		return -1;
+	}
+
+	return sockfd;
+}
+
+
+gint tcp_connect(const char *host, const char *serv) {
+	gint sockfd;
 
 #ifdef HAVE_GETADDRINFO
-	int				n;
+	gint				n;
 	struct addrinfo	hints, *res, *ressave;
 
 	(void) memset(&hints, 0, sizeof(struct addrinfo));
@@ -123,6 +164,6 @@ int tcp_connect(const char *host, const char *serv) {
 	}
 #endif
 
-	return(sockfd);
+	return sockfd;
 }
 

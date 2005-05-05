@@ -53,7 +53,6 @@ static gchar* get_window_title (Display* disp, Window win);
 static gboolean client_msg(Display* disp, Window win, gchar* msg,
 		gulong data0, gulong data1, gulong data2, gulong data3, gulong data4);
 
-//XSetInputFocus
 void refocus(Display* disp, Window w1, Window w2) {
 	g_return_if_fail(disp != NULL);
 
@@ -95,24 +94,6 @@ Window get_active_window(Display* disp) {
 	XGetInputFocus(disp, &active_window, &dummy);
 	
 	return active_window;
-}
-
-
-void raise_window(Display* disp, Window win1, Window win2,
-		gboolean switch_desktop) {
-	gulong* desktop;
-
-	if (!win1 || !win2)
-		return;
-
-	desktop = get_desktop(disp, win2);
-
-	if (switch_desktop)
-		window_to_desktop(disp, win1, *desktop);
-
-	g_free(desktop);
-
-	XMapRaised(disp, win1);
 }
 
 

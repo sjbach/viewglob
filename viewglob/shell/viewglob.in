@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with Viewglob; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-
+set -x
 SCRIPT_NAME="${0##*/}"
 VG_LIB_DIR="@pkglibdir@"
 VGPING="$VG_LIB_DIR/vgping"
@@ -29,6 +29,7 @@ VGD_OPTS=
 # vgping needs a default.
 HOST=localhost
 PORT=16108
+VG_LOCAL=yep
 
 # We need extended globbing.
 shopt -s extglob
@@ -142,6 +143,7 @@ while getoptex "h: p: i: c: d: r: s: t: H; v; V; z: host: port: shell-mode: disp
 	do case "$OPTOPT" in
 
 		h|host)
+			VG_LOCAL=nope
 			VGSEER_ONLY=yep
 			HOST="$OPTARG"
 			VGSEER_OPTS="$VGSEER_OPTS --host=$OPTARG"
@@ -203,6 +205,20 @@ if [ "$OPTOPT" = \? ]
 	then exit 5
 fi
 
+if [ "$VG_LOCAL" = yep ]; then
+
+	# Clean out old Unix sockets (if any).
+	for file in $HOME/.viewglob/.*; do
+		if [[ $file == */.+([0-9]) ]]; then
+			$VGPING dummy ${file##*/} || rm -f $file
+		fi
+	done
+
+	PORT=.$PORT
+	VGSEER_OPTS="$VGSEER_OPTS --unix-socket=on"
+fi
+
+
 if [ "$VGSEER_ONLY" = yep ]; then
 	# Either we're running in a display-less environment or the user
 	# specified a host to connect to, implying we're not going local.
@@ -220,7 +236,7 @@ else
 	fi
 
 	# We'll have to setup a new vgd, then exec.
-	if vgd $VGD_OPTS --daemon=on ; then
+	if vgd $VGD_OPTS ; then
 		exec $VGSEER_EXEC $VGSEER_OPTS
 	fi
 fi

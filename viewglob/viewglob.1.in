@@ -12,7 +12,7 @@ The \fIviewglob\fP command is a convenience wrapper for two other programs in th
 .BR vgseer (1)
 and
 .BR vgd (1).
-You will want to use those programs directly to do things that are non-simple.
+You will want to use those programs directly to do things that are non\-simple.
 .PP
 General information about using Viewglob can be found on this manpage under \fBUSAGE\fP.
 
@@ -23,7 +23,7 @@ This program follows the usual GNU command line syntax, with long options starti
 Connect a new vgseer process to a vgd process on the given host.  You should only specify this if you are not connecting to your local machine.
 .TP
 .B \-p, \-\-port=<number>
-Connect a new vgseer process to a vgd process on the given port.  If it is a local connection and there is no vgd active on the port, one will be started.  The default port for Viewglob is 16108 (1-GLOB).
+Connect a new vgseer process to a vgd process on the given port.  If it is a local connection and there is no vgd active on the port, one will be started.  The default port for Viewglob is 16108 (1\-GLOB).
 .TP
 .B \-c, \-\-shell\-mode=<name>
 Shell to be used.  \fIname\fP can be \*(lqbash\*(rq or \*(lqzsh\*(rq (default is bash).
@@ -59,7 +59,7 @@ At the bottom of the display is the command line.  This is what Viewglob is actu
 .PP
 With a few exceptions, any text you type into the display is passed to the terminal as input.  So if you wished, you could use the display as your interface to the shell \-\- this actually works quite well if you're doing a lot of file management.  Arrow keys, Page Up, Page Down, Home, and End are interpreted by the display and not passed to the terminal.
 .PP
-If you start other Viewglob-supervised shells, they will share the display if they connect to the same vgd process (default).  Whichever terminal is currently active (i.e. has window focus or is being typed in) will have its environment shown.
+If you start other Viewglob\-supervised shells, they will share the display if they connect to the same vgd process (default).  Whichever terminal is currently active (i.e. has window focus or is being typed in) will have its environment shown.
 
 \fBDisplay Navigation\fP
 .RS 4
@@ -69,27 +69,27 @@ You can navigate the display from the terminal by pressing C\-g (Ctrl\-G) follow
 .PD 0
 .TP 21n
 Up:
-C-k, C-p, or <Up Arrow>
+C\-k, C\-p, or <Up Arrow>
 .TP
 Down:
-C-j, C-n, or <Down Arrow>
+C\-j, C\-n, or <Down Arrow>
 .TP
 Page Up:
-C-b, C-u, or <Page Up>
+C\-b, C\-u, or <Page Up>
 .TP
 Page Down:
-C-f, C-d, or <Page Down>
+C\-f, C\-d, or <Page Down>
 .PD
 .RE
 .LP
-To enter a real C\-g to the shell, type it twice.  Navigation commands can be chained together - for example, typing C-g C-f C-f C-k will page down twice and then move up once.  The chain is broken when a non-navigation character is typed.
+To enter a real C\-g to the shell, type it twice.  Navigation commands can be chained together \- for example, typing C\-g C\-f C\-f C\-k will page down twice and then move up once.  The chain is broken when a non\-navigation character is typed.
 .LP
 In \fIvgmini\fP, the default display program, Up and Down are used to switch between viewable direcories, while Page Up and Page Down are used to navigation the currently viewed directory.
 .RE
 .PP
 \fBCommands\fP
 .RS 4
-There are four Viewglob commands in addition to display navigation.  After typing C-g:
+There are four Viewglob commands in addition to display navigation.  After typing C\-g:
 .LP
 .RS
 .PD 0
@@ -98,13 +98,13 @@ Set or clear mask:
 <ENTER>
 .TP
 Toggle on/off:
-C-<SPACE>
+C\-<SPACE>
 .TP
 Refocus window:
 <TAB>
 .TP
 Disable:
-C-q
+C\-q
 .PD
 .RE
 .LP
@@ -125,18 +125,18 @@ The location of the display in relation to the active terminal.
 .PD
 .RE
 .LP
-Generally it tries to ensure that both the terminal and the display are viewable at the same time, and if they already are, it switches the focus between the display and the active terminal (sort-of like an internal Alt-<TAB>).
+Generally it tries to ensure that both the terminal and the display are viewable at the same time, and if they already are, it switches the focus between the display and the active terminal (sort\-of like an internal Alt\-<TAB>).
 .LP
 If the display did not automatically update to the current shell after a window shuffle (i.e. it's showing the environment of a different shell), refocusing will wake it up.  This is often necessary for tabbed terminals like \fIgnome\-terminal\fP and \fIkonsole\fP.
 .LP
-\fIDisabling\fP Viewglob functionality disconnects the terminal from vgd and turns vgseer off, resulting in an almost regular shell.  There is no way to re-enable Viewglob in a shell which has been disabled.
+\fIDisabling\fP Viewglob functionality disconnects the terminal from vgd and turns vgseer off, resulting in an almost regular shell.  There is no way to re\-enable Viewglob in a shell which has been disabled.
 .RE
 .PP
 \fBFilename Masking\fP
 .RS 4
-File masking is a way to control the number and types of files shown in the display.  The default mask is "*", which shows all non-hidden files.  To show ALL files, an appropriate mask would be ".* *".  To show only C source files, the mask could be "*.[ch]" or "*.c *.h".  To just display directory file types, the mask would be "*/".
+File masking is a way to control the number and types of files shown in the display.  The default mask is "*", which shows all non\-hidden files.  To show ALL files, an appropriate mask would be ".* *".  To show only C source files, the mask could be "*.[ch]" or "*.c *.h".  To just display directory file types, the mask would be "*/".
 .LP
-A mask can be set with the key sequence C-g [mask] <ENTER>.  The mask string will print in the display as it's being typed.  Typing a non-printable character (such as <ESC> or C-c) while creating a new mask will cancel it.  The mask can be set back to the default "*" with a simple C-g <ENTER>.
+A mask can be set with the key sequence C\-g [mask] <ENTER>.  The mask string will print in the display as it's being typed.  Typing a non\-printable character (such as <ESC> or C\-c) while creating a new mask will cancel it.  The mask can be set back to the default "*" with a simple C\-g <ENTER>.
 .LP
 File masking is done on the client level.  Therefore, when using Viewglob with a remote machine, a conservative file mask could improve response time a little.
 .RE

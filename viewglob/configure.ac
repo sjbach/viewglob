@@ -32,7 +32,7 @@ AC_HEADER_TIOCGWINSZ
 AC_HEADER_TIME
 AC_CHECK_HEADERS([sys/time.h time.h sys/select.h])
 AC_CHECK_HEADERS([ \
-	fnmatch.h \
+	fnmatch.h  sys/un.h \
 	fcntl.h    errno.h       stdlib.h      \
 	string.h   sys/ioctl.h   termios.h     \
 	unistd.h   stdlib.h      arpa/inet.h   \

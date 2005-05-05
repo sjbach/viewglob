@@ -17,14 +17,15 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#ifndef TCP_LISTEN_H
-#define TCP_LISTEN_H
+#ifndef SOCKET_CONNECT_H
+#define SOCKET_CONNECT_H
 
 #include "common.h"
 
 G_BEGIN_DECLS
 
 
+int unix_connect(const char* port);
 int tcp_connect(const char* host, const char* serv);
 
 

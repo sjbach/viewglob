@@ -6,7 +6,7 @@ vgseer \- Viewglob shell overseer.
 .RI [ options ]
 
 .SH DESCRIPTION
-\fIvgseer\fP creates a Viewglob-supervised interactive shell and opens up an Internet-domain socket connection to a listening
+\fIvgseer\fP creates a Viewglob\-supervised interactive shell and opens up a socket connection to a listening
 .BR vgd (1)
 process.  It maintains a snapshot of the relevant parts of its local filesystem and tracks the user's command line and other information, which is communicated to vgd.
 .PP
@@ -29,7 +29,7 @@ This program follows the usual GNU command line syntax, with long options starti
 Connect to a vgd process on the given host.  The default is localhost.
 .TP
 .B \-p, \-\-port=<number>
-Connect to a vgd process through the given port.  The default is 16108 (1-GLOB).
+Connect to a vgd process through the given port.  The default is 16108 (1\-GLOB).
 .TP
 .B \-c, \-\-shell\-mode=<name>
 Shell to be used.  \fIname\fP can be \*(lqbash\*(rq or \*(lqzsh\*(rq (default is bash).
@@ -39,6 +39,9 @@ Show or hide the asterisk character which is usually at the beginning of a vgsee
 .TP
 .B \-e, \-\-executable=<path>
 Use the given executable as the shell instead of its first reference in the path.  Note that if this isn't a version of the shell chosen with \-\-shell\-mode, you won't get very far.
+.TP
+.B \-u, \-\-unix\-socket=<on/off>
+Try to use a Unix\-domain socket.  If this option is turned on, the host is assumed to be localhost.  If a different host is specified later, this option is automatically turned off.
 .TP
 .B \-H, \-\-help
 Show summary of options.

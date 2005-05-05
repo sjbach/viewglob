@@ -27,6 +27,9 @@
 #include <gdk/gdkx.h>
 #include <gdk/gdkkeysyms.h>
 
+#include <X11/Xlib.h>
+#include <X11/Xatom.h>
+
 #include "fgetopt.h"
 
 static void report_version(void);
@@ -221,13 +224,17 @@ void raise_wrapped(GtkWidget* display_win_gtk, gchar* term_win_str) {
 	if (display_win == 0 || term_win == 0)
 		return;
 
-	gulong* desktop = get_desktop(Xdisplay, term_win);
+	gulong* term_desktop = get_desktop(Xdisplay, term_win);
+	gulong* disp_desktop = get_desktop(Xdisplay, display_win);
 
-	window_to_desktop(Xdisplay, display_win, *desktop);
+	if (*term_desktop != *disp_desktop)
+		window_to_desktop(Xdisplay, display_win, *term_desktop);
 
 	/*raise_window(Xdisplay, display_win, term_win, TRUE);*/
+	XMapRaised(Xdisplay, display_win);
 
-	g_free(desktop);
+	g_free(term_desktop);
+	g_free(disp_desktop);
 }
 
 

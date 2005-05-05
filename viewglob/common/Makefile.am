@@ -8,7 +8,7 @@ noinst_HEADERS = \
 	file-types.h \
 	x11-stuff.h \
 	syslogging.h \
-	tcp-connect.h \
+	socket-connect.h \
 	logging.h \
 	fgetopt.h \
 	conf-to-args.h

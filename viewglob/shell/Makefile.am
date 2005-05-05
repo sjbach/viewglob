@@ -44,9 +44,7 @@ CLEANFILES = \
 
 EXTRA_DIST = \
 	init-viewglob.bashrc.in \
-	init-viewglob.bashrc \
 	init-viewglob.zshrc.in \
-	.zshrc \
 	viewglob.in \
 	getopt.sh.in \
 	conf-to-args.sh

@@ -28,7 +28,7 @@
 #include "shell.h"
 #include "hardened-io.h"
 #include "param-io.h"
-#include "tcp-connect.h"
+#include "socket-connect.h"
 #include "logging.h"
 #include "fgetopt.h"
 #include "conf-to-args.h"
@@ -83,6 +83,7 @@ struct options {
 	enum shell_type shell;
 	gchar* host;
 	gchar* port;
+	gboolean use_unix_socket;
 	gchar* executable;
 	gchar* init_loc;
 };
@@ -119,8 +120,8 @@ static gboolean scan_for_newline(const Connection* b);
 static void     scan_sequences(Connection* b, struct user_state* u);
 
 /* Communication with vgd. */
-static gint     connect_to_vgd(gchar* server, gchar* port,
-		struct user_state* u);
+static gint connect_to_vgd(gchar* server, gchar* port,
+		gboolean use_unix_socket, struct user_state* u);
 static gboolean set_term_title(gint fd, gchar* title);
 static gchar*   escape_filename(gchar* name, struct user_state* u,
 		enum process_level pl, gchar* holdover);
@@ -164,6 +165,7 @@ gint main(gint argc, gchar** argv) {
 	opts.shell = ST_BASH;
 	opts.host = g_strdup("localhost");
 	opts.port = g_strdup("16108");
+	opts.use_unix_socket = FALSE;
 	opts.executable = NULL;
 	opts.init_loc = NULL;
 
@@ -199,7 +201,7 @@ gint main(gint argc, gchar** argv) {
 	clean_fail(&u.sandbox);
 
 	/* Connect to vgd and negotiate setup. */
-	vgd_fd = connect_to_vgd(opts.host, opts.port, &u);
+	vgd_fd = connect_to_vgd(opts.host, opts.port, opts.use_unix_socket, &u);
 	if (vgd_fd == -1)
 		clean_fail(NULL);
 
@@ -237,7 +239,7 @@ gint main(gint argc, gchar** argv) {
 
 
 static gint connect_to_vgd(gchar* server, gchar* port,
-		struct user_state* u) {
+		gboolean use_unix_socket, struct user_state* u) {
 	gint fd;
 	gchar term_title[100];
 
@@ -250,7 +252,12 @@ static gint connect_to_vgd(gchar* server, gchar* port,
 	}
 
 	/* Attempt to connect to vgd. */
-	if ( (fd = tcp_connect(server, port)) == -1)
+	if (use_unix_socket)
+		fd = unix_connect(port);
+	else
+		fd = tcp_connect(server, port);
+
+	if (fd == -1)
 		return -1;
 
 	/* Send over information. */
@@ -326,6 +333,7 @@ static void parse_args(gint argc, gchar** argv, struct options* opts) {
 		{ "shell-mode", 1, NULL, 'c' },
 		{ "shell-star", 2, NULL, 't' },
 		{ "executable", 1, NULL, 'e' },
+		{ "unix-socket", 2, NULL, 'u' },
 		{ "help", 0, NULL, 'H' },
 		{ "version", 0, NULL, 'V' },
 		{ 0, 0, 0, 0},
@@ -334,7 +342,7 @@ static void parse_args(gint argc, gchar** argv, struct options* opts) {
 	optind = 0;
 	while (in_loop) {
 		switch (fgetopt_long(argc, argv,
-					"h:p:c:t::e:vVH", long_options, NULL)) {
+					"h:p:c:t::e:u::vVH", long_options, NULL)) {
 			case -1:
 				in_loop = FALSE;
 				break;
@@ -342,6 +350,7 @@ static void parse_args(gint argc, gchar** argv, struct options* opts) {
 			case 'h':
 				g_free(opts->host);
 				opts->host = g_strdup(optarg);
+				opts->use_unix_socket = FALSE;
 				break;
 
 			case 'p':
@@ -363,6 +372,13 @@ static void parse_args(gint argc, gchar** argv, struct options* opts) {
 			case 'e':
 				g_free(opts->executable);
 				opts->executable = g_strdup(optarg);
+				break;
+
+			case 'u':
+				if (!optarg || STREQ(optarg, "on"))
+					opts->use_unix_socket = TRUE;
+				else if (STREQ(optarg, "off"))
+					opts->use_unix_socket = FALSE;
 				break;
 
 			case 'H':
@@ -418,7 +434,8 @@ static void report_version(void) {
 
 static void usage(void) {
 	g_print("usage: vgseer [-h <host>] [-p <port>] [-c <shell mode>]\n");
-	g_print("              [-e <shell executable>] [-t <on/off>]\n\n");
+	g_print("              [-e <shell executable>] [-t <on/off>] "
+			"[-u <on/off>]\n\n");
 
 	g_print("-h, --host            Host to connect to.            "
 			"(default: localhost)\n");
@@ -427,7 +444,9 @@ static void usage(void) {
 	g_print("-c, --shell-mode      Shell to use (bash or zsh).    "
 			"(default: bash)\n");
 	g_print("-t, --shell-star      Little asterisk at prompt.     "
-			"(default: on)\n\n");
+			"(default: on)\n");
+	g_print("-u, --unix-socket     Use Unix-domain socket.        "
+			"(default: off)\n\n");
 
 	g_print("-e, --executable      Alternate shell executable.\n");
 	g_print("-H, --help            Display this usage.\n");
