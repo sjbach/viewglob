@@ -1,6 +1,6 @@
 
-                            Viewglob 2.0 README
-                              April 25, 2005
+                           Viewglob 2.0.1 README
+                                May 5, 2005
 
                 Stephen Bach <sjbach@users.sourceforge.net>
 
@@ -8,31 +8,30 @@
 INTRODUCTION
 ------------
 
-Viewglob is a filesystem visualization add-on for Bash and Zsh when used in
-windowing environments. It controls a graphical display  listing  the  con­
-tents  of  certain directories, with file selections, which are relevant to
-the active shell+terminal. The display updates dynamically when the command
-line  or environment of the current shell changes or when the user switches
-to a different terminal. It can track multiple shells, local and remote.
+Viewglob  is  a filesystem visualization add-on for Bash and Zsh. It tracks
+the command line and environment of any number of interactive shells (local
+and  remote).  A  graphical  display follows the currently active terminal,
+listing the contents of directories relevant to its shell and  highlighting
+file selections and potential name completions dynamically.
 
 The package has three communicating parts:
 
      - vgseer, client:
-          Supervises an interactive shell and keeps track of  command  line
+          Supervises  an  interactive shell and keeps track of command line
           and environment changes.
 
      - vgd, server daemon:
-          Mediates  information  exchange between any number of vgseer pro­
+          Mediates information exchange between any number of  vgseer  pro­
           cesses (local or remote) and a Viewglob display.
 
      - vgmini and vgclassic, graphical displays:
           List the contents of directories relevant to the currently active
-          shell,  highlighting  file  selections and potential name comple­
+          shell, highlighting file selections and  potential  name  comple­
           tions.
 
 A convenience script "viewglob" is provided as a startup shortcut.
 
-You can learn more about using this  package  in  the  manpages  for  view­
+You  can  learn  more  about  using  this package in the manpages for view­
 glob(1), vgseer(1), and vgd(1).
 
 The website for Viewglob is here:
@@ -49,24 +48,19 @@ Feedback is welcome!
 NEW IN THIS RELEASE
 -------------------
 
-Lots  of  work  has been done to implement some of the most often requested
-features, resulting in a massive code  overhaul  and  completely  different
-"under the hood" execution. It's a large enough release that even if you've
-used Viewglob before, you'll probably have to glance through the manpages.
+Unix-domain sockets are now used by default instead of Internet-domain when
+using  Viewglob  locally.  This  is  to  prevent  a security issue where an
+attacker could see an inattentive user's Viewglob display by  being  sneaky
+with X forwarding over ssh.
 
-Here's a short list of the biggest changes:
-
-     - Multiple terminal tracking for a single display
-     - Viewglob tracking for remote shells (ssh, telnet)
-     - A new display program (used by default)
-     - Filename masking as a means to filter display results
+The refocus/raise command has been tweaked to be much less broken.
 
 INSTALLATION
 ------------
 
 For a full install, it's a simple ./configure && make && sudo make install.
-If  you  only  wish  to  install the shell client portion, say for a server
-without X or GTK+ which you only access  through  ssh,  use  the  following
+If you only wish to install the shell client  portion,  say  for  a  server
+without  X  or  GTK+  which  you only access through ssh, use the following
 flag:
 
       ./configure --enable-vgseer-only
@@ -81,11 +75,11 @@ Tested on:
      FreeBSD 4.10 with GTK+ 2.4.3
      GNU/Linux (various) with GTK+ 2.4+
 
-Previous  versions  of  Viewglob  were said to run on Mac OS X 10.3.5 (with
-fink unstable providing GTK+ 2.4), but it has  not  been  tested  for  this
+Previous versions of Viewglob were said to run on Mac  OS  X  10.3.5  (with
+fink  unstable  providing  GTK+  2.4),  but it has not been tested for this
 release.
 
-The  program has been built with portability in mind, so it should (ha) run
+The program has been built with portability in mind, so it should (ha)  run
 on most POSIX-compliant systems with minimal fuss. I happily accept patches
 for portability issues.
 
@@ -93,5 +87,5 @@ REQUIREMENTS
 ------------
 
 Viewglob requires a version of Bash (any, as far as I know) and GTK+ 2.4. A
-version of Zsh is also obviously required if you  wish  to  use  Zsh  under
+version  of  Zsh  is  also  obviously required if you wish to use Zsh under
 Viewglob.

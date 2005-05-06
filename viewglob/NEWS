@@ -1,3 +1,10 @@
+New in 2.0.1, released 2005-05-05:
+	Bug fixes:
+	  * Use Unix-domain sockets by default for local connections to avoid
+	    a potential security issue with the Viewglob display and ssh X
+	    forwarding.  Thanks to Kevin McCarty.
+	  * Display refocusing/jumping works better.
+
 New in 2.0, released 2005-04-25:
 	Features:
 	  * Multiple terminal tracking.

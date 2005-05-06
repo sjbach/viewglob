@@ -70,13 +70,13 @@ void refocus(Display* disp, Window w1, Window w2) {
 	XGetInputFocus(disp, &active_window, &dummy);
 
 	/* Refocus the window which isn't focused.  Or, if neither
-	   are focused (?), raise one and focus the other. */
+	   are focused (?), focus both. */
 	if (active_window == w1)
 		focus_window(disp, w2, *w1_desktop);
 	else if (active_window == w2)
 		focus_window(disp, w1, *w2_desktop);
 	else {
-		raise_window(disp, w1, w2, TRUE);
+		focus_window(disp, w1, *w2_desktop);
 		focus_window(disp, w2, *w2_desktop);
 	}
 

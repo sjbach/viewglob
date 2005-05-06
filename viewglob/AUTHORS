@@ -1,12 +1,13 @@
 Stephen Bach <sjbach@users.sourceforge.net>
 
-- Kevin B. McCarty submitted a patch to fix a bunch of compiler warnings.
-- Ron Ross helped track down a series of bugs with the pseudo terminal code.
-- Pavel Tavoda had a great idea for a more intuitive way to list directories.
-- Andy Bastien thought of making the display toggleable.
-- Artis Rozentals suggested the option to display directories in reverse
-  order.
-- Johannes Jordan reported a bug having to do with filename encoding.
+Other contributors:
+
+	Kevin B. McCarty
+	Artis Rozentals
+	Ron Ross
+	Pavel Tavoda
+	Andy Bastien
+	Johannes Jordan
 
 This package also uses code from the following people, but without their
 participation or endorsement:

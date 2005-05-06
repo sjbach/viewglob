@@ -4,15 +4,15 @@
 .so giftcurs.tmac
 .
 .TL
-Viewglob 2.0 README
+Viewglob 2.0.1 README
 .br
-April 25, 2005
+May 5, 2005
 .AU
 Stephen Bach <sjbach@users.sourceforge.net>
 .
 .Sh INTRODUCTION
 .LP
-\fIViewglob\fP is a filesystem visualization add-on for Bash and Zsh when used in windowing environments.  It controls a graphical display listing the contents of certain directories, with file selections, which are relevant to the active shell+terminal.  The display updates dynamically when the command line or environment of the current shell changes or when the user switches to a different terminal.  It can track multiple shells, local and remote.
+Viewglob is a filesystem visualization add-on for Bash and Zsh. It tracks the command line and environment of any number of interactive shells (local and remote). A graphical display follows the currently active terminal, listing the contents of directories relevant to its shell and highlighting file selections and potential name completions dynamically.
 .LP
 The package has three communicating parts:
 .RS
@@ -41,19 +41,9 @@ Feedback is welcome!
 .
 .Sh NEW IN THIS RELEASE
 .LP
-Lots of work has been done to implement some of the most often requested features, resulting in a massive code overhaul and completely different "under the hood" execution.  It's a large enough release that even if you've used Viewglob before, you'll probably have to glance through the manpages.
+Unix-domain sockets are now used by default instead of Internet-domain when using Viewglob locally.  This is to prevent a security issue where an attacker could see an inattentive user's Viewglob display by being sneaky with X forwarding over ssh.
 .LP
-Here's a short list of the biggest changes:
-.LP
-.RS
-- Multiple terminal tracking for a single display
-.br
-- Viewglob tracking for remote shells (ssh, telnet)
-.br
-- A new display program (used by default)
-.br
-- Filename masking as a means to filter display results
-.RE
+The refocus/raise command has been tweaked to be much less broken.
 .
 .Sh INSTALLATION
 .LP

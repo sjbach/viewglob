@@ -1,3 +1,12 @@
+2005-05-05 22:24  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* AUTHORS, NEWS, configure.ac, README, README.ms:
+	  Updates for release 2.0.1.
+	* x11-stuff.c: fix build error
+	* hardened-io.c, hardened-io.h: includes should be in header
+	* viewglob.in: 
+	  Further updates for Unix-domain socket usage.
+
 2005-05-05 17:00  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* tcp-connect.c, tcp-connect.h: removed
