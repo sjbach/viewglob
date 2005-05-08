@@ -1,3 +1,8 @@
+2005-05-08 13:42  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* AUTHORS, viewglob.in:
+	  Try to use gconf to determine terminal program.
+
 2005-05-05 22:24  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* AUTHORS, NEWS, configure.ac, README, README.ms:

@@ -1,6 +1,6 @@
+- dir-order doesn't work
 
 Critical:
-- make: viewglob.in should not be packaged?
 
 Non-critical:
 - cygwin

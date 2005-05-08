@@ -124,10 +124,24 @@ if [[ "$VG_VIEWGLOB_ACTIVE" = yep ]]
 	then vg_error "This shell is already being monitored" 2
 elif [[ -z "$DISPLAY" ]]
 	then VGSEER_ONLY=yep
-elif [[ -z "$TERM" ]] || [[ "$TERM" = dumb ]]
+elif [[ -z "$TERM" ]] || [[ "$TERM" = dumb ]]; then
 	# There's no terminal associated with the shell, but an X display is
-	# present, so make a new xterm.
-	then VGSEER_EXEC="xterm -e $VGSEER_EXEC"
+	# present, so make a new xterm.  Try to use gconf-tool2 to determine
+	# a usable terminal program.  Thanks to Koenraad Heijlen.
+
+	GCONF='gconftool-2'
+	if [ `which ${GCONF} 2>/dev/null` ]; then
+		TERM_EXEC=`${GCONF} -g \
+			/desktop/gnome/applications/terminal/exec \
+			2>/dev/null`
+		TERM_EXEC_ARG=`${GCONF} -g \
+			/desktop/gnome/applications/terminal/exec_arg \
+			2>/dev/null`
+		VGSEER_EXEC="${TERM_EXEC} ${TERM_EXEC_ARG} $VGSEER_EXEC"
+	else 
+		# Fallback to xterm.
+		VGSEER_EXEC="xterm -e $VGSEER_EXEC"
+	fi
 fi
 
 # This is an excellent script to replace bash's getopts with one which allows
