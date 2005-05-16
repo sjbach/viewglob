@@ -28,6 +28,7 @@ vgseer_SOURCES = \
 BUILT_SOURCES = vgseer-usage.h
 
 vgseer-usage.h: vgseer-usage.txt
+	rm -f vgseer-usage.tmp
 	sed <vgseer-usage.txt >vgseer-usage.tmp \
 		-e 's/\\/\\\\/g' \
 		-e 's/"/\\"/g' \

@@ -3,6 +3,7 @@
 	* vgd-usage.txt, vgseer-usage.txt: added
 	* vgd/Makefile.am, vgd.c, vgseer/Makefile.am, vgseer.c:
 	  Generate usages from text file (simpler editing).
+	* ./Makefile.am: manpages weren't receiving new release date (oops).
 
 2005-05-16 15:53  Stephen Bach <sjbach@users.sourceforge.net>
 

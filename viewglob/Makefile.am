@@ -27,5 +27,5 @@ vgd.1:
 	mv vgd.1.tmp vgd.1
 
 EXTRA_DIST = COPYING2 HACKING $(man_MANS)
-CLEAN_FILES = viewglob.1.tmp vgseer.1.tmp vgd.1.tmp
+CLEANFILES = viewglob.1 viewglob.1.tmp vgseer.1 vgseer.1.tmp vgd.1 vgd.1.tmp
 

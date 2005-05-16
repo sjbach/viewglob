@@ -24,6 +24,7 @@ vgd_SOURCES = \
 BUILT_SOURCES = vgd-usage.h
 
 vgd-usage.h: vgd-usage.txt
+	rm -f vgd-usage.tmp
 	sed <vgd-usage.txt >vgd-usage.tmp \
 		-e 's/\\/\\\\/g' \
 		-e 's/"/\\"/g' \
