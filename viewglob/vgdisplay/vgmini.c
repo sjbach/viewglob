@@ -193,6 +193,9 @@ static gboolean receive_data(GIOChannel* source, GIOCondition condition,
 
 			case P_WIN_ID:
 				if (!STREQ(vg->term_win->str, value)) {
+					/* If jump-resize is enabled, align display to the window
+					   given by value.  Otherwise just refocus/raise to the
+					   window. */
 
 					vg->term_win = g_string_assign(vg->term_win, value);
 
@@ -204,8 +207,9 @@ static gboolean receive_data(GIOChannel* source, GIOCondition condition,
 					}
 					else
 						raise_wrapped(vg->window, value);
-					
 				}
+				else
+					raise_wrapped(vg->window, value);
 				break;
 
 			case P_MASK:

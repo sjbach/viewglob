@@ -53,7 +53,9 @@
 
 struct state {
 	GList*                clients;
-	struct vgseer_client* active;
+	struct vgseer_client* current;
+	gboolean              current_is_active;
+
 	struct child          display;
 	Window                display_win;
 
@@ -478,13 +480,23 @@ static void check_active_window(struct state* s) {
 	
 	/* If the currently active window has changed and is one of
 	   our vgseer client terminals, make a context switch. */
-	if (new_active_win != s->active->win) {
+	if (new_active_win == s->current->win) {
+		if (!s->current_is_active) {
+			/* Reraise the display. */
+			s->current_is_active = TRUE;
+			update_display(s, s->current, P_WIN_ID,
+					win_to_str(s->current->win));
+		}
+	}
+	else {
+		s->current_is_active = FALSE;
 		GList* iter;
 		struct vgseer_client* v;
 		for (iter = s->clients; iter; iter = g_list_next(iter)) {
 			v = iter->data;
 			if (new_active_win == v->win) {
-				s->active = v;
+				s->current = v;
+				s->current_is_active = TRUE;
 				context_switch(s, v);
 				break;
 			}
@@ -568,9 +580,9 @@ static void process_display(struct state* s) {
 
 	if (param != P_NONE) {
 		/* Pass the message right along. */
-		if (!put_param(s->active->fd, param, value)) {
-			g_warning("Couldn't pass message to active client");
-			drop_client(s, s->active);
+		if (!put_param(s->current->fd, param, value)) {
+			g_warning("Couldn't pass message to current client");
+			drop_client(s, s->current);
 		}
 	}
 }
@@ -632,10 +644,10 @@ static void process_client(struct state* s, struct vgseer_client* v) {
 
 		case P_ORDER:
 			if (STREQ(value, "refocus")) {
-				/* If vgd doesn't recognize that the active terminal has
+				/* If vgd doesn't recognize that the current terminal has
 				   changed, you can force it to take notice by refocusing. */
-				if (s->active != v) {
-					s->active = v;
+				if (s->current != v) {
+					s->current = v;
 					context_switch(s, v);
 				}
 				else
@@ -649,7 +661,7 @@ static void process_client(struct state* s, struct vgseer_client* v) {
 						g_critical("Couldn't fork the display");
 						die(s, GENERAL_FAILURE);
 					}
-					context_switch(s, s->active);
+					context_switch(s, s->current);
 				}
 			}
 			else {
@@ -683,7 +695,7 @@ static void update_display(struct state* s, struct vgseer_client* v,
 	g_return_if_fail(v != NULL);
 	g_return_if_fail(value != NULL);
 
-	if (s->active != v || !child_running(&s->display))
+	if (s->current != v || !child_running(&s->display))
 		return;
 
 	if (!put_param(s->display.fd_out, param, value)) {
@@ -715,14 +727,14 @@ static void drop_client(struct state* s, struct vgseer_client* v) {
 		g_message("(disp) Killed display");
 	}
 
-	/* If this was the active client, switch to another one. */
-	if (s->active == v) {
+	/* If this was the current client, switch to another one. */
+	if (s->current == v) {
 		if (s->clients) {
-			s->active = s->clients->data;
-			context_switch(s, s->active);
+			s->current = s->clients->data;
+			context_switch(s, s->current);
 		}
 		else
-			s->active = NULL;
+			s->current = NULL;
 	}
 
 	/* If we're not running in persistent mode, and this was the last client,
@@ -849,9 +861,9 @@ static void new_vgseer_client(struct state* s, gint client_fd) {
 	/* We've got a new client. */
 	v->fd = client_fd;
 
-	/* This is our only client, so it's active by default. */
+	/* This is our only client, so it's current by default. */
 	if (!s->clients)
-		s->active = v;
+		s->current = v;
 
 	s->clients = g_list_prepend(s->clients, v);
 
@@ -861,7 +873,7 @@ static void new_vgseer_client(struct state* s, gint client_fd) {
 			g_critical("Couldn't fork the display");
 			die(s, GENERAL_FAILURE);
 		}
-		/* Send the window ID, just in case this is the active window.
+		/* Send the window ID, just in case this is the current window.
 		   Otherwise the window ID is only sent on a context switch. */
 		update_display(s, v, P_WIN_ID, win_to_str(v->win));
 	}
@@ -989,7 +1001,7 @@ void state_init(struct state* s) {
 
 	s->vgexpand_opts = g_string_new(DEFAULT_VGEXPAND_OPTS);
 	s->Xdisplay = NULL;
-	s->active = NULL;
+	s->current = NULL;
 
 	s->port = g_strdup("16108");
 	s->port_fd = -1;

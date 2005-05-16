@@ -1,3 +1,10 @@
+2005-05-16 18:50  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* vgd.c, vgmini.c:
+	  Display is raised if current terminal is unfocused and then
+	  refocused, regardless of whether a different terminal is focused or
+	  not.
+
 2005-05-16 17:01  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* vgd-usage.txt, vgseer-usage.txt: added
