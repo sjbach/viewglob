@@ -1,3 +1,9 @@
+2005-05-16 17:01  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* vgd-usage.txt, vgseer-usage.txt: added
+	* vgd/Makefile.am, vgd.c, vgseer/Makefile.am, vgseer.c:
+	  Generate usages from text file (simpler editing).
+
 2005-05-16 15:53  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* viewglob.in:

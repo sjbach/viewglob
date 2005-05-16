@@ -1,0 +1,12 @@
+usage: vgseer [-h <host>] [-p <port>] [-c <shell mode>]
+              [-e <shell executable>] [-t <on/off>] [-u <on/off>]
+
+-h, --host            Host to connect to.            [localhost]
+-p, --port            vgd listen port on host.       [16108]
+-c, --shell-mode      Shell to use (bash or zsh).    [bash]
+-t, --shell-star      Little asterisk at prompt.     [on]
+-u, --unix-socket     Use Unix-domain socket.        [on]
+
+-e, --executable      Alternate shell executable.
+-H, --help            Display this usage.
+-V, --version         Print the version.

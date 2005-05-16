@@ -398,42 +398,9 @@ static void parse_args(gint argc, gchar** argv, struct state* s) {
 
 
 static void usage(void) {
-	g_print("usage: vgd  [-p <port>] [-P <on/off>] [-D <on/off>] [-d <display>]\n");
-	g_print("            [-s <sort style>] [-r <dir order>] [-z <font size modifier>]\n");
-	g_print("            [-b <on/off>] [-j <on/off>] [--<colour> <colour string>]\n\n");
-
-	g_print("-p, --port                     "
-			"Listen on this port.      [16108]\n");
-	g_print("-D, --daemon                   "
-			"Run as a daemon.          [on]\n");
-	g_print("-P, --persistent               "
-			"Hang around.              [off]\n\n");
-
-	g_print("-d, --display                  "
-			"Display program.          [vgmini]\n");
-	g_print("-s, --sort-style               "
-			"Windows or ls.            [ls]\n");
-	g_print("-r, --dir-order                "
-			"Directory list ordering.  [ascending]\n");
-	g_print("-b, --file-icons               "
-			"File type icons.          [on]\n");
-	g_print("-j, --jump-resize              "
-			"Automatic move/resize.    [on]\n\n");
-
-	g_print("-z, --font-size-modifier       "
-			"Increase/decrease display font size.\n\n");
-
-	g_print("--black, --red, --green        "
-			"LS_COLORS terminal colour interpretations.\n");
-	g_print("--yellow, --blue, --magenta    "
-			"These can be names or hex representations\n");
-	g_print("--magenta --cyan, --white      "
-			"such as \"#RRGGBB\".\n\n");
-
-	g_print("-H, --help                     "
-			"Display this usage.\n");
-	g_print("-V, --version                  "
-			"Print the version.\n");
+	g_print(
+#		include "vgd-usage.h"
+	);
 	exit(EXIT_SUCCESS);
 }
 

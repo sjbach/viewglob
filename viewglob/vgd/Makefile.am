@@ -21,5 +21,15 @@ vgd_SOURCES = \
 	$(COMMON_DIR)/conf-to-args.c \
 	$(COMMON_DIR)/fgetopt.c
 
+BUILT_SOURCES = vgd-usage.h
+
+vgd-usage.h: vgd-usage.txt
+	sed <vgd-usage.txt >vgd-usage.tmp \
+		-e 's/\\/\\\\/g' \
+		-e 's/"/\\"/g' \
+		-e 's/.*/\"&\\n\"/'
+	mv vgd-usage.tmp vgd-usage.h
+
+CLEANFILES = vgd-usage.tmp vgd-usage.h
 noinst_HEADERS = tcp-listen.h
 

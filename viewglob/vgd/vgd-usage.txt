@@ -1,0 +1,22 @@
+usage: vgd  [-p <port>] [-P <on/off>] [-D <on/off>] [-d <display>]
+            [-s <sort style>] [-r <dir order>] [-z <font size modifier>]
+            [-b <on/off>] [-j <on/off>] [--<colour> <colour string>]
+
+-p, --port                     Listen on this port.      [16108]
+-D, --daemon                   Run as a daemon.          [on]
+-P, --persistent               Hang around.              [off]
+
+-d, --display                  Display program.          [vgmini]
+-s, --sort-style               Windows or ls.            [ls]
+-r, --dir-order                Directory list ordering.  [ascending]
+-b, --file-icons               File type icons.          [on]
+-j, --jump-resize              Automatic move/resize.    [on]
+
+-z, --font-size-modifier       Increase/decrease display font size.
+
+--black, --red, --green        LS_COLORS terminal colour interpretations.
+--yellow, --blue, --magenta    These can be names or hex representations
+--magenta --cyan, --white      such as "#RRGGBB".
+
+-H, --help                     Display this usage.
+-V, --version                  Print the version.

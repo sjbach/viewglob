@@ -433,24 +433,9 @@ static void report_version(void) {
 
 
 static void usage(void) {
-	g_print("usage: vgseer [-h <host>] [-p <port>] [-c <shell mode>]\n");
-	g_print("              [-e <shell executable>] [-t <on/off>] "
-			"[-u <on/off>]\n\n");
-
-	g_print("-h, --host            Host to connect to.            "
-			"[localhost]\n");
-	g_print("-p, --port            vgd listen port on host.       "
-			"[16108]\n");
-	g_print("-c, --shell-mode      Shell to use (bash or zsh).    "
-			"[bash]\n");
-	g_print("-t, --shell-star      Little asterisk at prompt.     "
-			"[on]\n");
-	g_print("-u, --unix-socket     Use Unix-domain socket.        "
-			"[on]\n\n");
-
-	g_print("-e, --executable      Alternate shell executable.\n");
-	g_print("-H, --help            Display this usage.\n");
-	g_print("-V, --version         Print the version.\n");
+	g_print(
+#		include "vgseer-usage.h"
+	);
 	exit(EXIT_SUCCESS);
 }
 
