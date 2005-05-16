@@ -47,6 +47,10 @@
 #define DEFAULT_VGEXPAND_OPTS  "-d"
 #define CONF_FILE              ".viewglob/vgd.conf"
 
+#define X_FAILURE        3
+#define SOCKET_FAILURE   2
+#define GENERAL_FAILURE  1
+
 struct state {
 	GList*                clients;
 	struct vgseer_client* active;
@@ -129,14 +133,14 @@ gint main(gint argc, gchar** argv) {
 	/* Get a connection to the X display. */
 	if ( (s.Xdisplay = XOpenDisplay(NULL)) == NULL) {
 		g_critical("Could not connect to X server");
-		exit(EXIT_FAILURE);
+		exit(X_FAILURE);
 	}
 
 	/* Setup listening sockets. */
 	if ( (s.port_fd = tcp_listen(NULL, s.port)) == -1)
-		exit(EXIT_FAILURE);
+		exit(SOCKET_FAILURE);
 	if ( (s.unix_fd = unix_listen(&s)) == -1)
-		exit(EXIT_FAILURE);
+		exit(SOCKET_FAILURE);
 
 	(void) chdir("/");
 
@@ -380,13 +384,13 @@ static void parse_args(gint argc, gchar** argv, struct state* s) {
 
 			case ':':
 				g_critical("Option missing argument");
-				exit(EXIT_FAILURE);
+				exit(GENERAL_FAILURE);
 				break;
 
 			case '?':
 			default:
 				g_critical("Unknown option provided");
-				exit(EXIT_FAILURE);
+				exit(GENERAL_FAILURE);
 				break;
 		}
 	}
@@ -399,22 +403,22 @@ static void usage(void) {
 	g_print("            [-b <on/off>] [-j <on/off>] [--<colour> <colour string>]\n\n");
 
 	g_print("-p, --port                     "
-			"Listen on this port.      (default: 16108)\n");
-	g_print("-P, --persistent               "
-			"Hang around.              (default: off)\n");
+			"Listen on this port.      [16108]\n");
 	g_print("-D, --daemon                   "
-			"Run as a daemon.          (default: on)\n\n");
+			"Run as a daemon.          [on]\n");
+	g_print("-P, --persistent               "
+			"Hang around.              [off]\n\n");
 
 	g_print("-d, --display                  "
-			"Display program.          (default: vgmini)\n");
+			"Display program.          [vgmini]\n");
 	g_print("-s, --sort-style               "
-			"Windows or ls.            (default: ls)\n");
+			"Windows or ls.            [ls]\n");
 	g_print("-r, --dir-order                "
-			"Directory list ordering.  (default: ascending)\n");
+			"Directory list ordering.  [ascending]\n");
 	g_print("-b, --file-icons               "
-			"File type icons.          (default: on)\n");
+			"File type icons.          [on]\n");
 	g_print("-j, --jump-resize              "
-			"Automatic move/resize.    (default: on)\n\n");
+			"Automatic move/resize.    [on]\n\n");
 
 	g_print("-z, --font-size-modifier       "
 			"Increase/decrease display font size.\n\n");
@@ -460,7 +464,7 @@ static void poll_loop(struct state* s) {
 		if (nready == -1) {
 			g_critical("Problem while waiting for data: %s",
 					g_strerror(errno));
-			die(s, EXIT_FAILURE);
+			die(s, GENERAL_FAILURE);
 		}
 		else if (nready > 0) {
 
@@ -555,7 +559,7 @@ static void process_display(struct state* s) {
 		(void) child_terminate(&s->display);
 		if (!child_fork(&s->display)) {
 			g_critical("The display had issues and I couldn't restart it");
-			die(s, EXIT_FAILURE);
+			die(s, GENERAL_FAILURE);
 		}
 		else {
 			s->display_win = 0;
@@ -676,7 +680,7 @@ static void process_client(struct state* s, struct vgseer_client* v) {
 				else {
 					if (!child_fork(&s->display)) {
 						g_critical("Couldn't fork the display");
-						die(s, EXIT_FAILURE);
+						die(s, GENERAL_FAILURE);
 					}
 					context_switch(s, s->active);
 				}
@@ -888,7 +892,7 @@ static void new_vgseer_client(struct state* s, gint client_fd) {
 	if (!child_running(&s->display)) {
 		if (!child_fork(&s->display)) {
 			g_critical("Couldn't fork the display");
-			die(s, EXIT_FAILURE);
+			die(s, GENERAL_FAILURE);
 		}
 		/* Send the window ID, just in case this is the active window.
 		   Otherwise the window ID is only sent on a context switch. */

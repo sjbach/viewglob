@@ -165,7 +165,7 @@ gint main(gint argc, gchar** argv) {
 	opts.shell = ST_BASH;
 	opts.host = g_strdup("localhost");
 	opts.port = g_strdup("16108");
-	opts.use_unix_socket = FALSE;
+	opts.use_unix_socket = TRUE;
 	opts.executable = NULL;
 	opts.init_loc = NULL;
 
@@ -438,15 +438,15 @@ static void usage(void) {
 			"[-u <on/off>]\n\n");
 
 	g_print("-h, --host            Host to connect to.            "
-			"(default: localhost)\n");
+			"[localhost]\n");
 	g_print("-p, --port            vgd listen port on host.       "
-			"(default: 16108)\n");
+			"[16108]\n");
 	g_print("-c, --shell-mode      Shell to use (bash or zsh).    "
-			"(default: bash)\n");
+			"[bash]\n");
 	g_print("-t, --shell-star      Little asterisk at prompt.     "
-			"(default: on)\n");
+			"[on]\n");
 	g_print("-u, --unix-socket     Use Unix-domain socket.        "
-			"(default: off)\n\n");
+			"[on]\n\n");
 
 	g_print("-e, --executable      Alternate shell executable.\n");
 	g_print("-H, --help            Display this usage.\n");
@@ -671,6 +671,11 @@ static void process_shell(struct user_state* u, Connection* cnct) {
 
 	if (!connection_read(cnct))
 		clean_fail(NULL);
+
+	//FILE* temp_file = fopen("/tmp/out1.txt", "a");
+	//if (fwrite(cnct->buf, 1, cnct->filled, temp_file) != cnct->filled)
+	//	g_warning("bad");
+	//fclose(temp_file);
 
 	/* The scan commences whether vgseer_enabled is true or not, since
 	   some viewglob sequences need to be removed or they interfere

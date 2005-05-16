@@ -24,7 +24,7 @@ HOST_DEFAULT=localhost
 PORT_DEFAULT=16108
 
 # Execution configuration
-VGSEER_ONLY=
+REMOTE=
 VGSEER_OPTS=
 VGSEER_EXEC=vgseer
 VGD_OPTS=
@@ -34,19 +34,19 @@ shopt -s extglob
 
 vg_usage() {
 	cat >&2 << EOF
-usage: $SCRIPT_NAME [-h <host>] [-p <port>] [-c <shell mode>] [-d <display>]
-                [-s <sort style>] [-r <dir ordering] [-t <on/off>]
+usage: viewglob [-h <host>] [-p <port>] [-c <shell mode>] [-d <display>]
+                [-s <sort style>] [-r <dir ordering>] [-t <on/off>]
                 [-i <on/off>] [-z <font size modifier>]
 
--h, --host                  Host to connect to.            (default: localhost)
--p, --port                  Port to use or connect to.     (default: 16108)
--c, --shell-mode            Shell to use (bash or zsh).    (default: bash)
--d, --display               Display program.               (default: vgmini)
--s, --sort-style            Windows (dirs first) or ls.    (default: ls)
--r, --dir-order             Directory list ordering.       (default: ascending)
+-h, --host                  Host to connect to.            [localhost]
+-p, --port                  Port to use or connect to.     [16108]
+-c, --shell-mode            Shell to use (bash or zsh).    [bash]
+-d, --display               Display program.               [vgmini]
+-s, --sort-style            Windows (dirs first) or ls.    [ls]
+-r, --dir-order             Directory list ordering.       [ascending]
 
--t, --shell-star            Asterisk character at prompt.  (default: on)
--i, --file-icons            File type icons in display.    (default: on)
+-t, --shell-star            Asterisk character at prompt.  [on]
+-i, --file-icons            File type icons in display.    [on]
 
 -z, --font-size-modifier    Increase/decrease display font size.
 
@@ -123,11 +123,11 @@ vg_test_onoff() {
 if [[ "$VG_VIEWGLOB_ACTIVE" = yep ]]
 	then vg_error "This shell is already being monitored" 2
 elif [[ -z "$DISPLAY" ]]
-	then VGSEER_ONLY=yep
+	then REMOTE=yep
 elif [[ -z "$TERM" ]] || [[ "$TERM" = dumb ]]; then
 	# There's no terminal associated with the shell, but an X display is
 	# present, so make a new xterm.  Try to use gconf-tool2 to determine
-	# a usable terminal program.  Thanks to Koenraad Heijlen.
+	# a usable terminal program.
 
 	GCONF='gconftool-2'
 	if [ `which ${GCONF} 2>/dev/null` ]; then
@@ -137,17 +137,19 @@ elif [[ -z "$TERM" ]] || [[ "$TERM" = dumb ]]; then
 		TERM_EXEC_ARG=`${GCONF} -g \
 			/desktop/gnome/applications/terminal/exec_arg \
 			2>/dev/null`
-		VGSEER_EXEC="${TERM_EXEC} ${TERM_EXEC_ARG} $VGSEER_EXEC"
-	else 
-		# Fallback to xterm.
-		VGSEER_EXEC="xterm -e $VGSEER_EXEC"
 	fi
+
+	if [ -z "$TERM_EXEC" ] || [ -z "$TERM_EXEC_ARG" ]; then
+		# Fallback to xterm.
+		TERM_EXEC=xterm
+		TERM_EXEC_ARG=-e
+	fi
+
+	VGSEER_EXEC="$TERM_EXEC $TERM_EXEC_ARG $VGSEER_EXEC"
 fi
 
 # This is an excellent script to replace bash's getopts with one which allows
-# long names.  I found it on Google Groups.  It's written by Grigoriy Strokin
-# (grg@philol.msu.ru).  The script is also available in the bash package under
-# examples/functions/getoptx.bash.
+# long names.  It's written by Grigoriy Strokin.
 . $VG_LIB_DIR/getopt.sh
 
 # Parse the options.
@@ -155,7 +157,7 @@ while getoptex "h: p: i: c: d: r: s: t: H; v; V; z: host: port: shell-mode: disp
 	do case "$OPTOPT" in
 
 		h|host)
-			VGSEER_ONLY=yep
+			REMOTE=yep
 			HOST="$OPTARG"
 			VGSEER_OPTS="$VGSEER_OPTS --host=$OPTARG"
 			;;
@@ -216,6 +218,9 @@ if [ "$OPTOPT" = \? ]
 	then exit 5
 fi
 
+# Just in case the user has turned daemonizing off in vgd.conf.
+VGD_OPTS="$VGD_OPTS --daemon=on"
+
 if [ -z "${HOST}${PORT}" ]; then
 	# A local connection is assumed.
 
@@ -239,25 +244,39 @@ if [ -z "${HOST}${PORT}" ]; then
 	if [ $nvgds -eq 0 ]; then
 		# There are no active vgds.
 
-		# Find an unused port.
+		# Find an unused port for vgd and create new vgd and vgseer
+		# processes.
 		port=$PORT_DEFAULT
 		while true; do
-		    if $VGPING localhost $port
-			then port=`expr $port + 1`
-		    else
-			break
-		    fi
-		done
 
-		if vgd $VGD_OPTS -p $port ; then
-			exec $VGSEER_EXEC $VGSEER_OPTS -p $port
-		fi
+			while true; do
+			    if $VGPING localhost $port
+				then port=`expr $port + 1`
+			    else
+				break
+			    fi
+			done
+
+			vgd $VGD_OPTS --port $port
+
+			case "$?" in
+				0)
+					exec $VGSEER_EXEC $VGSEER_OPTS \
+						--port $port ;;
+				2)
+					# Socket error -- try another port.
+					continue ;;
+				*)
+					# Other error -- give up.
+					break ;;
+			esac
+		done
 
 	elif [ $nvgds -eq 1 ]; then
 		# There is a single active vgd.
-		exec $VGSEER_EXEC $VGSEER_OPTS -p $vgd_ports
+		exec $VGSEER_EXEC $VGSEER_OPTS --port $vgd_ports
 	else
-		echo "There are active vgds on the following ports:"
+		echo "There are active vgds on the following local ports:"
 		for port in $vgd_ports; do
 			echo "	$port"
 		done
@@ -266,18 +285,23 @@ else
 	test -z "$HOST" && HOST=$HOST_DEFAULT
 	test -z "$PORT" && PORT=$PORT_DEFAULT
 
-	if [ "$VGSEER_ONLY" = yep ]; then
-		# Either we're running in a display-less environment or the
-		# user specified a host to connect to, implying we're not
-		# going local.
+	if [ "$REMOTE" = yep ]; then
+		# We're running in a displayless environment or the user
+		# specified a host to connect to.  Either case implies we're
+		# not connecting locally, and so we shouldn't create a vgd.
+
+		VGSEER_OPTS="$VGSEER_OPTS --unix-socket=off"
 
 		if ! $VGPING $HOST $PORT ; then
-			vg_error "Couldn't handshake with a vgd at ${HOST}:${PORT}" 6
+			vg_error "Couldn't handshake with a vgd at \
+				${HOST}:${PORT}" 6
 		fi
 
-		exec $VGSEER_EXEC $VGSEER_OPTS
+		exec $VGSEER_EXEC $VGSEER_OPTS --unix-socket=off
 
 	else
+		VGSEER_OPTS="$VGSEER_OPTS --unix-socket=on"
+		
 		# First check for an existing vgd.  If there is one, connect
 		# to it.
 		if $VGPING $HOST .$PORT ; then
@@ -289,7 +313,5 @@ else
 			exec $VGSEER_EXEC $VGSEER_OPTS
 		fi
 	fi
-
-
 fi
 

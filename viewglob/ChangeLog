@@ -1,7 +1,27 @@
+2005-05-16 15:53  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* viewglob.in:
+	  - Better terminal fallback to xterm.
+	  - Force daemonizing for vgd.
+	  - Fix for small race condition when starting vgd and vgseer.  Thanks
+	    to Kevin McCarty.
+	  - Always use Unix sockets when connecting locally.  Thanks to Kevin
+	    McCarty.
+	  - Comments changes.
+	  - Cleaned up usage a little.
+	* vgseer.c:
+	  - Use Unix sockets by default.
+	  - Cleaned up usage a little.
+	* vgd.c:
+	  - Different exit codes depending on failure.
+	  - Cleaned up usage a little.
+	* vgd.1.in: exit codes
+
 2005-05-08 13:42  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* AUTHORS, viewglob.in:
-	  Try to use gconf to determine terminal program.
+	  Try to use gconf to determine terminal program.  Thanks to
+	  Koenraad Heijlen.
 
 2005-05-05 22:24  Stephen Bach <sjbach@users.sourceforge.net>
 

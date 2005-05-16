@@ -12,7 +12,7 @@ processes and a single Viewglob display process (which it controls).  It keeps t
 .PP
 While vgseer can be used on a remote machine using ssh or telnet, it only makes sense for vgd to be running on the same X server as the user (meaning, in most cases, locally).
 .PP
-After startup, vgd uses the syslog interface for error reporting if running as a daemon.
+After successful startup, vgd uses the syslog interface for error reporting if running as a daemon.
 
 .SH OPTIONS
 This program follows the usual GNU command line syntax, with long options starting with two dashes.  A summary is included below.
@@ -139,6 +139,9 @@ For example, for iso8859\-1, run:
 .IP
 \fBG_FILENAME_ENCODING=ISO\-8859\-1 vgd\fP
 
+.SH DIAGNOSTICS
+.TP
+Exit status is 0 if vgd daemonizes or exits successfully.  If vgd fails to obtain a connection to the X display, exit status is 3.  If a socket setup error occurs, exit status is 2.  For other errors, exit status is 1.
 .SH AUTHORS
 Stephen Bach <sjbach@users.sourceforge.net>
 .SH SEE ALSO
