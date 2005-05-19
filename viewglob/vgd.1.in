@@ -1,6 +1,6 @@
 .TH VGD 1 "@RELEASE_DATE@" "" "Viewglob Manual"
 .SH NAME
-vgd \- Viewglob daemon.
+vgd \- Viewglob communication daemon.
 .SH SYNOPSIS
 .B vgd
 .RI [ options ]
@@ -13,6 +13,8 @@ processes and a single Viewglob display process (which it controls).  It keeps t
 While vgseer can be used on a remote machine using ssh or telnet, it only makes sense for vgd to be running on the same X server as the user (meaning, in most cases, locally).
 .PP
 After successful startup, vgd uses the syslog interface for error reporting if running as a daemon.
+.PP
+This program is slightly misnamed; traditionally, a single daemon process provides a service on a machine for all users.  In Viewglob's case, there should be separate vgd processes for each physical user running Viewglob.  The \fIviewglob\fP startup script handles this automatically, and is recommended for simple usage.
 
 .SH OPTIONS
 This program follows the usual GNU command line syntax, with long options starting with two dashes.  A summary is included below.
@@ -91,7 +93,7 @@ Show summary of options.
 Show the version of the program.
 
 .SH NOTES
-vgd keeps track of the active terminal by querying the X server.  This doesn't work great for tabbed terminals such as gnome\-terminal and konsole, because they share an X window.  With these, you will need to wake up vgd when you shuffle around.  If you switch to a shell and the display doesn't automatically update, send it the refocus command C\-g <TAB>.
+vgd keeps track of the active terminal by querying the X server.  This doesn't work great for tabbed terminals such as \fIgnome\-terminal\fP and \fIkonsole\fP, because they share an X window.  With these, you will need to wake up vgd when you shuffle around.  If you switch to a shell and the display doesn't automatically update, send it the refocus command C\-g <TAB>.
 .PP
 By default vgmini is in jump/resize mode, which means it'll move to be near the active terminal and change its dimensions to try to match.  Some window managers just don't deal with this well and the resizing can get wacky.  If you're seeing this behaviour, you can disable jump/resize mode (or switch to a different window manager).
 
@@ -113,6 +115,7 @@ port
 5555
 .TP
 persistent
+on
 .TP
 font\-size\-modifier
 -1

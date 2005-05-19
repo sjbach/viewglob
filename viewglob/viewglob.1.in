@@ -4,7 +4,6 @@ viewglob \- convenience wrapper script for the Viewglob package
 .SH SYNOPSIS
 .B viewglob
 .RI [ options ]
-
 .SH DESCRIPTION
 \fIViewglob\fP supervises interactive shell activity and tracks file selections and globs in a graphical display showing the contents of relevant directories.
 .PP
@@ -23,7 +22,7 @@ This program follows the usual GNU command line syntax, with long options starti
 Connect a new vgseer process to a vgd process on the given host.  You should only specify this if you are not connecting to your local machine.
 .TP
 .B \-p, \-\-port=<number>
-Connect a new vgseer process to a vgd process on the given port.  If it is a local connection and there is no vgd active on the port, one will be started.  The default port for Viewglob is 16108 (1\-GLOB).
+Connect a new vgseer process to a vgd process on the given port.  If it is a local connection and there is no vgd active on the port, one will be started.  The default port for Viewglob is 16108 (1\-GLOB).  By default Viewglob will communicate over a Unix\-domain socket for a local vgd instance, but will still listen on the specified port for remote connections.
 .TP
 .B \-c, \-\-shell\-mode=<name>
 Shell to be used.  \fIname\fP can be \*(lqbash\*(rq or \*(lqzsh\*(rq (default is bash).
@@ -32,7 +31,7 @@ Shell to be used.  \fIname\fP can be \*(lqbash\*(rq or \*(lqzsh\*(rq (default is
 Show or hide the asterisk character which is usually at the beginning of a vgseer shell prompt.
 .TP
 .B \-d, \-\-display=<vgmini|vgclassic|[path]>
-Display program.  The Viewglob package comes with \fIvgclassic\fP and \fIvgmini\fP (the new display).  Though there aren't any other displays in existence at this point, one could be used by passing its path.  The default is vgmini.
+Display program.  The Viewglob package comes with \fIvgclassic\fP and \fIvgmini\fP (the newer display).  Though there aren't any other displays in existence at this point, one could be used by passing its path.  The default is vgmini.
 .TP
 .B \-s, \-\-sort\-style=<windows|ls>
 In the display, sort files with directories first (Windows) or purely by name (ls).  ls mode is the default.
@@ -51,6 +50,8 @@ Show summary of options.
 .TP
 .B \-V, \-\-version
 Show the version of the package.
+.TP
+Note that vgseer and vgd have further options when used directly.
 
 .SH USAGE
 When you start Viewglob, you'll be presented with your familiar prompt and a new window showing the file layout of the current directory.  As you begin to type a command, the display window will highlight to show potential filename completions (dull highlight) and file selections and globs/expansions (vibrant highlight).  Also, as you reference other directories (e.g. \fI../\fP or \fI/usr/local/\fP), their layouts will appear as well.
@@ -84,7 +85,7 @@ C\-f, C\-d, or <Page Down>
 .LP
 To enter a real C\-g to the shell, type it twice.  Navigation commands can be chained together \- for example, typing C\-g C\-f C\-f C\-k will page down twice and then move up once.  The chain is broken when a non\-navigation character is typed.
 .LP
-In \fIvgmini\fP, the default display program, Up and Down are used to switch between viewable direcories, while Page Up and Page Down are used to navigation the currently viewed directory.
+In \fIvgmini\fP, the default display program, Up and Down are used to switch between viewable direcories, while Page Up and Page Down are used to navigate the currently viewed directory.
 .RE
 .PP
 \fBCommands\fP

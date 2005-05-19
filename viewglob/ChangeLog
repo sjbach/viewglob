@@ -1,3 +1,7 @@
+2005-05-19 16:16  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* vgseer.1.in, vgd.1.in, viewglob.1.in: documentation updates
+
 2005-05-16 18:50  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* vgd.c, vgmini.c:
