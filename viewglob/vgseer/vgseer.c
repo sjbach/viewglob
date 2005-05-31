@@ -657,10 +657,10 @@ static void process_shell(struct user_state* u, Connection* cnct) {
 	if (!connection_read(cnct))
 		clean_fail(NULL);
 
-	//FILE* temp_file = fopen("/tmp/out1.txt", "a");
-	//if (fwrite(cnct->buf, 1, cnct->filled, temp_file) != cnct->filled)
-	//	g_warning("bad");
-	//fclose(temp_file);
+//	FILE* temp_file = fopen("/tmp/out1.txt", "a");
+//	if (fwrite(cnct->buf, 1, cnct->filled, temp_file) != cnct->filled)
+//		g_warning("bad");
+//	fclose(temp_file);
 
 	/* The scan commences whether vgseer_enabled is true or not, since
 	   some viewglob sequences need to be removed or they interfere
@@ -868,9 +868,21 @@ static void scan_sequences(Connection* b, struct user_state* u) {
 	/* We might be in the middle of matching a sequence, but we're at the end
 	   of the buffer.  If it's PL_AT_PROMPT, we've gotta write what we've got
 	   since it goes straight to the user.  Otherwise, it's safe to make a
-	   holdover to attach to the next buffer read. */
-	if (IN_PROGRESS(b->status))
-		create_holdover(b, b->pl != PL_AT_PROMPT);
+	   holdover to attach to the next buffer read.  Special case: if the only
+	   character in the segment thus far is a space, we can assume that the
+	   user has simply typed a space (it's not the first character of a command
+	   wrap). */
+	if (IN_PROGRESS(b->status)) {
+		if (b->pl == PL_AT_PROMPT
+				&& b->seglen == 1 && b->buf[b->pos] == ' ') {
+			disable_all_seqs(PL_AT_PROMPT);
+			b->status = MS_NO_MATCH;
+			cmd_overwrite_char(&u->cmd, b->buf[b->pos], FALSE);
+			action_queue(A_SEND_CMD);
+		}
+		else 
+			create_holdover(b, b->pl != PL_AT_PROMPT);
+	}
 }
 
 

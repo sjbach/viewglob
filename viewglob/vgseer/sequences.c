@@ -367,8 +367,15 @@ static void init_zsh_seqs(void) {
 
 static void disable_seq(Sequence* sq) {
 	sq->enabled = FALSE;
+	sq->pos = 0;
 }
 
+
+void disable_all_seqs(enum process_level pl) {
+	gint i;
+	for (i = 0; i < seq_groups[pl].n; i++)
+		disable_seq(seq_groups[pl].seqs[i]);
+}
 
 void enable_all_seqs(enum process_level pl) {
 	gint i;
@@ -617,10 +624,8 @@ static MatchEffect seq_term_cmd_wrapped(Connection* b, struct cmdline* cmd) {
 static MatchEffect seq_term_backspace(Connection* b, struct cmdline* cmd) {
 	MatchEffect effect;
 
-	if (cmd->pos > 0) {
-		cmd->pos--;
+	if (cmd_backward(cmd, 1, TRUE))
 		effect = ME_NO_EFFECT;
-	}
 	else
 		effect = ME_ERROR;
 
@@ -640,15 +645,14 @@ static MatchEffect seq_term_cursor_forward(Connection* b,
 		/* Default is 1. */
 		n = 1;
 	}
-	if (cmd->pos + n <= cmd->data->len)
-		cmd->pos += n;
-	else {
+
+	if (!cmd_forward(cmd, n, TRUE)) {
 		if (shell == ST_ZSH) {
-			if (cmd->pos + n == cmd->data->len + 1) {
-				/* This is more likely to just be a space causing a
-				   deletion of the RPROMPT in zsh. */
+			/* If n more characters is just one character pass the length,
+			   it's more likely to just be a space causing a deletion of the
+			   RPROMPT in zsh. */
+			if (cmd_forward(cmd, n - 1, FALSE))
 				cmd_overwrite_char(cmd, ' ', FALSE);
-			}
 			else {
 				/* It's writing the RPROMPT. */
 				cmd->rebuilding = TRUE;
@@ -674,9 +678,8 @@ static MatchEffect seq_term_cursor_backward(Connection* b,
 		/* Default is 1. */
 		n = 1;
 	}
-	if (cmd->pos - n >= 0)
-		cmd->pos -= n;
-	else
+
+	if (!cmd_backward(cmd, n, TRUE))
 		effect = ME_ERROR;
 
 	pass_segment(b);
@@ -749,6 +752,7 @@ static MatchEffect seq_term_bell(Connection* b, struct cmdline* cmd) {
 
 
 /* Move cursor up from present location n times. */
+// FIXME for UTF-8.
 static MatchEffect seq_term_cursor_up(Connection* b, struct cmdline* cmd) {
 	MatchEffect effect = ME_NO_EFFECT;
 	gint i, n;
@@ -766,11 +770,11 @@ static MatchEffect seq_term_cursor_up(Connection* b, struct cmdline* cmd) {
 	last_cr_p = g_strrstr_len(cmd->data->str, cmd->pos, "\015");
 	next_cr_p = g_strstr_len(cmd->data->str + cmd->pos,
 			cmd->data->len - cmd->pos, "\015");
-	if (last_cr_p == NULL && next_cr_p == NULL)
+	if (!last_cr_p && !next_cr_p)
 		goto out_of_prompt;
 
 	/* First try to find the ^M at the beginning of the wanted line. */
-	if (last_cr_p != NULL) {
+	if (last_cr_p) {
 
 		pos = cmd->data->str + cmd->pos;
 		for (i = 0; i < n + 1 && pos != NULL; i++)
@@ -836,7 +840,7 @@ static MatchEffect seq_term_carriage_return(Connection* b,
 	}
 	else {
 		p = g_strrstr_len(cmd->data->str, cmd->pos, "\015");
-		if (p == NULL) {
+		if (!p) {
 			cmd->pos = 0;
 			effect = ME_CMD_REBUILD;
 		}
@@ -866,7 +870,7 @@ static MatchEffect seq_term_newline(Connection* b, struct cmdline* cmd) {
 
 	p = g_strstr_len(cmd->data->str + cmd->pos, cmd->data->len - cmd->pos,
 			"\015");
-	if (p == NULL) {
+	if (!p) {
 		if (cmd->expect_newline) {
 			/* Command must have been executed. */
 			effect = ME_CMD_EXECUTED;

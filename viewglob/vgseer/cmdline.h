@@ -34,6 +34,8 @@ struct cmdline {
 	gchar* pwd;
 	GString* mask;    /* The new mask as it's being built. */
 	GString* mask_final;
+
+	gboolean is_utf8;
 };
 
 
@@ -53,6 +55,9 @@ gboolean cmd_insert_chars(struct cmdline* cmd, gchar c, gint n);
 gboolean cmd_del_chars(struct cmdline* cmd, gint n);
 gboolean cmd_wipe_in_line(struct cmdline* cmd, enum direction dir);
 void     cmd_del_trailing_CRs(struct cmdline* cmd);
+
+gboolean cmd_forward(struct cmdline* cmd, gint n, gboolean do_it);
+gboolean cmd_backward(struct cmdline* cmd, gint n, gboolean do_it);
 
 void cmd_mask_add(struct cmdline* cmd, char c);
 void cmd_mask_clear(struct cmdline* cmd);

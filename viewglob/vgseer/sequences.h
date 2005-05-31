@@ -45,6 +45,7 @@ enum _MatchEffect {
 void  init_seqs(enum shell_type shell);
 void  check_seqs(Connection* b, struct cmdline* cmd);
 void  enable_all_seqs(enum process_level pl);
+void  disable_all_seqs(enum process_level pl);
 void  clear_seqs(enum process_level pl);
 
 G_END_DECLS
