@@ -1,3 +1,8 @@
+2005-05-31 01:34  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* COPYING2: no more misc.c
+	* NEWS, vgd.1.in, vgseer.1.in, viewglob.1.in: documentation updates
+
 2005-05-30 20:48  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* cmdline.c, cmdline.h, sequences.c, sequences.h, vgseer.c:

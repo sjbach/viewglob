@@ -1,3 +1,18 @@
+New in 2.0.2, released 2005-05-31:
+	Features:
+	  * Display is raised when switching back from any window, regardless
+	    of whether or not it was a Viewglob terminal (i.e. the behaviour
+	    which should have been present in the first place).
+	  * Try to use gconf to determine appropriate terminal program if
+	    necessary.  Thanks to Koenraad Heijlen.
+
+	Bug fixes:
+	  * UTF-8 processing now works even when you use non-ASCII characters
+	    ;-).  Thanks to Artis Rozentals
+	  * Use Unix-domain sockets by default.  Thanks to Kevin McCarty.
+	  * Startup race condition fix.  Thanks to Kevin McCarty.
+	  * Documentation and usage cleanup.
+
 New in 2.0.1, released 2005-05-05:
 	Bug fixes:
 	  * Use Unix-domain sockets by default for local connections to avoid

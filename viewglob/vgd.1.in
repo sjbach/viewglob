@@ -1,4 +1,4 @@
-.TH VGD 1 "@RELEASE_DATE@" "" "Viewglob Manual"
+.TH VGD 1 "@RELEASE_DATE@" "" "Viewglob Manual (vgd)"
 .SH NAME
 vgd \- Viewglob communication daemon.
 .SH SYNOPSIS
@@ -118,7 +118,7 @@ persistent
 on
 .TP
 font\-size\-modifier
--1
+\-1
 .PD
 .RE
 .IP
