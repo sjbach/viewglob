@@ -33,4 +33,5 @@ vgd-usage.h: vgd-usage.txt
 
 CLEANFILES = vgd-usage.tmp vgd-usage.h
 noinst_HEADERS = tcp-listen.h
+EXTRA_DIST = vgd-usage.txt
 

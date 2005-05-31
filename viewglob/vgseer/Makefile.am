@@ -46,3 +46,4 @@ noinst_HEADERS = \
 	ptytty.h \
 	pty-child.h
 
+EXTRA_DIST = vgseer-usage.txt

@@ -1,6 +1,6 @@
 
-                           Viewglob 2.0.1 README
-                                May 5, 2005
+                           Viewglob 2.0.2 README
+                               May 31, 2005
 
                 Stephen Bach <sjbach@users.sourceforge.net>
 
@@ -21,22 +21,26 @@ The package has three communicating parts:
           and environment changes.
 
      - vgd, server daemon:
-          Mediates information exchange between any number of  vgseer  pro­
+          Mediates information exchange between any number of  vgseer  pro-
           cesses (local or remote) and a Viewglob display.
 
      - vgmini and vgclassic, graphical displays:
           List the contents of directories relevant to the currently active
-          shell, highlighting file selections and  potential  name  comple­
+          shell, highlighting file selections and  potential  name  comple-
           tions.
 
 A convenience script "viewglob" is provided as a startup shortcut.
 
-You  can  learn  more  about  using  this package in the manpages for view­
+You  can  learn  more  about  using  this package in the manpages for view-
 glob(1), vgseer(1), and vgd(1).
 
 The website for Viewglob is here:
 
      http://viewglob.sourceforge.net
+
+Mailing list signup is here:
+
+     http://lists.sourceforge.net/lists/listinfo/viewglob-general
 
 The sourceforge listing is here:
 
@@ -48,24 +52,21 @@ Feedback is welcome!
 NEW IN THIS RELEASE
 -------------------
 
-Unix-domain sockets are now used by default instead of Internet-domain when
-using  Viewglob  locally.  This  is  to  prevent  a security issue where an
-attacker could see an inattentive user's Viewglob display by  being  sneaky
-with X forwarding over ssh.
+See the file NEWS (I'm getting lazy).
 
-The refocus/raise command has been tweaked to be much less broken.
 
 INSTALLATION
 ------------
 
 For a full install, it's a simple ./configure && make && sudo make install.
-If you only wish to install the shell client  portion,  say  for  a  server
-without  X  or  GTK+  which  you only access through ssh, use the following
+If  you  only  wish  to  install the shell client portion, say for a server
+without X or GTK+ which you only access  through  ssh,  use  the  following
 flag:
 
       ./configure --enable-vgseer-only
 
 See the file INSTALL for generic installation instructions.
+
 
 PORTABILITY
 -----------
@@ -75,13 +76,13 @@ Tested on:
      FreeBSD 4.10 with GTK+ 2.4.3
      GNU/Linux (various) with GTK+ 2.4+
 
-Previous versions of Viewglob were said to run on Mac  OS  X  10.3.5  (with
-fink  unstable  providing  GTK+  2.4),  but it has not been tested for this
-release.
+Previous  versions  of  Viewglob  were said to run on Mac OS X 10.3.5 (with
+fink unstable providing GTK+ 2.4), but it has not been tested recently.
 
 The program has been built with portability in mind, so it should (ha)  run
 on most POSIX-compliant systems with minimal fuss. I happily accept patches
 for portability issues.
+
 
 REQUIREMENTS
 ------------

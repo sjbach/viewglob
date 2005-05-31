@@ -4,9 +4,9 @@
 .so giftcurs.tmac
 .
 .TL
-Viewglob 2.0.1 README
+Viewglob 2.0.2 README
 .br
-May 5, 2005
+May 31, 2005
 .AU
 Stephen Bach <sjbach@users.sourceforge.net>
 .
@@ -32,6 +32,10 @@ The website for Viewglob is here:
 .IP
 http://viewglob.sourceforge.net
 .LP
+Mailing list signup is here:
+.IP
+http://lists.sourceforge.net/lists/listinfo/viewglob-general
+.LP
 The sourceforge listing is here:
 .IP
 http://sourceforge.net/projects/viewglob/
@@ -41,9 +45,7 @@ Feedback is welcome!
 .
 .Sh NEW IN THIS RELEASE
 .LP
-Unix-domain sockets are now used by default instead of Internet-domain when using Viewglob locally.  This is to prevent a security issue where an attacker could see an inattentive user's Viewglob display by being sneaky with X forwarding over ssh.
-.LP
-The refocus/raise command has been tweaked to be much less broken.
+See the file NEWS (I'm getting lazy).
 .
 .Sh INSTALLATION
 .LP
@@ -60,7 +62,7 @@ Tested on:
 FreeBSD 4.10 with GTK+ 2.4.3
 GNU/Linux (various) with GTK+ 2.4+
 .Ve
-Previous versions of Viewglob were said to run on Mac OS X 10.3.5 (with fink unstable providing GTK+ 2.4), but it has not been tested for this release.
+Previous versions of Viewglob were said to run on Mac OS X 10.3.5 (with fink unstable providing GTK+ 2.4), but it has not been tested recently.
 .LP
 The program has been built with portability in mind, so it should (ha) run on most POSIX-compliant systems with minimal fuss.  I happily accept patches for portability issues.
 .

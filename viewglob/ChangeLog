@@ -1,3 +1,11 @@
+2005-05-31 14:12  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* README, README.ms: documentation updates
+	* make-readme.sh: output ascii
+	* strip-grotty: don't fix page breaks automatically
+	* configure.ac, vgd/Makefile.am, vgseer/Makefile.am:
+	  Updates for release 2.0.2.
+
 2005-05-31 01:34  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* COPYING2: no more misc.c
