@@ -444,7 +444,8 @@ static MatchStatus check_seq(gchar c, Sequence* sq) {
 			break;
 
 		case PRINTABLE_C:
-			if (isprint(c))
+			/*if (isprint(c))*/
+			if (!iscntrl(c))  /* Quick hack for UTF-8 characters. */
 				return MS_IN_PROGRESS;
 			else if (sq->seq[sq->pos + 1] == c) {
 				/* Skip over special char and delimiter. */

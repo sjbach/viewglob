@@ -3,6 +3,7 @@
 	* README, README.ms: documentation updates
 	* make-readme.sh: output ascii
 	* strip-grotty: don't fix page breaks automatically
+	* sequences.c: one more UTF-8 fix
 	* configure.ac, vgd/Makefile.am, vgseer/Makefile.am:
 	  Updates for release 2.0.2.
 
