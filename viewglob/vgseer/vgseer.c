@@ -120,6 +120,9 @@ static gboolean scan_for_newline(const Connection* b);
 static void     scan_sequences(Connection* b, struct user_state* u);
 
 /* Communication with vgd. */
+static void put_param_verify(gint fd, enum parameter param, gchar* value);
+static void get_param_verify(gint fd, enum parameter* param, gchar** value,
+		enum parameter expected_param, gchar* expected_value);
 static gint connect_to_vgd(gchar* server, gchar* port,
 		gboolean use_unix_socket, struct user_state* u);
 static gboolean set_term_title(gint fd, gchar* title);
@@ -260,53 +263,46 @@ static gint connect_to_vgd(gchar* server, gchar* port,
 	if (fd == -1)
 		return -1;
 
-	/* Send over information. */
 	enum parameter param;
 	gchar* value = NULL;
-	if (!put_param(fd, P_PURPOSE, "vgseer"))
-		goto fail;
-	if (!put_param(fd, P_VERSION, VERSION))
-		goto fail;
-	if (!put_param(fd, P_TERM_TITLE, term_title))
-		goto fail;
+
+	/* Send over information. */
+	put_param_verify(fd, P_PURPOSE, "vgseer");
+	put_param_verify(fd, P_VERSION, VERSION);
+	put_param_verify(fd, P_TERM_TITLE, term_title);
 
 	/* Wait for acknowledgement. */
-	if (!get_param(fd, &param, &value) || param != P_STATUS)
-		goto fail;
+	get_param_verify(fd, &param, &value, P_STATUS, NULL);
 	if (STREQ(value, "ERROR")) {
-		/* Print error and exit. */
-		if (!get_param(fd, &param, &value) || param != P_REASON)
-			goto fail;
+		/* Print reason for error and exit. */
+		get_param_verify(fd, &param, &value, P_REASON, NULL);
 		g_critical(value);
-		goto fail;
+		clean_fail(NULL);
 	}
 	else if (STREQ(value, "WARNING")) {
 		/* Print warning but continue. */
-		if (!get_param(fd, &param, &value) || param != P_REASON)
-			goto fail;
+		get_param_verify(fd, &param, &value, P_REASON, NULL);
 		g_warning(value);
 	}
-	else if (!STREQ(value, "OK"))
-		goto fail;
+	else if (!STREQ(value, "OK")) {
+		g_critical("Unknown value for P_STATUS: %s", value);
+		clean_fail(NULL);
+	}
 
 	/* Wait for vgd to tell us to set our title. */
-	if (!get_param(fd, &param, &value) || param != P_ORDER ||
-			!STREQ(value, "set-title"))
-		goto fail;
+	get_param_verify(fd, &param, &value, P_ORDER, "set-title");
 
 	/* Set the terminal title. */
 	if (!set_term_title(STDOUT_FILENO, term_title)) {
 		g_critical("Couldn't set the term title");
-		goto fail;
+		clean_fail(NULL);
 	}
 
 	/* Alert vgd that we've set the title. */
-	if (!put_param(fd, P_STATUS, "title-set"))
-		goto fail;
+	put_param_verify(fd, P_STATUS, "title-set");
 
 	/* Next receive the vgexpand execution options. */
-	if (!get_param(fd, &param, &value) || param != P_VGEXPAND_OPTS)
-		goto fail;
+	get_param_verify(fd, &param, &value, P_VGEXPAND_OPTS, NULL);
 
 	u->vgexpand_opts = g_strdup(value);
 
@@ -315,11 +311,46 @@ static gint connect_to_vgd(gchar* server, gchar* port,
 		g_warning("Couldn't fix the term title");
 
 	return fd;
+}
 
-fail:
-	g_critical("Could not complete negotiation with vgd");
-	(void) close(fd);
-	return -1;
+
+/* Ensure that the parameter is transferred successfully, and fail if not. */
+static void put_param_verify(gint fd, enum parameter param, gchar* value) {
+	if (!put_param(fd, param, value)) {
+		g_critical("Could not send parameter: %s = %s",
+				param_to_string(param), value);
+		clean_fail(NULL);
+	}
+}
+
+
+/* Ensure the data we get is what we expect to receive, and fail if not. */
+static void get_param_verify(gint fd, enum parameter* param, gchar** value,
+		enum parameter expected_param, gchar* expected_value) {
+
+	if (!get_param(fd, param, value)) {
+		/* An error has already been reported. */
+		g_critical("Expected: %s = \"%s\"",
+				param_to_string(expected_param),
+				value ? *value : "(unknown)");
+		clean_fail(NULL);
+	}
+
+	/* Next verify we got the expected parameter. */
+	if (*param != expected_param) {
+		g_critical("Received %s (\"%s\") instead of %s",
+				param_to_string(*param), *value,
+				param_to_string(expected_param));
+		clean_fail(NULL);
+	}
+
+	/* Now check the value, if necessary. */
+	if (expected_value != NULL && !STREQ(expected_value, *value)) {
+		g_critical("Expected %s = \"%s\", not %s = \"%s\".",
+				param_to_string(expected_param), expected_value,
+				param_to_string(*param), *value);
+		clean_fail(NULL);
+	}
 }
 
 

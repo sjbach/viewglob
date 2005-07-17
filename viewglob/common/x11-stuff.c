@@ -88,12 +88,26 @@ void refocus(Display* disp, Window w1, Window w2) {
 Window get_active_window(Display* disp) {
 	g_return_val_if_fail(disp != NULL, 0);
 	
+	/*
 	Window active_window;
 	gint dummy;
 
 	XGetInputFocus(disp, &active_window, &dummy);
 	
 	return active_window;
+	*/
+
+	gchar *prop;
+	gulong size;
+	Window ret = (Window)0;
+
+	prop = get_property(disp, DefaultRootWindow(disp), XA_WINDOW, 
+		"_NET_ACTIVE_WINDOW", &size);
+	if (prop) {
+		ret = *((Window*)prop);
+		g_free(prop);
+	}
+	return(ret);
 }
 
 
@@ -267,7 +281,7 @@ Window get_xid_from_title(Display* disp, gchar* title) {
 		if ( (client_list = get_client_list(disp, &client_list_size)) == NULL)
 			return 0;
 
-		for (j = 0; j < client_list_size / 4; j++) {
+		for (j = 0; j < client_list_size / sizeof(Window); j++) {
 			gchar* window_title = get_window_title(disp, client_list[j]);
 			/* title can appear anywhere in the window's title. */
 			if (window_title && strstr(window_title, title))

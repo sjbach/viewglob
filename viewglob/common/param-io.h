@@ -69,7 +69,8 @@ enum parameter {
 
 gboolean get_param(int fd, enum parameter* param, gchar** value);
 gboolean put_param(int fd, enum parameter param, gchar* value);
-
+enum parameter string_to_param(gchar* string);
+gchar* param_to_string(enum parameter param);
 
 G_END_DECLS
 

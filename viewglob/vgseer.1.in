@@ -81,7 +81,7 @@ Configuration file options can be overridden on the command line.
 .br
 .SM LC_ALL
 .RS
-If either of these values include a variation of "UTF-8", vgseer will accommodate  you.  This is important, as otherwise Viewglob will have trouble keeping track of the cursor position.
+If either of these values include a variation of "UTF\-8", vgseer will accommodate  you.  This is important, as otherwise Viewglob will have trouble keeping track of the cursor position.
 .RE
 .SH AUTHORS
 Stephen Bach <sjbach@users.sourceforge.net>

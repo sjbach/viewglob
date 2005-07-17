@@ -51,10 +51,6 @@ static gchar* params[P_COUNT] = {
 };
 
 
-static enum parameter string_to_param(gchar* string);
-static gchar*         param_to_string(enum parameter param);
-
-
 gboolean get_param(int fd, enum parameter* param, gchar** value) {
 
 	g_return_val_if_fail(fd >= 0, FALSE);
@@ -165,7 +161,7 @@ gboolean put_param(int fd, enum parameter param, gchar* value) {
 	iov[1].iov_base = string;
 	iov[1].iov_len = len;
 	if (writev_all(fd, iov, 2) != IOR_OK) {
-		g_critical("Could not write pair: %s", g_strerror(errno));
+		g_critical("Could not write parameter: %s", g_strerror(errno));
 		return FALSE;
 	}
 
@@ -173,7 +169,7 @@ gboolean put_param(int fd, enum parameter param, gchar* value) {
 }
 
 
-static enum parameter string_to_param(gchar* string) {
+enum parameter string_to_param(gchar* string) {
 
 	g_return_val_if_fail(string != NULL, P_NONE);
 
@@ -191,7 +187,7 @@ static enum parameter string_to_param(gchar* string) {
 }
 
 
-static gchar* param_to_string(enum parameter param) {
+gchar* param_to_string(enum parameter param) {
 
 	g_return_val_if_fail(param < P_COUNT, params[P_NONE]);
 

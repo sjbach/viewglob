@@ -1,3 +1,17 @@
+2005-07-15 20:03  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* Makefile.am:
+	  Correctly handle the building and distribution of manpages.  Thanks
+	  to Kevin McCarty.
+	* vgseer.1.in: fix hyphen escaping.  Thanks to Kevin McCarty.
+	* viewglob.in: quote the calls to gconf.  Thanks to Kevin McCarty.
+	* vgseer.c, param-io.c, param-io.h:
+	  Cleaned up code for connecting to vgd and more informative errors.
+	* x11-stuff.c:
+	  - Correctly handle 64-bit environments.  Thanks to Tom Martin.
+	  - Use new algorithm for get_active_window() (grabbed from
+	    wmctrl-1.07).
+
 2005-05-31 14:12  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* README, README.ms: documentation updates
