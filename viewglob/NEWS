@@ -1,3 +1,9 @@
+New in 2.0.3, released 2005-07-18:
+	Bug fixes:
+	  * Work correctly in 64-bit environments.  Thanks to Tom Martin.
+	  * Fixed build issue with the manpages.  Thanks to Kevin McCarty.
+	  * Use new algorithm for tracking the active window.
+
 New in 2.0.2, released 2005-05-31:
 	Features:
 	  * Display is raised when switching back from any window, regardless

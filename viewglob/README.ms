@@ -4,9 +4,9 @@
 .so giftcurs.tmac
 .
 .TL
-Viewglob 2.0.2 README
+Viewglob 2.0.3 README
 .br
-May 31, 2005
+July 18, 2005
 .AU
 Stephen Bach <sjbach@users.sourceforge.net>
 .
@@ -55,6 +55,10 @@ For a full install, it's a simple ./configure && make && sudo make install.  If 
 .LP
 See the file \fBINSTALL\fP for generic installation instructions.
 .
+.Sh REQUIREMENTS
+.LP
+All installations fo Viewglob require a version of Bash (any, as far as I know).  A client-only install requires GLib 2.2, and a full install requires GTK+ 2.4.  A version of Zsh is also obviously required if you wish to use Zsh under Viewglob.
+.
 .Sh PORTABILITY
 .LP
 Tested on:
@@ -65,8 +69,4 @@ GNU/Linux (various) with GTK+ 2.4+
 Previous versions of Viewglob were said to run on Mac OS X 10.3.5 (with fink unstable providing GTK+ 2.4), but it has not been tested recently.
 .LP
 The program has been built with portability in mind, so it should (ha) run on most POSIX-compliant systems with minimal fuss.  I happily accept patches for portability issues.
-.
-.Sh REQUIREMENTS
-.LP
-Viewglob requires a version of Bash (any, as far as I know) and GTK+ 2.4.  A version of Zsh is also obviously required if you wish to use Zsh under Viewglob.
 
