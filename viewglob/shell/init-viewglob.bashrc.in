@@ -37,7 +37,7 @@ if [ "$VG_SANDBOX" = yep ]; then
 	# No prompt command.
 	unset PROMPT_COMMAND
 
-	# Only viewglob programs (glob-expand) in the path.
+	# Only viewglob programs (vgexpand) in the path.
 	PATH="@pkglibdir@"
 
 else

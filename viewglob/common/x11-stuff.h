@@ -34,11 +34,11 @@ G_BEGIN_DECLS
 void refocus(Display* disp, Window w1, Window w2);
 Window get_xid_from_title(Display* disp, char* title);
 Window get_active_window(Display* disp);
-void focus_window(Display* disp, Window win, gulong desktop);
+void focus_window(Display* disp, Window win, gint desktop);
 
-gint window_to_desktop (Display *disp, Window win, gint desktop);
-gulong* get_desktop(Display* disp, Window win);
-gulong* current_desktop(Display* disp);
+gboolean window_to_desktop (Display *disp, Window win, gint desktop);
+gint get_desktop(Display* disp, Window win);
+gint current_desktop(Display* disp);
 
 gboolean is_visible(Display* disp, Window win);
 gchar* win_to_str(Window win);

@@ -119,14 +119,14 @@ gboolean jump_and_resize(GtkWidget* gtk_window, gchar* term_win_str) {
 		}
 	}
 
-	gulong* term_desktop = get_desktop(Xdisplay, term_win);
-	gulong* me_desktop = get_desktop(Xdisplay, me_win);
+	gint term_desktop = get_desktop(Xdisplay, term_win);
+	gint me_desktop = get_desktop(Xdisplay, me_win);
 
 	/* Determine if the new position is different from the old position. */
 	gboolean changed = me_x + left != old_x
 		|| me_y + top != old_y || me_w != old_w || me_h != old_h
-		|| (term_desktop != NULL && me_desktop != NULL
-			&& *me_desktop != *term_desktop);
+		|| (term_desktop != -1 && me_desktop != -1
+			&& me_desktop != term_desktop);
 
 #if 0
 	/* Moving without resizing: */
@@ -152,9 +152,6 @@ gboolean jump_and_resize(GtkWidget* gtk_window, gchar* term_win_str) {
 
 	if (move && changed)
 		gdk_window_move_resize(gdk_win, me_x, me_y, me_w, me_h);
-
-	g_free(term_desktop);
-	g_free(me_desktop);
 
 	return move && changed;
 }

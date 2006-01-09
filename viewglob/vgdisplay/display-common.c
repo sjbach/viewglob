@@ -209,6 +209,8 @@ void refocus_wrapped(GtkWidget* display_win_gtk, gchar* term_win_str) {
 		return;
 
 	refocus(Xdisplay, display_win, term_win);
+	static int i = 0; i++;
+	g_warning("refocus %d", i);
 }
 
 
@@ -224,17 +226,19 @@ void raise_wrapped(GtkWidget* display_win_gtk, gchar* term_win_str) {
 	if (display_win == 0 || term_win == 0)
 		return;
 
-	gulong* term_desktop = get_desktop(Xdisplay, term_win);
-	gulong* disp_desktop = get_desktop(Xdisplay, display_win);
+	gint term_desktop = get_desktop(Xdisplay, term_win);
+	gint disp_desktop = get_desktop(Xdisplay, display_win);
 
-	if (*term_desktop != *disp_desktop)
-		window_to_desktop(Xdisplay, display_win, *term_desktop);
+	if (term_desktop != -1 && disp_desktop != -1
+			&& term_desktop != disp_desktop) {
+		window_to_desktop(Xdisplay, display_win, term_desktop);
+	}
 
+	static int i = 0; i++;
+	g_warning("raise %d", i);
 	/*raise_window(Xdisplay, display_win, term_win, TRUE);*/
-	XMapRaised(Xdisplay, display_win);
-
-	g_free(term_desktop);
-	g_free(disp_desktop);
+	//XMapRaised(Xdisplay, display_win);
+	XRaiseWindow(Xdisplay, display_win);
 }
 
 

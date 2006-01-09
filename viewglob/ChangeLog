@@ -1,3 +1,8 @@
+2006-01-09 07:03  Stephen Bach <sjbach@users.sourceforge.net>
+
+	* x11-stuff.c, x11-stuff.h, display-common.c, jump-resize.c: clean up.
+	* init-viewglob.bashrc.in: glob-expand -> vgexpand
+
 2005-07-15 20:03  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* Makefile.am:

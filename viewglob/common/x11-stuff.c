@@ -61,8 +61,8 @@ void refocus(Display* disp, Window w1, Window w2) {
 
 	Window active_window;
 	gint dummy;
-	gulong* w1_desktop;
-	gulong* w2_desktop;
+	gint w1_desktop;
+	gint w2_desktop;
 
 	w1_desktop = get_desktop(disp, w1);
 	w2_desktop = get_desktop(disp, w2);
@@ -72,16 +72,13 @@ void refocus(Display* disp, Window w1, Window w2) {
 	/* Refocus the window which isn't focused.  Or, if neither
 	   are focused (?), focus both. */
 	if (active_window == w1)
-		focus_window(disp, w2, *w1_desktop);
+		focus_window(disp, w2, w1_desktop);
 	else if (active_window == w2)
-		focus_window(disp, w1, *w2_desktop);
+		focus_window(disp, w1, w2_desktop);
 	else {
-		focus_window(disp, w1, *w2_desktop);
-		focus_window(disp, w2, *w2_desktop);
+		focus_window(disp, w1, w2_desktop);
+		focus_window(disp, w2, w2_desktop);
 	}
-
-	g_free(w1_desktop);
-	g_free(w2_desktop);
 }
 
 
@@ -111,7 +108,7 @@ Window get_active_window(Display* disp) {
 }
 
 
-void focus_window(Display* disp, Window win, gulong desktop) {
+void focus_window(Display* disp, Window win, gint desktop) {
 
 	if (window_to_desktop(disp, win, desktop)) {
 		 /* 100 ms - make sure the WM has enough time to move the window,
@@ -120,7 +117,8 @@ void focus_window(Display* disp, Window win, gulong desktop) {
 	}
 
 	client_msg(disp, win, "_NET_ACTIVE_WINDOW", 0, 0, 0, 0, 0);
-	XMapRaised(disp, win);
+	//XMapRaised(disp, win);
+	XRaiseWindow(disp, win);
 }
 
 
@@ -142,56 +140,61 @@ gboolean is_visible(Display* disp, Window win) {
 }
 
 
-gulong* get_desktop(Display* disp, Window win) {
-
-	gulong* desktop = NULL;
+gint get_desktop(Display* disp, Window win) {
+	gint desktop;
+	gulong* desktop_p;
 
 	/* desktop ID */
-	if ((desktop = (gulong*)get_property(disp, win,
-			XA_CARDINAL, "_NET_WM_DESKTOP", NULL)) == NULL) {
-		desktop = (gulong*)get_property(disp, win,
-				XA_CARDINAL, "_WIN_WORKSPACE", NULL);
+	if (!(desktop_p = (gulong*)get_property(disp, win,
+			XA_CARDINAL, "_NET_WM_DESKTOP", NULL))) {
+		if (!(desktop_p = (gulong*)get_property(disp, win,
+				XA_CARDINAL, "_WIN_WORKSPACE", NULL))) {
+			g_warning("Cannot discover desktop. "
+					"(_NET_WM_DESKTOP or _WIN_WORKSPACE property)");
+		}
 	}
 
+	if (desktop_p)
+		desktop = *desktop_p;
+	else
+		desktop = -1;
+
+	g_free(desktop_p);
 	return desktop;
 }
 
 
-gulong* current_desktop(Display* disp) {
-    gulong *cur_desktop = NULL;
+gint current_desktop(Display* disp) {
+    gint cur_desktop;
+    gulong* cur_desktop_p;
 
 	Window root = DefaultRootWindow(disp);
 
-	if (!(cur_desktop = (gulong*)get_property(disp, root,
+	if (!(cur_desktop_p = (gulong*)get_property(disp, root,
 			XA_CARDINAL, "_NET_CURRENT_DESKTOP", NULL))) {
-		if (!(cur_desktop = (gulong*)get_property(disp, root,
+		if (!(cur_desktop_p = (gulong*)get_property(disp, root,
 				XA_CARDINAL, "_WIN_WORKSPACE", NULL))) {
 			g_warning("Cannot get current desktop properties. "
 					"(_NET_CURRENT_DESKTOP or _WIN_WORKSPACE property)");
 		}
 	}
 
+	if (cur_desktop_p)
+		cur_desktop = *cur_desktop_p;
+	else
+		cur_desktop = -1;
+
+	g_free(cur_desktop_p);
 	return cur_desktop;
 }
 
 
-gint window_to_desktop (Display *disp, Window win, gint desktop) {
-    gulong *cur_desktop = NULL;
-    Window root = DefaultRootWindow(disp);
-   
-    if (desktop == -1) {
-        if (! (cur_desktop = (gulong *)get_property(disp, root,
-                XA_CARDINAL, "_NET_CURRENT_DESKTOP", NULL))) {
-            if (! (cur_desktop = (gulong *)get_property(disp, root,
-                    XA_CARDINAL, "_WIN_WORKSPACE", NULL))) {
-                g_warning("Cannot get current desktop properties. "
-                      "(_NET_CURRENT_DESKTOP or _WIN_WORKSPACE property)");
-                return EXIT_FAILURE;
-            }
-        }
-        desktop = *cur_desktop;
-    }
-    g_free(cur_desktop);
+gboolean window_to_desktop(Display* disp, Window win, gint desktop) {
+
+	if (desktop == -1) {
+		if ( (desktop = current_desktop(disp)) == -1)
+			return FALSE;
+	}
 
     return client_msg(disp, win, "_NET_WM_DESKTOP", (gulong)desktop,
             0, 0, 0, 0);

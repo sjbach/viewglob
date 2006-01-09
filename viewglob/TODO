@@ -1,3 +1,5 @@
+- lex/yacc for vgexpand parsing
+- minilanguage for shell scanning?
 - dir-order doesn't work
 - if user input received on a terminal, set it as active
 
