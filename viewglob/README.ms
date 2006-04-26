@@ -57,7 +57,7 @@ See the file \fBINSTALL\fP for generic installation instructions.
 .
 .Sh REQUIREMENTS
 .LP
-All installations fo Viewglob require a version of Bash (any, as far as I know).  A client-only install requires GLib 2.2, and a full install requires GTK+ 2.4.  A version of Zsh is also obviously required if you wish to use Zsh under Viewglob.
+All installations of Viewglob require a version of Bash (any, as far as I know).  A client-only install requires GLib 2.2, and a full install requires GTK+ 2.4.  A version of Zsh is also obviously required if you wish to use Zsh under Viewglob.
 .
 .Sh PORTABILITY
 .LP
