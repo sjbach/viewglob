@@ -51,7 +51,7 @@ enum io_result write_all(gint fd, void* buf, gsize bytes);
 enum io_result read_all(int fd, void* buf, gsize bytes);
 enum io_result writev_all(int fd, struct iovec* vec, int count);
 
-enum io_result hardened_read(gint fd, void* buf, size_t count, ssize_t* nread);
+enum io_result hardened_read(gint fd, void* buf, size_t count, gssize* nread);
 int            hardened_select(gint fd, fd_set* readfds, long milliseconds);
 
 G_END_DECLS

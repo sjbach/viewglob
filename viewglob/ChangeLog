@@ -2,6 +2,7 @@
 	* configure.ac, vgseer/Makefile.am, vgping/Makefile.am,
 	  vgd/Makefile.am:
 	  Making build work with newer versions of the autotools.
+	* hardened-io.h: making bulid work on OS X.  Thanks to John Magolske.
 
 2006-01-09 07:03  Stephen Bach <sjbach@users.sourceforge.net>
 
