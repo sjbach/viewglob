@@ -5,7 +5,7 @@ bin_PROGRAMS = vgseer
 vgseer_CPPFLAGS = \
 	-DVG_LIB_DIR="\"$(pkglibdir)\"" -I$(COMMON_DIR) \
 	@GLIB_CFLAGS@
-vgseer_LDADD = @GLIB_LIBS@ @ETR_SOCKET_LIBS@
+vgseer_LDADD = @GLIB_LIBS@ @LIBS@
 vgseer_SOURCES = \
 	vgseer.c \
 	cmdline.c \

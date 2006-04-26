@@ -6,7 +6,7 @@ vgd_CPPFLAGS = \
 	-DVG_LIB_DIR="\"$(pkglibdir)\"" -I$(COMMON_DIR) \
 	@GLIB_CFLAGS@ @X_CFLAGS@
 vgd_LDADD = \
-	@GLIB_LIBS@ @ETR_SOCKET_LIBS@ \
+	@GLIB_LIBS@ @LIBS@ \
 	@X_PRE_LIBS@ @X_LIBS@ -lX11 @X_EXTRA_LIBS@
 vgd_SOURCES = \
 	vgd.c \

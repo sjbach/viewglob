@@ -1,3 +1,8 @@
+2006-04-26 14:24  Stephen Bach <sjbach@users.sourceforge.net>
+	* configure.ac, vgseer/Makefile.am, vgping/Makefile.am,
+	  vgd/Makefile.am:
+	  Making build work with newer versions of the autotools.
+
 2006-01-09 07:03  Stephen Bach <sjbach@users.sourceforge.net>
 
 	* x11-stuff.c, x11-stuff.h, display-common.c, jump-resize.c: clean up.

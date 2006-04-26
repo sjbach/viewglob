@@ -66,7 +66,7 @@ AC_CHECK_FUNCS([getaddrinfo],,
 		[AC_MSG_ERROR([Socket interface is incomplete!])])])
 
 dnl Determine necessary libraries for sockets.
-ETR_SOCKET_NSL
+LIB_SOCKET_NSL
 TYPE_SOCKLEN_T
 
 AM_PATH_GLIB_2_0(2.2.0,,
