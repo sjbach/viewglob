@@ -4,9 +4,9 @@
 .so giftcurs.tmac
 .
 .TL
-Viewglob 2.0.3 README
+Viewglob 2.0.4 README
 .br
-July 18, 2005
+April 26, 2006
 .AU
 Stephen Bach <sjbach@users.sourceforge.net>
 .
@@ -45,7 +45,7 @@ Feedback is welcome!
 .
 .Sh NEW IN THIS RELEASE
 .LP
-See the file NEWS (I'm getting lazy).
+Mostly just fixing OS X compatibility.  See NEWS for more information.
 .
 .Sh INSTALLATION
 .LP
@@ -66,7 +66,7 @@ Tested on:
 FreeBSD 4.10 with GTK+ 2.4.3
 GNU/Linux (various) with GTK+ 2.4+
 .Ve
-Previous versions of Viewglob were said to run on Mac OS X 10.3.5 (with fink unstable providing GTK+ 2.4), but it has not been tested recently.
+This version of Viewglob is also said to run on Mac OS X 10.3.9 (with fink providing GTK+ 2.4).
 .LP
 The program has been built with portability in mind, so it should (ha) run on most POSIX-compliant systems with minimal fuss.  I happily accept patches for portability issues.
 

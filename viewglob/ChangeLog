@@ -1,3 +1,7 @@
+2006-4-26  15:12  Stephen Bach <sjbach@users.sourceforge.net>
+	* AUTHORS, README, README.ms, configure.ac, HACKING, NEWS:
+	  Updates for release 2.0.4.
+
 2006-04-26 14:24  Stephen Bach <sjbach@users.sourceforge.net>
 	* configure.ac, vgseer/Makefile.am, vgping/Makefile.am,
 	  vgd/Makefile.am:

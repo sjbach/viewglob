@@ -1,12 +1,12 @@
 
 The Viewglob CVS repository is accessible on the web from here:
 
+    (this is obsolete - use the subversion checkout below instead)
     http://sourceforge.net/cvs/?group_id=116249
 
-For anonymous checkout (blank password):
+For anonymous subversion checkout:
 
-    cvs -d:pserver:anonymous@cvs.sf.net:/cvsroot/viewglob login
-    cvs -d:pserver:anonymous@cvs.sf.net:/cvsroot/viewglob checkout viewglob
+    svn checkout https://svn.sourceforge.net/svnroot/viewglob/trunk/viewglob
 
 Tab spacing for *.[ch] files is 4.  Optimized for an 80 column width.
 

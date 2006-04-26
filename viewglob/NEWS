@@ -1,3 +1,9 @@
+New in 2.0.4, released 2006-04-26:
+	Bug fixes:
+	  * Fixed build on OS X.  Thanks to John Magolske.
+	  * Update to new version of autotools (you probably don't care about
+	    this).
+
 New in 2.0.3, released 2005-07-18:
 	Bug fixes:
 	  * Work correctly in 64-bit environments.  Thanks to Tom Martin.
