@@ -54,4 +54,3 @@ gviewglob:
 
 Future:
 	- vgterm -- terminal based on rxvt (unicode?) with integrated gviewglob display.
-testing
