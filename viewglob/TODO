@@ -1,3 +1,6 @@
+- after parsing file name, when scanning through list:
+	if (name > parsed)
+		parsed is new file (don't have to go through whole list)
 - lex/yacc for vgexpand parsing
 - minilanguage for shell scanning?
 - dir-order doesn't work

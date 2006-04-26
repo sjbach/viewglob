@@ -194,7 +194,7 @@ static gboolean get_win_geometry(Display* Xdisplay, Window win, gint* x,
 				&depth)) {
 		case BadDrawable:
 		case BadWindow:
-			g_warning("Error while getting terminal window attributes");
+			g_warning("Error while getting window geometry");
 			return FALSE;
 		default:
 			break;

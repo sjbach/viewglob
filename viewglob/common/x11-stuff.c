@@ -46,10 +46,10 @@
 
 #include <glib.h>
 
-static Window *get_client_list (Display *disp, gulong *size);
-static gchar* get_property (Display* disp, Window win, Atom xa_prop_type,
+static Window *get_client_list(Display *disp, gulong *size);
+static gchar* get_property(Display* disp, Window win, Atom xa_prop_type,
 		gchar* prop_name, gulong* size);
-static gchar* get_window_title (Display* disp, Window win);
+static gchar* get_window_title(Display* disp, Window win);
 static gboolean client_msg(Display* disp, Window win, gchar* msg,
 		gulong data0, gulong data1, gulong data2, gulong data3, gulong data4);
 
@@ -242,6 +242,11 @@ static gchar* get_property (Display* disp, Window win,
 	
 	xa_prop_name = XInternAtom(disp, prop_name, False);
 	
+	/* MAX_PROPERTY_VALUE_LEN / 4 explanation (XGetWindowProperty manpage):
+
+	   long_length = Specifies the length in 32-bit multiples of the
+	                 data to be retrieved.
+	 */
 	if (XGetWindowProperty(disp, win, xa_prop_name, 0,
 				MAX_PROPERTY_VALUE_LEN / 4, False,
 				xa_prop_type, &xa_ret_type, &ret_format,

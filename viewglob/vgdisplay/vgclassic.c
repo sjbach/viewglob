@@ -258,23 +258,22 @@ gint main(gint argc, gchar **argv) {
 			G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION, syslogging, NULL);
 	openlog_wrapped(g_get_prgname());
 
-	GtkWidget* vbox;
-	GtkWidget* scrolled_window;
-
+	/* Display preferences. */
 	struct prefs v;
-
-	/* This is pretty central -- it gets passed around a lot. */
-	Exhibit	e;
-	e.dls = NULL;
-	e.term_win = g_string_new(NULL);
-	
-	/* Option defaults. */
 	prefs_init(&v);
 	parse_args(argc, argv, &v);
 
 	/* Set the label font sizes. */
 	file_box_set_sizing(v.font_size_modifier, v.show_icons);
 	dlisting_set_sizing(v.font_size_modifier);
+
+	/* This is pretty central -- it gets passed around a lot. */
+	Exhibit	e;
+	e.dls = NULL;
+	e.term_win = g_string_new(NULL);
+	
+	GtkWidget* vbox;
+	GtkWidget* scrolled_window;
 
 	/* Create window. */
 	e.window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
