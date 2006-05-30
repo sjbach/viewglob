@@ -1,4 +1,8 @@
-2006-4-26  15:12  Stephen Bach <sjbach@users.sourceforge.net>
+2006-05-29  23:52  Stephen Bach <sjbach@users.sourceforge.net>
+	* cmdline.c: fixed reading invalid memory
+	* vgd.c, vgseer.c: little fixes/changes
+
+2006-04-26  15:12  Stephen Bach <sjbach@users.sourceforge.net>
 	* AUTHORS, README, README.ms, configure.ac, HACKING, NEWS:
 	  Updates for release 2.0.4.
 

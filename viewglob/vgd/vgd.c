@@ -1002,6 +1002,7 @@ void state_init(struct state* s) {
 	s->vgexpand_opts = g_string_new(DEFAULT_VGEXPAND_OPTS);
 	s->Xdisplay = NULL;
 	s->current = NULL;
+	s->current_is_active = FALSE;
 
 	s->port = g_strdup("16108");
 	s->port_fd = -1;

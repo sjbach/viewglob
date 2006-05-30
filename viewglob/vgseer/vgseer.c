@@ -173,7 +173,7 @@ gint main(gint argc, gchar** argv) {
 	opts.init_loc = NULL;
 
 	/* Fill in the opts struct. */
-	int conf_argc;
+	gint conf_argc;
 	gchar** conf_argv;
 	if (conf_to_args(&conf_argc, &conf_argv, CONF_FILE)) {
 		parse_args(conf_argc, conf_argv, &opts);

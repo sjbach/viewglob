@@ -343,7 +343,8 @@ gboolean cmd_insert_chars(struct cmdline* cmd, gchar c, gint n) {
 void cmd_del_trailing_CRs(struct cmdline* cmd) {
 	/* This should be safe for UTF-8 as well. */
 	gint temp;
-	while (cmd->data->str[cmd->data->len - 1] == '\015' &&
+	while (cmd->data->len &&
+			cmd->data->str[cmd->data->len - 1] == '\015' &&
 			cmd->pos < cmd->data->len - 1) {
 		temp = cmd->pos;
 		cmd->pos = cmd->data->len - 1;
