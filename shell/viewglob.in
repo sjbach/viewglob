@@ -16,6 +16,9 @@
 # along with Viewglob; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+# We need extended globbing.
+shopt -s extglob
+
 SCRIPT_NAME="${0##*/}"
 VG_LIB_DIR="@pkglibdir@"
 VGPING="$VG_LIB_DIR/vgping"
@@ -28,9 +31,6 @@ REMOTE=
 VGSEER_OPTS=
 VGSEER_EXEC=vgseer
 VGD_OPTS=
-
-# We need extended globbing.
-shopt -s extglob
 
 vg_usage() {
 	cat >&2 << EOF
@@ -293,8 +293,7 @@ else
 		VGSEER_OPTS="$VGSEER_OPTS --unix-socket=off"
 
 		if ! $VGPING $HOST $PORT ; then
-			vg_error "Couldn't handshake with a vgd at \
-				${HOST}:${PORT}" 6
+			vg_error "Couldn't handshake with a vgd at ${HOST}:${PORT}" 6
 		fi
 
 		exec $VGSEER_EXEC $VGSEER_OPTS --unix-socket=off

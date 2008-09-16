@@ -31,16 +31,17 @@ if [ "$VG_SANDBOX" = yep ]; then
 	# This is all for the sandbox shell.
 
 	# We have to disable this stuff because...
-	# History expansion is a no-go.
-	# The NOMATCH error message prevents vgexpand from running.
-	# Global aliases could be dangerous to the filesystem, and they can't be
-	#   disabled without disabling all aliases (AFAIK).
-	# No spell check!
-	# BAD_PATTERN can prevent vgexpand from running.
-	# The sandbox should NEVER modify the file system, but turn off
+	# - History expansion is a no-go.
+	# - The NOMATCH error message prevents vgexpand from running.
+	# - Global aliases could be dangerous to the filesystem, and they can't
+	#   be disabled without disabling all aliases (AFAIK).
+	# - No spell check!
+	# - BAD_PATTERN can prevent vgexpand from running.
+	# - The sandbox should NEVER modify the file system, but turn off
 	#   clobbering and star_silent just in case.
-	# Don't save history in the sandbox.
-	# The user could put setopt zle in their .zshrc, overriding seer's +Z.
+	# - Don't save history in the sandbox.
+	# - The user could put setopt zle in their .zshrc, overriding vgseer's
+	#   +Z.
 	setopt \
 		NO_BANG_HIST      \
 		NO_NOMATCH        \
