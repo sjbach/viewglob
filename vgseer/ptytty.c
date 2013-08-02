@@ -59,7 +59,7 @@
 #ifdef HAVE_SYS_IOCTL_H
 # include <sys/ioctl.h>
 #endif
-#if defined(PTYS_ARE_PTMX) && !defined(__CYGWIN32__)
+#if defined(PTYS_ARE_PTMX) && !(defined(__CYGWIN32__) || defined(__APPLE__))
 # include <sys/stropts.h>      /* for I_PUSH */
 #endif
 
